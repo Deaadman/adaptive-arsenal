@@ -50,5 +50,5 @@ Currently no mods are incompatible, but when there are some, avoid using the fol
 4. Copy the `AdaptiveArsenal.dll` from your `Downloads` folder and paste it into the `mods` directory.
 5. Launch the game. The mod should be enabled.
 
-> [!WARNING]
+> [!NOTE]
 > This modification is not officially a part of The Long Dark and is not affiliated with Hinterland Studio Inc or its affiliates.
