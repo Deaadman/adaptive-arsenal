@@ -8,9 +8,9 @@ internal static class BuildInfo
     /// <summary>Who made the mod</summary>
     public const string Author                          = "Deadman";
     /// <summary>Current version (e.g. 1.0.0, 1.0.0-Alpha, 1.0.0-Beta, 1.0.0-RC, etc.) </summary>
-    public const string Version                         = "1.0.2";
+    public const string Version                         = "1.0.3-DevelopmentBuild";
     /// <summary>Version shown in DnSpy</summary>
-    public const string AssemblyVersion                 = "1.0.2.0";
+    public const string AssemblyVersion                 = "1.0.3.0";
     /// <summary>Name used on GUI's, like ModSettings</summary>
     public const string GUIName                         = "Adaptive Arsenal";
     /// <summary>The minimum Melon Loader version that your mod requires.</summary>

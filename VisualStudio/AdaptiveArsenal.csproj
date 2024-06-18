@@ -13,7 +13,7 @@
 	<PropertyGroup>
 		<!-- This should point to wherever your games primary EXE is -->
 		<TheLongDarkPath>C:\Program Files (x86)\Steam\steamapps\common\TheLongDark</TheLongDarkPath>
-		<ReleaseFolderPath>D:\Personal Projects\The Long Dark\Projects\Maintained\AdaptiveArsenal\Release</ReleaseFolderPath>
+		<ReleaseFolderPath>D:\The Long Dark\Projects\Maintained\AdaptiveArsenal\Release</ReleaseFolderPath>
 		<FileVersion></FileVersion>
 		<AssemblyVersion></AssemblyVersion>
 	</PropertyGroup>

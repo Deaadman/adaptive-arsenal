@@ -13,8 +13,6 @@ public class AmmoProjectile : MonoBehaviour
     private GunType m_GunType;
     private LineRenderer m_LineRenderer;
     private Rigidbody m_Rigidbody;
-    private int m_RifleSkillLevel;
-    private int m_RevolverSkillLevel;
 #nullable enable
     #endregion
 
@@ -23,11 +21,6 @@ public class AmmoProjectile : MonoBehaviour
     /// Multiplier for the gun's muzzle velocity, affecting projectile speed.
     /// </summary>
     private readonly float m_ScaleMultiplier = 0.175f;
-
-    /// <summary>
-    /// Multiplier for the effect of wind on the projectile's trajectory.
-    /// </summary>
-    private readonly float m_WindEffectMultiplier = 1f;
 
     /// <summary>
     /// Base damage dealt by the weapon, defaulting to 100 for all weapons.
@@ -61,7 +54,6 @@ public class AmmoProjectile : MonoBehaviour
 
     #region Other
     private readonly List<Vector3> m_TrajectoryPoints = [];
-    private Vector3 m_WindEffect;
     private Vector3 m_InitialPosition;
     #endregion
 
@@ -114,19 +106,6 @@ public class AmmoProjectile : MonoBehaviour
             );
             m_LineRenderer.colorGradient = gradient;
         }
-
-        Wind windComponent = GameManager.GetWindComponent();
-        if (windComponent != null)
-        {
-            float windSpeedMetersPerSec = windComponent.m_CurrentMPH * 0.44704f;
-            int currentSkillLevel = GetCurrentSkillLevel();
-            float adjustedWindEffectMultiplier = Mathf.Max(1f - 0.1f * currentSkillLevel, 0f);
-            m_WindEffect = windComponent.m_CurrentDirection.normalized * windSpeedMetersPerSec * adjustedWindEffectMultiplier;
-        }
-        else
-        {
-            m_WindEffect = Vector3.zero;
-        }
     }
 
     void Fire()
@@ -146,15 +125,10 @@ public class AmmoProjectile : MonoBehaviour
         m_LineRenderer.startColor = new Color(1f, 1f, 1f, 0f);
         m_LineRenderer.endColor = Color.white * 0.7f;
 
-        Vector3 initialForce = transform.forward * (m_GunExtension.m_GunStats.m_MuzzleVelocity * m_ScaleMultiplier) + m_WindEffect;
+        Vector3 initialForce = transform.forward * (m_GunExtension.m_GunStats.m_MuzzleVelocity * m_ScaleMultiplier);
         m_Rigidbody.AddForce(initialForce, ForceMode.VelocityChange);
 
         m_InitialPosition = transform.position;
-    }
-
-    int GetCurrentSkillLevel()
-    {
-        return m_GunType == GunType.Rifle ? m_RifleSkillLevel : m_RevolverSkillLevel;
     }
 
     void InitializeComponents()
@@ -165,8 +139,6 @@ public class AmmoProjectile : MonoBehaviour
         {
             m_GunExtension = GameManager.GetPlayerManagerComponent().m_ItemInHands.GetComponent<GunExtension>();
         }
-        m_RifleSkillLevel = GameManager.GetSkillRifle().GetCurrentTierNumber();
-        m_RevolverSkillLevel = GameManager.GetSkillRevolver().GetCurrentTierNumber();
 
         ConfigureComponents();
     }
@@ -257,12 +229,6 @@ public class AmmoProjectile : MonoBehaviour
     }
 
     void Update()
-    {
-        UpdateLineRenderer();
-        m_Rigidbody.AddForce(m_WindEffect * Time.deltaTime, ForceMode.Acceleration);
-    }
-
-    void UpdateLineRenderer()
     {
         if (m_LineRenderer != null)
         {
