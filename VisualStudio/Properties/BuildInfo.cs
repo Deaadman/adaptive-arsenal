@@ -8,7 +8,7 @@ internal static class BuildInfo
     /// <summary>Who made the mod</summary>
     public const string Author                          = "Deadman";
     /// <summary>Current version (e.g. 1.0.0, 1.0.0-Alpha, 1.0.0-Beta, 1.0.0-RC, etc.) </summary>
-    public const string Version                         = "1.0.3-DevelopmentBuild";
+    public const string Version                         = "1.0.3-Beta";
     /// <summary>Version shown in DnSpy</summary>
     public const string AssemblyVersion                 = "1.0.3.0";
     /// <summary>Name used on GUI's, like ModSettings</summary>
