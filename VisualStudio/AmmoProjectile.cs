@@ -20,7 +20,7 @@ public class AmmoProjectile : MonoBehaviour
     /// <summary>
     /// Multiplier for the gun's muzzle velocity, affecting projectile speed.
     /// </summary>
-    private readonly float m_ScaleMultiplier = 0.75f;
+    private readonly float m_ScaleMultiplier = 0.5f;
 
     /// <summary>
     /// Base damage dealt by the weapon, defaulting to 100 for all weapons.
@@ -119,8 +119,8 @@ public class AmmoProjectile : MonoBehaviour
 
         m_Rigidbody.velocity = Vector3.zero;
         m_Rigidbody.mass = 0.02f;
-        m_Rigidbody.drag = 0.01f;
-        m_Rigidbody.angularDrag = 0.05f;
+        m_Rigidbody.drag = 0.1f;
+        m_Rigidbody.angularDrag = 0.1f;
 
         m_LineRenderer.startColor = new Color(1f, 1f, 1f, 0f);
         m_LineRenderer.endColor = Color.white * 0.7f;
@@ -174,6 +174,8 @@ public class AmmoProjectile : MonoBehaviour
 
         baseAi.SetupDamageForAnim(transform.position, GameManager.GetPlayerTransform().position, localizedDamage);
         baseAi.ApplyDamage(damage, bleedOutMinutes, DamageSource.Player, collider);
+
+        Logging.Log($"Target hit: {baseAi != null}, Limb: {collider}, Damage: {damage}");
 
         return baseAi;
     }
@@ -264,6 +266,6 @@ public class AmmoProjectile : MonoBehaviour
                     Destroy(m_LineRenderer);
                 }
             }
-        }
+        }       
     }
 }

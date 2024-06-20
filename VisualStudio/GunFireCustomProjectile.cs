@@ -37,12 +37,45 @@ class GunFireCustomProjectile
         {
             Camera weaponCamera = __instance.m_Camera.GetWeaponCamera();
             Camera mainCamera = GameManager.GetMainCamera();
-            Vector3 screenPoint = weaponCamera.WorldToScreenPoint(__instance.BulletEmissionLocator.transform.position);
-            Vector3 screenPointForward = weaponCamera.WorldToScreenPoint(__instance.BulletEmissionLocator.transform.position + __instance.BulletEmissionLocator.transform.forward);
-            Vector3 worldPoint = mainCamera.ScreenToWorldPoint(screenPoint);
-            Vector3 direction = Vector3.Normalize(mainCamera.ScreenToWorldPoint(screenPointForward) - worldPoint);
-            position = PlayerManager.MaybeAdjustShotPositionForNearShot(__instance.BulletEmissionLocator.transform.position, worldPoint, direction);
-            rotation = Quaternion.LookRotation(direction, Vector3.up);
+
+            Transform transform = null;
+            Transform transform2 = null;
+
+            if (__instance.m_Weapon.m_FirstPersonWeaponRightHand && __instance.m_Weapon.m_FirstPersonWeaponRightHand.m_BulletEmissionPoint)
+            {
+                __instance.BulletEmissionLocator = __instance.m_Weapon.m_FirstPersonWeaponRightHand.m_BulletEmissionPoint.transform;
+                transform = __instance.m_Weapon.m_FirstPersonWeaponRightHand.m_FrontSight;
+                transform2 = __instance.m_Weapon.m_FirstPersonWeaponRightHand.m_RearSight;
+            }
+            else if (__instance.m_Weapon.m_FirstPersonWeaponShoulder && __instance.m_Weapon.m_FirstPersonWeaponShoulder.m_BulletEmissionPoint)
+            {
+                __instance.BulletEmissionLocator = __instance.m_Weapon.m_FirstPersonWeaponShoulder.m_BulletEmissionPoint.transform;
+                transform = __instance.m_Weapon.m_FirstPersonWeaponShoulder.m_FrontSight;
+                transform2 = __instance.m_Weapon.m_FirstPersonWeaponShoulder.m_RearSight;
+            }
+
+            position = Vector3.zero;
+            rotation = Quaternion.identity;
+
+            if (transform != null && transform2 != null)
+            {
+                Vector3 vector2 = weaponCamera.WorldToScreenPoint(transform.position);
+                Vector3 vector3 = weaponCamera.WorldToScreenPoint(transform2.position);
+                Vector3 vector4 = mainCamera.ScreenToWorldPoint(vector2);
+                Vector3 vector5 = mainCamera.ScreenToWorldPoint(vector3);
+                Vector3 vector6 = Vector3.Normalize(vector4 - vector5);
+                position = PlayerManager.MaybeAdjustShotPositionForNearShot(transform.position, vector4, vector6);
+                rotation = Quaternion.LookRotation(vector6, Vector3.up);
+            }
+            else if (__instance.BulletEmissionLocator != null)
+            {
+                Vector3 vector8 = weaponCamera.WorldToScreenPoint(__instance.BulletEmissionLocator.transform.position);
+                Vector3 vector9 = weaponCamera.WorldToScreenPoint(__instance.BulletEmissionLocator.transform.position + __instance.BulletEmissionLocator.transform.forward);
+                Vector3 vector10 = mainCamera.ScreenToWorldPoint(vector8);
+                Vector3 vector11 = Vector3.Normalize(mainCamera.ScreenToWorldPoint(vector9) - vector10);
+                position = PlayerManager.MaybeAdjustShotPositionForNearShot(__instance.BulletEmissionLocator.transform.position, vector10, vector11);
+                rotation = Quaternion.LookRotation(vector11, Vector3.up);
+            }
         }
     }
 }
