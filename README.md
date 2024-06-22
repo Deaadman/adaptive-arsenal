@@ -22,8 +22,6 @@ Adaptive Arsenal is a modification that improves upon existing weapon mechanics 
 - **Bullet System Overhaul:** Replaced the existing Raycast / Hitscan bullet system with projectiles.
 - **Visuals:** A trail follows behind the bullet for visual representation of its landing location.
 - **Muzzle Velocities:** Each weapon has a unique muzzle velocity parameter set, determining how far the bullet can travel.
-- **Wind Direction / Speed:** The bullet's trajectory is affected by the direction and speed of the wind.
-- **Skill Levels:** The higher your skill level with either weapon, the less the wind affects the bullet's trajectory.
 - **Damage Drop-off:** Each weapon has a unique damage drop-off threshold; once it's passed, the damage will decrease from that point onwards.
 
 ---

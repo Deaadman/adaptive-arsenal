@@ -2,7 +2,7 @@ using System.Text;
 
 namespace AdaptiveArsenal.Utilities;
 
-internal class Logging
+internal abstract class Logging
 {
     internal static void LogStarter()                                                     => Melon<Mod>.Logger.Msg($"Mod loaded with v{Properties.BuildInfo.Version}");
     internal static void LogSeperator(params object[] parameters)                         => Melon<Mod>.Logger.Msg("==============================================================================", parameters);
