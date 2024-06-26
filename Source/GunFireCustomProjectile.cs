@@ -1,4 +1,6 @@
-﻿namespace AdaptiveArsenal;
+﻿using AdaptiveArsenal.Utilities;
+
+namespace AdaptiveArsenal;
 
 internal static class GunFireCustomProjectile
 {
@@ -7,16 +9,20 @@ internal static class GunFireCustomProjectile
     {
         private static void Prefix(vp_FPSShooter __instance)
         {
-            if (Time.time < __instance.m_NextAllowedFireTime || __instance.m_Weapon.ReloadInProgress() || !GameManager.GetPlayerAnimationComponent().IsAllowedToFire(__instance.m_Weapon.m_GunItem.m_AllowHipFire) || GameManager.GetPlayerAnimationComponent().IsReloading() || __instance.m_Weapon.GetAmmoCount() < 1)
-            {
-                return;
-            }
-
-            SetBulletEmissionLocator(__instance);
-
+            if (Time.time < __instance.m_NextAllowedFireTime || __instance.m_Weapon.ReloadInProgress() || !GameManager.GetPlayerAnimationComponent().IsAllowedToFire(__instance.m_Weapon.m_GunItem.m_AllowHipFire) || GameManager.GetPlayerAnimationComponent().IsReloading() || __instance.m_Weapon.GetAmmoCount() < 1) return;
             if (!__instance.ProjectilePrefab.GetComponent<AmmoProjectile>()) return;
+            
+            SetBulletEmissionLocator(__instance);
             CalculateProjectileTransform(__instance, out var position, out var rotation);
-            AmmoProjectile.SpawnAndFire(__instance.ProjectilePrefab, position, rotation);
+
+            if (__instance.m_Weapon.m_GunItem.m_AllowHipFire && !GameManager.GetPlayerAnimationComponent().IsAllowedToFire(false))
+            {
+                AmmoProjectile.SpawnAndFire(__instance.ProjectilePrefab, position, Quaternion.LookRotation(GameManager.GetVpFPSCamera().transform.forward));
+            }
+            else
+            {
+                AmmoProjectile.SpawnAndFire(__instance.ProjectilePrefab, position, rotation);
+            }
         }
 
         private static void SetBulletEmissionLocator(vp_FPSShooter instance)
@@ -44,6 +50,7 @@ internal static class GunFireCustomProjectile
                 instance.BulletEmissionLocator = instance.m_Weapon.m_FirstPersonWeaponRightHand.m_BulletEmissionPoint.transform;
                 transform = instance.m_Weapon.m_FirstPersonWeaponRightHand.m_FrontSight;
                 transform2 = instance.m_Weapon.m_FirstPersonWeaponRightHand.m_RearSight;
+                
             }
             else if (instance.m_Weapon.m_FirstPersonWeaponShoulder && instance.m_Weapon.m_FirstPersonWeaponShoulder.m_BulletEmissionPoint)
             {
