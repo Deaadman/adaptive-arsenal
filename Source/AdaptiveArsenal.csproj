@@ -28,7 +28,7 @@
 
 	<!-- List of used references -->
 	<ItemGroup>
-		<PackageReference Include="STBlade.Modding.TLD.Il2CppAssemblies.Windows" Version="2.25.0" />
+		<PackageReference Include="STBlade.Modding.TLD.Il2CppAssemblies.Windows" Version="2.28.0" />
 		
 		<!-- Uncomment whatever is required for your needs. -->
 		<!-- <PackageReference Include="STBlade.Modding.TLD.CraftingRevisions" Version="2.2.1" /> -->
