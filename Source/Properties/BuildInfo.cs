@@ -8,13 +8,13 @@ internal static class BuildInfo
     /// <summary>Who made the mod</summary>
     public const string Author                          = "Deadman";
     /// <summary>Current version (e.g. 1.0.0, 1.0.0-Alpha, 1.0.0-Beta, 1.0.0-RC, etc.) </summary>
-    public const string Version                         = "1.0.3-Beta.3";
+    public const string Version                         = "1.0.3";
     /// <summary>Version shown in DnSpy</summary>
     public const string AssemblyVersion                 = "1.0.3.0";
     /// <summary>Name used on GUI's, like ModSettings</summary>
     public const string GUIName                         = "Adaptive Arsenal";
     /// <summary>The minimum Melon Loader version that your mod requires.</summary>
-    public const string MelonLoaderVersion              = "0.6.4";
+    public const string MelonLoaderVersion              = "0.6.1";
     #endregion
 
     #region Optional

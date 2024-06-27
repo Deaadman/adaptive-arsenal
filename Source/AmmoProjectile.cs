@@ -155,11 +155,7 @@ public class AmmoProjectile : MonoBehaviour
             _ => null
         };
         
-        if (baseAi == null)
-        {
-            Logging.Log($"No valid target was hit. You missed :/");
-            return;
-        }
+        if (baseAi == null) return;
 
         var localizedDamage = victim.GetComponent<LocalizedDamage>();
         var weaponSource = m_GunType.ToWeaponSource();
@@ -187,8 +183,6 @@ public class AmmoProjectile : MonoBehaviour
 
         baseAi.SetupDamageForAnim(transform.position, GameManager.GetPlayerTransform().position, localizedDamage);
         baseAi.ApplyDamage(damage, bleedOutMinutes, DamageSource.Player, collider);
-
-        Logging.Log($"Target hit: {baseAi.GetType().Name}, Limb: {collider}, Damage: {damage}");
     }
 
     private void OnCollisionEnter(Collision collision)
