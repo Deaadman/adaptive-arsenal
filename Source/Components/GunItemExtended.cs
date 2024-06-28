@@ -1,8 +1,10 @@
-﻿namespace AdaptiveArsenal;
+﻿namespace AdaptiveArsenal.Components;
 
 [RegisterTypeInIl2Cpp(false)]
-public class GunExtension : MonoBehaviour
+public class GunItemExtended : MonoBehaviour
 {
+    internal GunStatistics? GunStats;
+    
     private static readonly Dictionary<string, GunStatistics> GunData = new()
     {
         {"GEAR_Rifle_Barbs", new GunStatistics(744, 175, 325)},
@@ -21,10 +23,6 @@ public class GunExtension : MonoBehaviour
         internal readonly int EffectiveRange = effectiveRange;
         internal readonly int MaxRange = maxRange;
     }
-
-#nullable disable
-    internal GunStatistics GunStats;
-#nullable enable
 
     private void Awake()
     {

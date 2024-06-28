@@ -1,4 +1,5 @@
-﻿using UnityEngine.AddressableAssets;
+﻿using AdaptiveArsenal.Components;
+using UnityEngine.AddressableAssets;
 
 namespace AdaptiveArsenal;
 
@@ -9,10 +10,8 @@ internal static class InitializeComponents
     {
         private static void Postfix(GearItem __instance)
         {
-            if (__instance.GetComponent<GunItem>() != null)
-            {
-                _ = __instance.gameObject.GetComponent<GunExtension>() ?? __instance.gameObject.AddComponent<GunExtension>();
-            }
+            if (__instance.GetComponent<GunItem>() == null) return;
+            _ = __instance.gameObject.GetComponent<GunItemExtended>() ?? __instance.gameObject.AddComponent<GunItemExtended>();
         }
     }
 
@@ -31,7 +30,7 @@ internal static class InitializeComponents
             if (gearItem == null) return;
             var newProjectilePrefab = Addressables.LoadAsset<GameObject>(gearItem).WaitForCompletion();
             if (newProjectilePrefab == null) return;
-            _ = newProjectilePrefab.GetComponent<AmmoProjectile>() ?? newProjectilePrefab.AddComponent<AmmoProjectile>();
+            _ = newProjectilePrefab.GetComponent<BulletItem>() ?? newProjectilePrefab.AddComponent<BulletItem>();
             __instance.ProjectileCustomPrefab = true;
             __instance.ProjectilePrefab = newProjectilePrefab;
         }

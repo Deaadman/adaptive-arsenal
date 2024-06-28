@@ -1,8 +1,8 @@
-﻿using AdaptiveArsenal.Utilities;
+﻿using AdaptiveArsenal.Components;
 
 namespace AdaptiveArsenal;
 
-internal static class GunFireCustomProjectile
+internal static class GunItemFireBulletItem
 {
     [HarmonyPatch(typeof(vp_FPSShooter), nameof(vp_FPSShooter.Fire))]
     private static class FireCustomProjectile
@@ -10,18 +10,18 @@ internal static class GunFireCustomProjectile
         private static void Prefix(vp_FPSShooter __instance)
         {
             if (Time.time < __instance.m_NextAllowedFireTime || __instance.m_Weapon.ReloadInProgress() || !GameManager.GetPlayerAnimationComponent().IsAllowedToFire(__instance.m_Weapon.m_GunItem.m_AllowHipFire) || GameManager.GetPlayerAnimationComponent().IsReloading() || __instance.m_Weapon.GetAmmoCount() < 1) return;
-            if (!__instance.ProjectilePrefab.GetComponent<AmmoProjectile>()) return;
+            if (!__instance.ProjectilePrefab.GetComponent<BulletItem>()) return;
             
             SetBulletEmissionLocator(__instance);
             CalculateProjectileTransform(__instance, out var position, out var rotation);
 
             if (__instance.m_Weapon.m_GunItem.m_AllowHipFire && !GameManager.GetPlayerAnimationComponent().IsAllowedToFire(false))
             {
-                AmmoProjectile.SpawnAndFire(__instance.ProjectilePrefab, position, Quaternion.LookRotation(GameManager.GetVpFPSCamera().transform.forward));
+                BulletItem.SpawnAndFire(__instance.ProjectilePrefab, position, Quaternion.LookRotation(GameManager.GetVpFPSCamera().transform.forward));
             }
             else
             {
-                AmmoProjectile.SpawnAndFire(__instance.ProjectilePrefab, position, rotation);
+                BulletItem.SpawnAndFire(__instance.ProjectilePrefab, position, rotation);
             }
         }
 

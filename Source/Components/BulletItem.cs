@@ -1,15 +1,15 @@
 ﻿using AdaptiveArsenal.Utilities;
 using Il2CppTLD.Stats;
 
-namespace AdaptiveArsenal;
+namespace AdaptiveArsenal.Components;
 
 [RegisterTypeInIl2Cpp(false)]
-public class AmmoProjectile : MonoBehaviour
+public class BulletItem : MonoBehaviour
 {
     #region References
 #nullable disable
     private AmmoItem m_AmmoItem;
-    private GunExtension m_GunExtension;
+    private GunItemExtended _mGunItemExtended;
     private GunType m_GunType;
     private LineRenderer m_LineRenderer;
     private Rigidbody m_Rigidbody;
@@ -65,8 +65,8 @@ public class AmmoProjectile : MonoBehaviour
 
     private float CalculateDamageByDistance(float distance)
     {
-        float effectiveRange = m_GunExtension.GunStats.EffectiveRange;
-        float maxRange = m_GunExtension.GunStats.MaxRange;
+        float effectiveRange = _mGunItemExtended.GunStats.EffectiveRange;
+        float maxRange = _mGunItemExtended.GunStats.MaxRange;
 
         if (distance <= effectiveRange)
         {
@@ -128,7 +128,7 @@ public class AmmoProjectile : MonoBehaviour
         m_LineRenderer.startColor = new Color(1f, 1f, 1f, 0f);
         m_LineRenderer.endColor = Color.white * 0.7f;
 
-        var initialForce = transform.forward * (m_GunExtension.GunStats.MuzzleVelocity * m_ScaleMultiplier);
+        var initialForce = transform.forward * (_mGunItemExtended.GunStats.MuzzleVelocity * m_ScaleMultiplier);
         m_Rigidbody.AddForce(initialForce, ForceMode.VelocityChange);
 
         m_InitialPosition = transform.position;
@@ -140,7 +140,7 @@ public class AmmoProjectile : MonoBehaviour
         m_AmmoItem = GetComponent<AmmoItem>();
         if (GameManager.GetPlayerManagerComponent().m_ItemInHands != null)
         {
-            m_GunExtension = GameManager.GetPlayerManagerComponent().m_ItemInHands.GetComponent<GunExtension>();
+            _mGunItemExtended = GameManager.GetPlayerManagerComponent().m_ItemInHands.GetComponent<GunItemExtended>();
         }
 
         ConfigureComponents();
@@ -204,7 +204,7 @@ public class AmmoProjectile : MonoBehaviour
         var gameObject = Instantiate(prefab, startPos, startRot);
         gameObject.name = prefab.name;
         gameObject.transform.parent = null;
-        gameObject.GetComponent<AmmoProjectile>().Fire();
+        gameObject.GetComponent<BulletItem>().Fire();
         return gameObject;
     }
 
