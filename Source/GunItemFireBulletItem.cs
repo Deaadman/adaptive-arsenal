@@ -9,7 +9,11 @@ internal static class GunItemFireBulletItem
     {
         private static void Prefix(vp_FPSShooter __instance)
         {
-            if (Time.time < __instance.m_NextAllowedFireTime || __instance.m_Weapon.ReloadInProgress() || !GameManager.GetPlayerAnimationComponent().IsAllowedToFire(__instance.m_Weapon.m_GunItem.m_AllowHipFire) || GameManager.GetPlayerAnimationComponent().IsReloading() || __instance.m_Weapon.GetAmmoCount() < 1) return;
+            if (Time.time < __instance.m_NextAllowedFireTime || __instance.m_Weapon.ReloadInProgress() 
+                                                             || !GameManager.GetPlayerAnimationComponent().IsAllowedToFire(__instance.m_Weapon.m_GunItem.m_AllowHipFire) 
+                                                             || GameManager.GetPlayerAnimationComponent().IsReloading() 
+                                                             || __instance.m_Weapon.GetAmmoCount() < 1
+                                                             || __instance.m_Weapon.m_GunItem.m_IsJammed) return;
             if (!__instance.ProjectilePrefab.GetComponent<BulletItem>()) return;
             
             SetBulletEmissionLocator(__instance);
