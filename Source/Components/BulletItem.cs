@@ -195,8 +195,8 @@ public class BulletItem : MonoBehaviour
 
         m_LineRendererStartFadeOut = true;
         m_LineRendererFadeTimer = 0f;
-
-        Destroy(gameObject, m_LineRendererFadeDuration);
+        
+        Destroy(gameObject);
     }
 
     internal static GameObject SpawnAndFire(GameObject prefab, Vector3 startPos, Quaternion startRot)

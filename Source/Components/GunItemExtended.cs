@@ -3,7 +3,9 @@
 [RegisterTypeInIl2Cpp(false)]
 public class GunItemExtended : MonoBehaviour
 {
-    internal GunStatistics? GunStats;
+    #nullable disable
+    internal GunStatistics GunStats;
+    #nullable enable
     
     private static readonly Dictionary<string, GunStatistics> GunData = new()
     {
