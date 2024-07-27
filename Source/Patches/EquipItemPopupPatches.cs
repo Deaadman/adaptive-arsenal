@@ -14,24 +14,39 @@ internal static class EquipItemPopupPatches
     public static class UpdateAmmoStatusPatch
     {
         private static int lastRoundsInClip = -1;
+        private static GunItem? lastGunItem = null;
     
         private static void Postfix(EquipItemPopup __instance)
         {
             var ammoSpriteAnimator = __instance.GetComponent<AmmoSpriteAnimator>();
             
             var itemInHands = GameManager.GetPlayerManagerComponent().m_ItemInHands;
-            if (itemInHands == null || itemInHands.m_GunItem == null || itemInHands.m_GunItem.m_GunType == GunType.FlareGun) return;
+            if (itemInHands == null || itemInHands.m_GunItem == null || itemInHands.m_GunItem.m_GunType == GunType.FlareGun) 
+            {
+                lastGunItem = null;
+                lastRoundsInClip = -1;
+                return;
+            }
             
-            var roundsInClip = itemInHands.m_GunItem.NumRoundsInClip();
-            if (roundsInClip < itemInHands.m_GunItem.m_ClipSize && roundsInClip < __instance.m_ListAmmoSprites.Length)
+            var currentGunItem = itemInHands.m_GunItem;
+            var roundsInClip = currentGunItem.NumRoundsInClip();
+
+            if (currentGunItem != lastGunItem)
+            {
+                lastGunItem = currentGunItem;
+                lastRoundsInClip = roundsInClip;
+                return;
+            }
+
+            if (roundsInClip < currentGunItem.m_ClipSize && roundsInClip < __instance.m_ListAmmoSprites.Length)
             {
                 if (roundsInClip < lastRoundsInClip)
                 {
                     var startPosition = __instance.m_ListAmmoSprites[roundsInClip].transform.localPosition;
-                    MelonCoroutines.Start(ammoSpriteAnimator.CasingEjectionAnimation(startPosition, __instance.m_ListAmmoSprites[0].transform.parent, itemInHands.m_GunItem.m_GunType));
+                    MelonCoroutines.Start(ammoSpriteAnimator.CasingEjectionAnimation(startPosition, __instance.m_ListAmmoSprites[0].transform.parent, currentGunItem.m_GunType));
                 }
             }
-        
+    
             lastRoundsInClip = roundsInClip;
         }
     }
