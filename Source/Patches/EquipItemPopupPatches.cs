@@ -7,10 +7,7 @@ internal static class EquipItemPopupPatches
     [HarmonyPatch(typeof(EquipItemPopup), nameof(EquipItemPopup.Awake))]
     private static class AttachAmmoSpriteAnimatorComponent
     {
-        private static void Postfix(EquipItemPopup __instance)
-        {
-            _ = __instance.GetComponent<AmmoSpriteAnimator>() ?? __instance.gameObject.AddComponent<AmmoSpriteAnimator>();
-        }
+        private static void Postfix(EquipItemPopup __instance) => _ = __instance.GetComponent<AmmoSpriteAnimator>() ?? __instance.gameObject.AddComponent<AmmoSpriteAnimator>();
     }
     
     [HarmonyPatch(typeof(EquipItemPopup), nameof(EquipItemPopup.UpdateAmmoStatus))]

@@ -20,6 +20,7 @@ public class ProjectileItem : MonoBehaviour
     private const float MaxRange = 500f;
     private float m_LineRendererFadeTimer;
 
+    private static readonly int[] RevolverEffectiveRange = [40, 50, 60, 80, 100];
     private readonly List<Vector3> m_TrajectoryPoints = [];
     private Vector3 m_InitialPosition;
 
@@ -44,6 +45,25 @@ public class ProjectileItem : MonoBehaviour
         enabled = false;
     }
 
+    public static float CalculateAccuracy(GunItem gunItem, bool isHipFire, bool isStanding)
+    {
+        var baseAccuracy = gunItem.m_GunType switch
+        {
+            GunType.Rifle => GameManager.GetSkillRifle().GetEffectiveRange(),
+            GunType.Revolver => GetEffectiveRevolverRange() + gunItem.m_AccuracyRange,
+            _ => gunItem.m_AccuracyRange
+        };
+
+        var accuracyMultiplier = 1f;
+        
+        if (isHipFire) accuracyMultiplier *= 0.6f;
+        if (isStanding) accuracyMultiplier *= 0.8f;
+
+        Logging.Log($"Accuracy Percentage: {baseAccuracy * accuracyMultiplier}%");
+        
+        return baseAccuracy * accuracyMultiplier;
+    }
+    
     private static float CalculateDamageByDistance(float distance) => Mathf.Lerp(Damage, MinDamage, Mathf.Clamp01(distance / MaxRange));
 
     private void ConfigureComponents()
@@ -86,6 +106,8 @@ public class ProjectileItem : MonoBehaviour
         m_InitialPosition = transform.position;
     }
 
+    private static float GetEffectiveRevolverRange() => RevolverEffectiveRange[GameManager.GetSkillsManager().GetSkill(SkillType.Revolver).GetCurrentTierNumber()];
+    
     private static int GetMuzzleVelocity(string gearItemName) => GunMuzzleVelocities.Keys.Where(gearItemName.Contains).Select(key => GunMuzzleVelocities[key]).FirstOrDefault();
 
     private void TryInflictDamage(GameObject victim, string collider)
@@ -122,8 +144,6 @@ public class ProjectileItem : MonoBehaviour
 
         baseAi.SetupDamageForAnim(transform.position, GameManager.GetPlayerTransform().position, localizedDamage);
         baseAi.ApplyDamage(damage, bleedOutMinutes, DamageSource.Player, collider);
-        
-        Logging.Log($"Projectile hit: Distance={distance:F2}m, Base Damage={distanceBasedDamage:F2}, " + $"Body Part={collider}, Damage Scale={damageScaleFactor:F2}, Final Damage={damage:F2}");
     }
 
     private void OnCollisionEnter(Collision collision)

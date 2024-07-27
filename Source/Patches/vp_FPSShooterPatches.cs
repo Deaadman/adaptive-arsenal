@@ -1,6 +1,7 @@
 using AdaptiveArsenal.Components;
 using AdaptiveArsenal.Utilities;
 using UnityEngine.AddressableAssets;
+using Random = UnityEngine.Random;
 
 namespace AdaptiveArsenal.Patches;
 
@@ -42,13 +43,20 @@ internal static class vp_FPSShooterPatches
             ProjectileUtilities.SetBulletEmissionLocator(__instance);
             ProjectileUtilities.CalculateProjectileTransform(__instance, out var position, out var rotation);
 
-            if (__instance.m_Weapon.m_GunItem.m_AllowHipFire && !GameManager.GetPlayerAnimationComponent().IsAllowedToFire(false))
+            var isHipFire = __instance.m_Weapon.m_GunItem.m_AllowHipFire && !GameManager.GetPlayerAnimationComponent().IsAllowedToFire(false);
+            var isStanding = !GameManager.GetPlayerManagerComponent().PlayerIsCrouched();
+
+            var accuracy = ProjectileItem.CalculateAccuracy(__instance.m_Weapon.m_GunItem, isHipFire, isStanding);
+            var inaccuracyAngle = Mathf.Lerp(0f, 10f, 1f - accuracy / 100f);
+            var randomRotation = new Vector3(Random.Range(-inaccuracyAngle, inaccuracyAngle), Random.Range(-inaccuracyAngle, inaccuracyAngle), 0);
+
+            if (isHipFire)
             {
-                ProjectileItem.SpawnAndFire(__instance.ProjectilePrefab, position, Quaternion.LookRotation(GameManager.GetVpFPSCamera().transform.forward));
+                ProjectileItem.SpawnAndFire(__instance.ProjectilePrefab, position, Quaternion.Euler(randomRotation) * Quaternion.LookRotation(GameManager.GetVpFPSCamera().transform.forward));
             }
             else
             {
-                ProjectileItem.SpawnAndFire(__instance.ProjectilePrefab, position, rotation);
+                ProjectileItem.SpawnAndFire(__instance.ProjectilePrefab, position, rotation * Quaternion.Euler(randomRotation));
             }
         }
     }

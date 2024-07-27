@@ -1,5 +1,6 @@
 using AdaptiveArsenal.Utilities;
 using System.Collections;
+using Il2CppInterop.Runtime.Attributes;
 
 namespace AdaptiveArsenal.Animators;
 
@@ -9,6 +10,7 @@ public class AmmoSpriteAnimator : MonoBehaviour
     private GameObject ammoPrefab;
     private readonly List<GameObject> activeAmmoSprites = [];
 
+    [HideFromIl2Cpp]
     internal IEnumerator CasingEjectionAnimation(Vector3 startPosition, Transform parentTransform, GunType gunType)
     {
         var casingObject = Instantiate(ammoPrefab, parentTransform);

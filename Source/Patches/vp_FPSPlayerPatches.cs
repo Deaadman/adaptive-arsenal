@@ -7,10 +7,7 @@ internal static class vp_FPSPlayerPatches
     {
         private static void Postfix(vp_FPSPlayer __instance)
         {
-            if (GameManager.GetPlayerManagerComponent().GetControlMode() == PlayerControlMode.AimRevolver && GameManager.IsMoveInputUnblocked())
-            {
-                __instance.InputWalk();
-            }
+            if (GameManager.GetPlayerManagerComponent().GetControlMode() == PlayerControlMode.AimRevolver && GameManager.IsMoveInputUnblocked()) __instance.InputWalk();
         }
     }
 }
