@@ -17,4 +17,4 @@
 
 [assembly: VerifyLoaderVersion(BuildInfo.MelonLoaderVersion, true)]
 [assembly: MelonPriority(BuildInfo.Priority)]
-[assembly: MelonIncompatibleAssemblies(null)] // Put any incompatible assemblies here like: ("DisableBreathEffect", "NonPotableToiletWater").
+[assembly: MelonIncompatibleAssemblies(null)]

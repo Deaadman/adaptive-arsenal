@@ -4,58 +4,24 @@ using Il2CppTLD.Stats;
 namespace AdaptiveArsenal.Components;
 
 [RegisterTypeInIl2Cpp(false)]
-public class BulletItem : MonoBehaviour
+public class ProjectileItem : MonoBehaviour
 {
-    #region References
-#nullable disable
     private AmmoItem m_AmmoItem;
-    private GunItemExtended _mGunItemExtended;
+    private GunItemExtension _mGunItemExtension;
     private GunType m_GunType;
     private LineRenderer m_LineRenderer;
     private Rigidbody m_Rigidbody;
-#nullable enable
-    #endregion
-
-    #region Properties
-    /// <summary>
-    /// Multiplier for the gun's muzzle velocity, affecting projectile speed.
-    /// </summary>
-    private readonly float m_ScaleMultiplier = 0.5f;
-
-    /// <summary>
-    /// Base damage dealt by the weapon, defaulting to 100 for all weapons.
-    /// </summary>
-    private readonly float m_Damage = 100f;
-
-    /// <summary>
-    /// Minimum damage dealt by the weapon at or beyond its maximum range.
-    /// </summary>
-    private readonly float m_MinDamage = 20f;
-    #endregion
-
-    #region LineRenderer Properties
-    /// <summary>
-    /// The maximum length at which the LineRenderer will render at.
-    /// </summary>
-    private readonly float m_LineRendererMaxLength = 200f;
-
-    /// <summary>
-    /// Will the LineRenderer start to fade out?
-    /// </summary>
+    
     private bool m_LineRendererStartFadeOut;
-
-    /// <summary>
-    /// The duration of how long it'll take for the LineRenderer to fade out in seconds.
-    /// </summary>
-    private const float m_LineRendererFadeDuration = 2f;
-
+    private const float ScaleMultiplier = 0.5f;
+    private const float Damage = 100f;
+    private const float MinDamage = 20f;
+    private const float LineRendererMaxLength = 200f;
+    private const float LineRendererFadeDuration = 2f;
     private float m_LineRendererFadeTimer;
-    #endregion
 
-    #region Other
     private readonly List<Vector3> m_TrajectoryPoints = [];
     private Vector3 m_InitialPosition;
-    #endregion
 
     private void Awake()
     {
@@ -65,21 +31,21 @@ public class BulletItem : MonoBehaviour
 
     private float CalculateDamageByDistance(float distance)
     {
-        float effectiveRange = _mGunItemExtended.GunStats.EffectiveRange;
-        float maxRange = _mGunItemExtended.GunStats.MaxRange;
+        float effectiveRange = _mGunItemExtension.GunStats.EffectiveRange;
+        float maxRange = _mGunItemExtension.GunStats.MaxRange;
 
         if (distance <= effectiveRange)
         {
-            return m_Damage;
+            return Damage;
         }
         else if (distance > maxRange)
         {
-            return m_MinDamage;
+            return MinDamage;
         }
         else
         {
             var normalizedDistance = (distance - effectiveRange) / (maxRange - effectiveRange);
-            return Mathf.Lerp(m_Damage, m_MinDamage, normalizedDistance);
+            return Mathf.Lerp(Damage, MinDamage, normalizedDistance);
         }
     }
 
@@ -128,7 +94,7 @@ public class BulletItem : MonoBehaviour
         m_LineRenderer.startColor = new Color(1f, 1f, 1f, 0f);
         m_LineRenderer.endColor = Color.white * 0.7f;
 
-        var initialForce = transform.forward * (_mGunItemExtended.GunStats.MuzzleVelocity * m_ScaleMultiplier);
+        var initialForce = transform.forward * (_mGunItemExtension.GunStats.MuzzleVelocity * ScaleMultiplier);
         m_Rigidbody.AddForce(initialForce, ForceMode.VelocityChange);
 
         m_InitialPosition = transform.position;
@@ -140,7 +106,7 @@ public class BulletItem : MonoBehaviour
         m_AmmoItem = GetComponent<AmmoItem>();
         if (GameManager.GetPlayerManagerComponent().m_ItemInHands != null)
         {
-            _mGunItemExtended = GameManager.GetPlayerManagerComponent().m_ItemInHands.GetComponent<GunItemExtended>();
+            _mGunItemExtension = GameManager.GetPlayerManagerComponent().m_ItemInHands.GetComponent<GunItemExtension>();
         }
 
         ConfigureComponents();
@@ -199,13 +165,12 @@ public class BulletItem : MonoBehaviour
         Destroy(gameObject);
     }
 
-    internal static GameObject SpawnAndFire(GameObject prefab, Vector3 startPos, Quaternion startRot)
+    internal static void SpawnAndFire(GameObject prefab, Vector3 startPos, Quaternion startRot)
     {
         var gameObject = Instantiate(prefab, startPos, startRot);
         gameObject.name = prefab.name;
         gameObject.transform.parent = null;
-        gameObject.GetComponent<BulletItem>().Fire();
-        return gameObject;
+        gameObject.GetComponent<ProjectileItem>().Fire();
     }
 
     private static void SpawnImpactEffects(Collision collision, Transform transform)
@@ -240,7 +205,7 @@ public class BulletItem : MonoBehaviour
             for (var i = 0; i < m_TrajectoryPoints.Count - 1; i++)
             {
                 totalLength += Vector3.Distance(m_TrajectoryPoints[i], m_TrajectoryPoints[i + 1]);
-                if (!(totalLength > m_LineRendererMaxLength)) continue;
+                if (!(totalLength > LineRendererMaxLength)) continue;
                 m_TrajectoryPoints.RemoveAt(0);
                 break;
             }
@@ -251,13 +216,13 @@ public class BulletItem : MonoBehaviour
         else
         {
             m_LineRendererFadeTimer += Time.deltaTime;
-            var alpha = Mathf.Clamp01(1.0f - (m_LineRendererFadeTimer / m_LineRendererFadeDuration));
+            var alpha = Mathf.Clamp01(1.0f - (m_LineRendererFadeTimer / LineRendererFadeDuration));
             var startColor = m_LineRenderer.startColor;
             var endColor = m_LineRenderer.endColor;
             m_LineRenderer.startColor = new Color(startColor.r, startColor.g, startColor.b, alpha * startColor.a);
             m_LineRenderer.endColor = new Color(endColor.r, endColor.g, endColor.b, alpha * endColor.a);
 
-            if (m_LineRendererFadeTimer >= m_LineRendererFadeDuration)
+            if (m_LineRendererFadeTimer >= LineRendererFadeDuration)
             {
                 Destroy(m_LineRenderer);
             }

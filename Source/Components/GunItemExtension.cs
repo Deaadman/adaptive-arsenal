@@ -1,11 +1,9 @@
 ﻿namespace AdaptiveArsenal.Components;
 
 [RegisterTypeInIl2Cpp(false)]
-public class GunItemExtended : MonoBehaviour
+public class GunItemExtension : MonoBehaviour
 {
-    #nullable disable
     internal GunStatistics GunStats;
-    #nullable enable
     
     private static readonly Dictionary<string, GunStatistics> GunData = new()
     {
