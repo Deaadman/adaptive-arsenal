@@ -11,19 +11,23 @@ public class ProjectileItem : MonoBehaviour
     private LineRenderer m_LineRenderer;
     private Rigidbody m_Rigidbody;
     
-    private bool m_LineRendererStartFadeOut;
-    private const float ScaleMultiplier = 0.5f;
     private const float Damage = 100f;
-    private const float MinDamage = 10f;
-    private const float LineRendererMaxLength = 200f;
-    private const float LineRendererFadeDuration = 2f;
     private const float MaxRange = 500f;
-    private float m_LineRendererFadeTimer;
-
+    private const float MinDamage = 10f;
+    private const float ScaleMultiplier = 0.5f;
     private static readonly int[] RevolverEffectiveRange = [40, 50, 60, 80, 100];
-    private readonly List<Vector3> m_TrajectoryPoints = [];
-    private Vector3 m_InitialPosition;
-
+    
+    private bool LineRendererStartFadeOut;
+    private const float LineRendererFadeDuration = 2f;
+    private const float LineRendererMaxLength = 200f;
+    private const float TrajectoryUpdateInterval = 0.05f;
+    private float LastTrajectoryUpdateTime;
+    private float LineRendererFadeTimer;
+    private const int InitialTrajectoryCapacity = 100;
+    private int CurrentTrajectoryIndex;
+    private Vector3 InitialPosition;
+    private List<Vector3> TrajectoryPoints;
+    
     private static readonly Dictionary<string, int> GunMuzzleVelocities = new()
     {
         {"GEAR_Rifle_Barbs", 800},
@@ -41,6 +45,8 @@ public class ProjectileItem : MonoBehaviour
         m_Rigidbody = GetComponent<Rigidbody>();
         m_AmmoItem = GetComponent<AmmoItem>();
 
+        TrajectoryPoints = new List<Vector3>(InitialTrajectoryCapacity);
+        
         ConfigureComponents();
         enabled = false;
     }
@@ -83,6 +89,8 @@ public class ProjectileItem : MonoBehaviour
         Gradient gradient = new();
         gradient.SetKeys(new GradientColorKey[] { new(Color.white, 0.0f), new(Color.white, 1.0f) }, new GradientAlphaKey[] { new(1.0f, 0.0f), new(0.0f, 1.0f) });
         m_LineRenderer.colorGradient = gradient;
+        m_LineRenderer.useWorldSpace = true;
+        m_LineRenderer.positionCount = 0;
     }
 
     private void Fire()
@@ -103,7 +111,10 @@ public class ProjectileItem : MonoBehaviour
         m_LineRenderer.endColor = Color.white * 0.7f;
         
         m_Rigidbody.AddForce(transform.forward * (GetMuzzleVelocity(GameManager.GetPlayerManagerComponent().m_ItemInHands.name) * ScaleMultiplier), ForceMode.VelocityChange);
-        m_InitialPosition = transform.position;
+        InitialPosition = transform.position;
+        TrajectoryPoints.Add(InitialPosition);
+        m_LineRenderer.positionCount = 1;
+        m_LineRenderer.SetPosition(0, InitialPosition);
     }
 
     private static float GetEffectiveRevolverRange() => RevolverEffectiveRange[GameManager.GetSkillsManager().GetSkill(SkillType.Revolver).GetCurrentTierNumber()];
@@ -127,7 +138,7 @@ public class ProjectileItem : MonoBehaviour
         var bleedOutMinutes = localizedDamage.GetBleedOutMinutes(weaponSource);
         var damageScaleFactor = localizedDamage.GetDamageScale(weaponSource);
 
-        var distance = Vector3.Distance(m_InitialPosition, transform.position);
+        var distance = Vector3.Distance(InitialPosition, transform.position);
         var distanceBasedDamage = CalculateDamageByDistance(distance);
 
         var damage = distanceBasedDamage * damageScaleFactor;
@@ -154,8 +165,8 @@ public class ProjectileItem : MonoBehaviour
         m_Rigidbody.velocity = Vector3.zero;
         m_Rigidbody.isKinematic = true;
 
-        m_LineRendererStartFadeOut = true;
-        m_LineRendererFadeTimer = 0f;
+        LineRendererStartFadeOut = true;
+        LineRendererFadeTimer = 0f;
         
         Destroy(gameObject);
     }
@@ -193,32 +204,41 @@ public class ProjectileItem : MonoBehaviour
     private void Update()
     {
         if (!m_LineRenderer) return;
-        if (!m_LineRendererStartFadeOut)
+        if (!LineRendererStartFadeOut)
         {
-            m_TrajectoryPoints.Add(transform.position);
+            if (Time.time - LastTrajectoryUpdateTime < TrajectoryUpdateInterval) return;
 
+            LastTrajectoryUpdateTime = Time.time;
+            TrajectoryPoints.Add(transform.position);
+            
             var totalLength = 0f;
-            for (var i = 0; i < m_TrajectoryPoints.Count - 1; i++)
+            var removeCount = 0;
+            for (var i = TrajectoryPoints.Count - 1; i > 0; i--)
             {
-                totalLength += Vector3.Distance(m_TrajectoryPoints[i], m_TrajectoryPoints[i + 1]);
+                totalLength += Vector3.Distance(TrajectoryPoints[i], TrajectoryPoints[i - 1]);
                 if (!(totalLength > LineRendererMaxLength)) continue;
-                m_TrajectoryPoints.RemoveAt(0);
+                removeCount = i;
                 break;
             }
 
-            m_LineRenderer.positionCount = m_TrajectoryPoints.Count;
-            m_LineRenderer.SetPositions(m_TrajectoryPoints.ToArray());
+            if (removeCount > 0)
+            {
+                TrajectoryPoints.RemoveRange(0, removeCount);
+            }
+
+            m_LineRenderer.positionCount = TrajectoryPoints.Count;
+            m_LineRenderer.SetPositions(TrajectoryPoints.ToArray());
         }
         else
         {
-            m_LineRendererFadeTimer += Time.deltaTime;
-            var alpha = Mathf.Clamp01(1.0f - (m_LineRendererFadeTimer / LineRendererFadeDuration));
+            LineRendererFadeTimer += Time.deltaTime;
+            var alpha = Mathf.Clamp01(1.0f - (LineRendererFadeTimer / LineRendererFadeDuration));
             var startColor = m_LineRenderer.startColor;
             var endColor = m_LineRenderer.endColor;
             m_LineRenderer.startColor = new Color(startColor.r, startColor.g, startColor.b, alpha * startColor.a);
             m_LineRenderer.endColor = new Color(endColor.r, endColor.g, endColor.b, alpha * endColor.a);
 
-            if (m_LineRendererFadeTimer >= LineRendererFadeDuration)
+            if (LineRendererFadeTimer >= LineRendererFadeDuration)
             {
                 Destroy(m_LineRenderer);
             }
