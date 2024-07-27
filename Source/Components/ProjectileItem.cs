@@ -7,7 +7,6 @@ namespace AdaptiveArsenal.Components;
 public class ProjectileItem : MonoBehaviour
 {
     private AmmoItem m_AmmoItem;
-    private GunItemExtension _mGunItemExtension;
     private GunType m_GunType;
     private LineRenderer m_LineRenderer;
     private Rigidbody m_Rigidbody;
@@ -15,39 +14,37 @@ public class ProjectileItem : MonoBehaviour
     private bool m_LineRendererStartFadeOut;
     private const float ScaleMultiplier = 0.5f;
     private const float Damage = 100f;
-    private const float MinDamage = 20f;
+    private const float MinDamage = 10f;
     private const float LineRendererMaxLength = 200f;
     private const float LineRendererFadeDuration = 2f;
+    private const float MaxRange = 500f;
     private float m_LineRendererFadeTimer;
 
     private readonly List<Vector3> m_TrajectoryPoints = [];
     private Vector3 m_InitialPosition;
 
+    private static readonly Dictionary<string, int> GunMuzzleVelocities = new()
+    {
+        {"GEAR_Rifle_Barbs", 800},
+        {"GEAR_Rifle_Curators", 1000},
+        {"GEAR_Rifle_Vaughns", 700},
+        {"GEAR_Rifle", 800},
+        {"GEAR_RevolverFancy", 600},
+        {"GEAR_RevolverGreen", 400},
+        {"GEAR_RevolverStubNosed", 300},
+        {"GEAR_Revolver", 400}
+    };
+    
     private void Awake()
     {
-        InitializeComponents();
+        m_Rigidbody = GetComponent<Rigidbody>();
+        m_AmmoItem = GetComponent<AmmoItem>();
+
+        ConfigureComponents();
         enabled = false;
     }
 
-    private float CalculateDamageByDistance(float distance)
-    {
-        float effectiveRange = _mGunItemExtension.GunStats.EffectiveRange;
-        float maxRange = _mGunItemExtension.GunStats.MaxRange;
-
-        if (distance <= effectiveRange)
-        {
-            return Damage;
-        }
-        else if (distance > maxRange)
-        {
-            return MinDamage;
-        }
-        else
-        {
-            var normalizedDistance = (distance - effectiveRange) / (maxRange - effectiveRange);
-            return Mathf.Lerp(Damage, MinDamage, normalizedDistance);
-        }
-    }
+    private static float CalculateDamageByDistance(float distance) => Mathf.Lerp(Damage, MinDamage, Mathf.Clamp01(distance / MaxRange));
 
     private void ConfigureComponents()
     {
@@ -56,13 +53,7 @@ public class ProjectileItem : MonoBehaviour
 
         var fxArrowTrailMaterial = MaterialSwapper.GetLineRendererMaterialFromGearItemPrefab("GEAR_Arrow", "LineRenderer");
         if (fxArrowTrailMaterial == null) return;
-        GameObject lineRendererObject = new("LineRenderer")
-        {
-            transform =
-            {
-                parent = transform
-            }
-        };
+        GameObject lineRendererObject = new("LineRenderer") { transform = { parent = transform } };
 
         m_LineRenderer = lineRendererObject.AddComponent<LineRenderer>();
         m_LineRenderer.material = fxArrowTrailMaterial;
@@ -70,10 +61,7 @@ public class ProjectileItem : MonoBehaviour
         m_LineRenderer.endWidth = 0.1f;
 
         Gradient gradient = new();
-        gradient.SetKeys(
-            new GradientColorKey[] { new(Color.white, 0.0f), new(Color.white, 1.0f) },
-            new GradientAlphaKey[] { new(1.0f, 0.0f), new(0.0f, 1.0f) }
-        );
+        gradient.SetKeys(new GradientColorKey[] { new(Color.white, 0.0f), new(Color.white, 1.0f) }, new GradientAlphaKey[] { new(1.0f, 0.0f), new(0.0f, 1.0f) });
         m_LineRenderer.colorGradient = gradient;
     }
 
@@ -93,24 +81,12 @@ public class ProjectileItem : MonoBehaviour
 
         m_LineRenderer.startColor = new Color(1f, 1f, 1f, 0f);
         m_LineRenderer.endColor = Color.white * 0.7f;
-
-        var initialForce = transform.forward * (_mGunItemExtension.GunStats.MuzzleVelocity * ScaleMultiplier);
-        m_Rigidbody.AddForce(initialForce, ForceMode.VelocityChange);
-
+        
+        m_Rigidbody.AddForce(transform.forward * (GetMuzzleVelocity(GameManager.GetPlayerManagerComponent().m_ItemInHands.name) * ScaleMultiplier), ForceMode.VelocityChange);
         m_InitialPosition = transform.position;
     }
 
-    private void InitializeComponents()
-    {
-        m_Rigidbody = GetComponent<Rigidbody>();
-        m_AmmoItem = GetComponent<AmmoItem>();
-        if (GameManager.GetPlayerManagerComponent().m_ItemInHands != null)
-        {
-            _mGunItemExtension = GameManager.GetPlayerManagerComponent().m_ItemInHands.GetComponent<GunItemExtension>();
-        }
-
-        ConfigureComponents();
-    }
+    private static int GetMuzzleVelocity(string gearItemName) => GunMuzzleVelocities.Keys.Where(gearItemName.Contains).Select(key => GunMuzzleVelocities[key]).FirstOrDefault();
 
     private void TryInflictDamage(GameObject victim, string collider)
     {
@@ -134,10 +110,7 @@ public class ProjectileItem : MonoBehaviour
 
         var damage = distanceBasedDamage * damageScaleFactor;
 
-        if (!baseAi.m_IgnoreCriticalHits && localizedDamage.RollChanceToKill(WeaponSource.Rifle))
-        {
-            damage = float.PositiveInfinity;
-        }
+        if (!baseAi.m_IgnoreCriticalHits && localizedDamage.RollChanceToKill(WeaponSource.Rifle)) damage = float.PositiveInfinity;
 
         if (baseAi.GetAiMode() != AiMode.Dead)
         {
@@ -149,6 +122,8 @@ public class ProjectileItem : MonoBehaviour
 
         baseAi.SetupDamageForAnim(transform.position, GameManager.GetPlayerTransform().position, localizedDamage);
         baseAi.ApplyDamage(damage, bleedOutMinutes, DamageSource.Player, collider);
+        
+        Logging.Log($"Projectile hit: Distance={distance:F2}m, Base Damage={distanceBasedDamage:F2}, " + $"Body Part={collider}, Damage Scale={damageScaleFactor:F2}, Final Damage={damage:F2}");
     }
 
     private void OnCollisionEnter(Collision collision)
@@ -189,6 +164,7 @@ public class ProjectileItem : MonoBehaviour
 
         if (!collision.collider || !collision.collider.gameObject) return;
         GameAudioManager.SetMaterialSwitch(materialTagForObjectAtPosition, collision.collider.gameObject);
+        
         var soundEmitterFromGameObject = GameAudioManager.GetSoundEmitterFromGameObject(collision.collider.gameObject);
         AkSoundEngine.PostEvent("Play_BulletImpacts", soundEmitterFromGameObject);
         GameAudioManager.SetAudioSourceTransform(collision.collider.gameObject, collision.collider.gameObject.transform);
