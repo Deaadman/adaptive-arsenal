@@ -39,10 +39,6 @@
 		<Using Include="MelonLoader" />
 		<Using Include="UnityEngine" />
 	</ItemGroup>
-	<ItemGroup>
-	  <None Remove="Resources\Localization.json" />
-	  <EmbeddedResource Include="Resources\Localization.json" />
-	</ItemGroup>
 
 	<!-- This is a build event. It will copy your dll to the currently defined TheLongDarkPath's Mods folder -->
 	<Target Name="PostBuild" AfterTargets="PostBuildEvent">

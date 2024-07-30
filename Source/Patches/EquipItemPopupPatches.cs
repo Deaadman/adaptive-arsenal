@@ -14,7 +14,7 @@ internal static class EquipItemPopupPatches
     public static class UpdateAmmoStatusPatch
     {
         private static int lastRoundsInClip = -1;
-        private static GunItem? lastGunItem = null;
+        private static GunItem? lastGunItem;
     
         private static void Postfix(EquipItemPopup __instance)
         {

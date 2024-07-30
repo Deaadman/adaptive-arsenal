@@ -19,10 +19,13 @@
 Adaptive Arsenal is a modification that improves upon existing weapon mechanics within [**The Long Dark**](https://www.hinterlandgames.com/the-long-dark/).
 
 #### Projectile Bullet System
+- **Accuracy:** Skills, crouching, standing and moving now all have an effect on how accurate of a shot your character is.
 - **Bullet System Overhaul:** Replaced the existing Raycast / Hitscan bullet system with projectiles.
-- **Visuals:** A trail follows behind the bullet for visual representation of its landing location.
-- **Muzzle Velocities:** Each weapon has a unique muzzle velocity parameter set, determining how far the bullet can travel.
 - **Damage Drop-off:** Each weapon has a unique damage drop-off threshold; once it's passed, the damage will decrease from that point onwards.
+- **HUD Animation:** After a bullet has been fired from a Rifle or Revolver, a cool animation plays of the bullet being chambered on the UI.
+- **Improved Revolver:** You can now move freely while aiming with the revolver.
+- **Muzzle Velocities:** Each weapon has a unique muzzle velocity parameter set, determining how far the bullet can travel.
+- **Visuals:** A trail follows behind the bullet for visual representation of its landing location.
 
 ---
 

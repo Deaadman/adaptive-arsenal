@@ -44,9 +44,8 @@ internal static class vp_FPSShooterPatches
             ProjectileUtilities.CalculateProjectileTransform(__instance, out var position, out var rotation);
 
             var isHipFire = __instance.m_Weapon.m_GunItem.m_AllowHipFire && !GameManager.GetPlayerAnimationComponent().IsAllowedToFire(false);
-            var isStanding = !GameManager.GetPlayerManagerComponent().PlayerIsCrouched();
-
-            var accuracy = ProjectileItem.CalculateAccuracy(__instance.m_Weapon.m_GunItem, isHipFire, isStanding);
+            
+            var accuracy = ProjectileItem.CalculateAccuracy(__instance.m_Weapon.m_GunItem, isHipFire, !GameManager.GetPlayerManagerComponent().PlayerIsCrouched(), GameManager.GetPlayerManagerComponent().PlayerIsWalking());
             var inaccuracyAngle = Mathf.Lerp(0f, 10f, 1f - accuracy / 100f);
             var randomRotation = new Vector3(Random.Range(-inaccuracyAngle, inaccuracyAngle), Random.Range(-inaccuracyAngle, inaccuracyAngle), 0);
 

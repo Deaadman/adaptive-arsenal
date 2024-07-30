@@ -51,7 +51,7 @@ public class ProjectileItem : MonoBehaviour
         enabled = false;
     }
 
-    public static float CalculateAccuracy(GunItem gunItem, bool isHipFire, bool isStanding)
+    public static float CalculateAccuracy(GunItem gunItem, bool isHipFire, bool isStanding, bool isMoving)
     {
         var baseAccuracy = gunItem.m_GunType switch
         {
@@ -62,10 +62,9 @@ public class ProjectileItem : MonoBehaviour
 
         var accuracyMultiplier = 1f;
         
-        if (isHipFire) accuracyMultiplier *= 0.6f;
+        if (isHipFire) accuracyMultiplier *= 0.7f;
         if (isStanding) accuracyMultiplier *= 0.8f;
-
-        Logging.Log($"Accuracy Percentage: {baseAccuracy * accuracyMultiplier}%");
+        if (isMoving) accuracyMultiplier *= 0.9f;
         
         return baseAccuracy * accuracyMultiplier;
     }
