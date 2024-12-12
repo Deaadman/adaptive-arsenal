@@ -34,8 +34,8 @@ Adaptive Arsenal is a modification that improves upon existing weapon mechanics 
 ### Required Dependencies:
 For optimal functionality of this modification, ensure you have the following versions or newer for the latest version of this modification.
 
-- [**The Long Dark**](https://store.steampowered.com/news/app/305620) - Version: **v2.31**
-- [**MelonLoader**](https://github.com/LavaGang/MelonLoader/releases) - Version: **v0.6.1**
+- [**The Long Dark**](https://store.steampowered.com/news/app/305620) - Version: **v2.35**
+- [**MelonLoader**](https://github.com/LavaGang/MelonLoader/releases) - Version: **v0.6.6**
 
 ### Incompatible Mods:
 
