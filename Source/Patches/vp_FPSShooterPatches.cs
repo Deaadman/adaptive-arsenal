@@ -37,7 +37,8 @@ internal static class vp_FPSShooterPatches
                                                              || !GameManager.GetPlayerAnimationComponent().IsAllowedToFire(__instance.m_Weapon.m_GunItem.m_AllowHipFire) 
                                                              || GameManager.GetPlayerAnimationComponent().IsReloading() 
                                                              || __instance.m_Weapon.GetAmmoCount() < 1
-                                                             || __instance.m_Weapon.m_GunItem.m_IsJammed) return;
+                                                             || __instance.m_Weapon.m_GunItem.m_IsJammed
+                                                             || __instance.ProjectilePrefab == null) return;
             if (!__instance.ProjectilePrefab.GetComponent<ProjectileItem>()) return;
             
             ProjectileUtilities.SetBulletEmissionLocator(__instance);
