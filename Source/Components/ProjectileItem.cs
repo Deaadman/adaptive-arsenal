@@ -1,4 +1,5 @@
 ﻿using AdaptiveArsenal.Utilities;
+using Il2CppTLD.AI;
 using Il2CppTLD.Stats;
 
 namespace AdaptiveArsenal.Components;
@@ -109,11 +110,15 @@ public class ProjectileItem : MonoBehaviour
         m_LineRenderer.startColor = new Color(1f, 1f, 1f, 0f);
         m_LineRenderer.endColor = Color.white * 0.7f;
         
-        m_Rigidbody.AddForce(transform.forward * (GetMuzzleVelocity(GameManager.GetPlayerManagerComponent().m_ItemInHands.name) * ScaleMultiplier), ForceMode.VelocityChange);
+        var muzzleVelocity = transform.forward * (GetMuzzleVelocity(GameManager.GetPlayerManagerComponent().m_ItemInHands.name) * ScaleMultiplier);
+        m_Rigidbody.AddForce(muzzleVelocity, ForceMode.VelocityChange);
+
         InitialPosition = transform.position;
         TrajectoryPoints.Add(InitialPosition);
         m_LineRenderer.positionCount = 1;
         m_LineRenderer.SetPosition(0, InitialPosition);
+        
+        GameManager.GetCougarManager().MaybeAimNearMiss(muzzleVelocity.normalized);
     }
 
     private static float GetEffectiveRevolverRange() => RevolverEffectiveRange[GameManager.GetSkillsManager().GetSkill(SkillType.Revolver).GetCurrentTierNumber()];
