@@ -34,12 +34,14 @@ Adaptive Arsenal is a modification that improves upon existing weapon mechanics 
 ### Required Dependencies:
 For optimal functionality of this modification, ensure you have the following versions or newer for the latest version of this modification.
 
-- [**The Long Dark**](https://store.steampowered.com/news/app/305620) - Version: **v2.35**
+- [**The Long Dark**](https://store.steampowered.com/news/app/305620) - Version: **v2.36**
 - [**MelonLoader**](https://github.com/LavaGang/MelonLoader/releases) - Version: **v0.6.6**
 
 ### Incompatible Mods:
 
-Currently no mods are incompatible, but when there are some, avoid using the following mods with this modification as combining this mod with incompatible ones might result in game crashes, data loss, or unforeseen issues. 
+Avoid using the following mods below with this one as they may result in game crashes, data loss, or unforeseen issues:
+
+- **[Target Practice & Master Hunter](https://github.com/RomainDeschampsFR/TargetPracticeAndMasterHunter)** 
 
 ---
 

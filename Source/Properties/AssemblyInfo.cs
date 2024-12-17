@@ -17,4 +17,4 @@
 
 [assembly: VerifyLoaderVersion(BuildInfo.MelonLoaderVersion, true)]
 [assembly: MelonPriority(BuildInfo.Priority)]
-[assembly: MelonIncompatibleAssemblies(null)]
+[assembly: MelonIncompatibleAssemblies("TargetPracticeAndMasterHunter")]

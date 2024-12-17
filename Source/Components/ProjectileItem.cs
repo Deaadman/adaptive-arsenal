@@ -1,5 +1,4 @@
 ﻿using AdaptiveArsenal.Utilities;
-using Il2CppTLD.AI;
 using Il2CppTLD.Stats;
 
 namespace AdaptiveArsenal.Components;
@@ -61,7 +60,7 @@ public class ProjectileItem : MonoBehaviour
             _ => gunItem.m_AccuracyRange
         };
 
-        var accuracyMultiplier = 1f;
+        var accuracyMultiplier = 1.2f;
         
         if (isHipFire) accuracyMultiplier *= 0.7f;
         if (isStanding) accuracyMultiplier *= 0.8f;
