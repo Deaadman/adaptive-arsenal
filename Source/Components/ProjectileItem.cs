@@ -96,7 +96,7 @@ public class ProjectileItem : MonoBehaviour
     {
         enabled = true;
 
-        StatsManager.IncrementValue(m_GunType == GunType.Rifle ? StatID.SuccessfulHits_Rifle : StatID.SuccessfulHits_Revolver);
+        StatsManager.IncrementValue(m_GunType == GunType.Rifle ? StatID.RifleShot : StatID.RevolverShot);
 
         Utils.SetIsKinematic(m_Rigidbody, false);
         transform.parent = null;
