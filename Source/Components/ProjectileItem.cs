@@ -32,6 +32,7 @@ public class ProjectileItem : MonoBehaviour
     {
         {"GEAR_Rifle_Barbs", 800},
         {"GEAR_Rifle_Curators", 1000},
+        {"GEAR_Rifle_Traders", 1100},
         {"GEAR_Rifle_Vaughns", 700},
         {"GEAR_Rifle", 800},
         {"GEAR_RevolverFancy", 600},
