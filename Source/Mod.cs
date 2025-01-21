@@ -10,7 +10,7 @@ internal sealed class Mod : MelonMod
     private readonly Dictionary<GunType, string[]> weaponSkins = new()
     {
         { GunType.Revolver, [
-                "AdaptiveArsenal.WeaponSkins.Revolver.Silver.png", "AdaptiveArsenal.WeaponSkins.Revolver.Black.png"
+                "AdaptiveArsenal.WeaponSkins.Revolver.Brown.png", "AdaptiveArsenal.WeaponSkins.Revolver.Orange.png", "AdaptiveArsenal.WeaponSkins.Revolver.Red.png"
             ]
         },
         { GunType.Rifle, [
@@ -84,7 +84,7 @@ internal sealed class Mod : MelonMod
         }
     }
 
-    public void ApplySkinToSpecificRifleMeshes(GameObject root, Texture2D skinTexture)
+    public void ApplySkinToSpecificRevolverMeshes(GameObject root, Texture2D skinTexture)
     {
         Transform gameData = root.transform.Find("FPH_Revolver_44Mag_Rig/GAME_DATA/mesh/FPH_Revolver_44Mag:OBJ_Revolver_44Mag");
         if (gameData == null) return;
@@ -104,7 +104,7 @@ internal sealed class Mod : MelonMod
         }
     }
     
-    public void ApplySkinToSpecificRevolverMeshes(GameObject root, Texture2D skinTexture)
+    public void ApplySkinToSpecificRifleMeshes(GameObject root, Texture2D skinTexture)
     {
         Transform gameData = root.transform.Find("GAME_DATA/Meshes");
         if (gameData == null) return;

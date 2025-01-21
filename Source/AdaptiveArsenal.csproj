@@ -65,6 +65,12 @@
 	  <EmbeddedResource Include="WeaponSkins\Rifle\Olive.png" />
 	  <None Remove="WeaponSkins\Rifle\Red.png" />
 	  <EmbeddedResource Include="WeaponSkins\Rifle\Red.png" />
+	  <None Remove="WeaponSkins\Revolver\Brown.png" />
+	  <EmbeddedResource Include="WeaponSkins\Revolver\Brown.png" />
+	  <None Remove="WeaponSkins\Revolver\Orange.png" />
+	  <EmbeddedResource Include="WeaponSkins\Revolver\Orange.png" />
+	  <None Remove="WeaponSkins\Revolver\Red.png" />
+	  <EmbeddedResource Include="WeaponSkins\Revolver\Red.png" />
 	</ItemGroup>
 	<ItemGroup>
 	  <Folder Include="WeaponSkins\Revolver\Icons\" />
