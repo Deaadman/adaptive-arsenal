@@ -41,7 +41,28 @@
 	</ItemGroup>
 	<ItemGroup>
 	  <None Remove="WeaponSkins\FlareGun\FlareGun_Yellow.png" />
-	  <EmbeddedResource Include="WeaponSkins\FlareGun\FlareGun_Yellow.png" />
+	</ItemGroup>
+	<ItemGroup>
+	  <None Remove="WeaponSkins\FlareGun\Blue.png" />
+	  <EmbeddedResource Include="WeaponSkins\FlareGun\Blue.png" />
+	  <None Remove="WeaponSkins\FlareGun\Green.png" />
+	  <EmbeddedResource Include="WeaponSkins\FlareGun\Green.png" />
+	  <None Remove="WeaponSkins\FlareGun\Red.png" />
+	  <EmbeddedResource Include="WeaponSkins\FlareGun\Red.png" />
+	  <None Remove="WeaponSkins\FlareGun\Icons\Blue.png" />
+	  <EmbeddedResource Include="WeaponSkins\FlareGun\Icons\Blue.png" />
+	  <None Remove="WeaponSkins\FlareGun\Icons\Green.png" />
+	  <EmbeddedResource Include="WeaponSkins\FlareGun\Icons\Green.png" />
+	  <None Remove="WeaponSkins\FlareGun\Icons\Red.png" />
+	  <EmbeddedResource Include="WeaponSkins\FlareGun\Icons\Red.png" />
+	  <None Remove="WeaponSkins\FlareGun\Icons\Yellow.png" />
+	  <EmbeddedResource Include="WeaponSkins\FlareGun\Icons\Yellow.png" />
+	  <None Remove="WeaponSkins\FlareGun\Yellow.png" />
+	  <EmbeddedResource Include="WeaponSkins\FlareGun\Yellow.png" />
+	</ItemGroup>
+	<ItemGroup>
+	  <Folder Include="WeaponSkins\Revolver\Icons\" />
+	  <Folder Include="WeaponSkins\Rifle\Icons\" />
 	</ItemGroup>
 
 	<!-- This is a build event. It will copy your dll to the currently defined TheLongDarkPath's Mods folder -->

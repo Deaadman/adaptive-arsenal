@@ -4,16 +4,33 @@ namespace AdaptiveArsenal;
 
 internal sealed class Mod : MelonMod
 {
+    public static Mod Instance { get; private set; }
+    
+    private int currentSkinIndex = 0;
+    private readonly string[] weaponSkins = 
+    {
+        "AdaptiveArsenal.WeaponSkins.FlareGun.Blue.png",
+        "AdaptiveArsenal.WeaponSkins.FlareGun.Yellow.png",
+        "AdaptiveArsenal.WeaponSkins.FlareGun.Green.png",
+        "AdaptiveArsenal.WeaponSkins.FlareGun.Red.png"
+    };
+
+    public override void OnInitializeMelon()
+    {
+        Instance = this;
+    }
+    
     public override void OnUpdate()
     {
         if (InputManager.GetKeyDown(InputManager.m_CurrentContext, KeyCode.T))
         {
-            // Static GearItem
-            ChangeWeaponSkin(GameManager.GetPlayerManagerComponent().m_ItemInHands.m_GunItem.gameObject, "AdaptiveArsenal.WeaponSkins.FlareGun.FlareGun_Yellow.png");
+            currentSkinIndex = (currentSkinIndex + 1) % weaponSkins.Length;
 
-            // First-Person View Model
+            string selectedSkin = weaponSkins[currentSkinIndex];
+            ChangeWeaponSkin(GameManager.GetPlayerManagerComponent().m_ItemInHands.gameObject, selectedSkin);
+
             GameObject firstPersonWeapon = GameManager.GetVpFPSCamera().m_CurrentWeapon.m_FirstPersonWeaponRightHand.gameObject;
-            ChangeFirstPersonWeaponSkin(firstPersonWeapon, "AdaptiveArsenal.WeaponSkins.FlareGun.FlareGun_Yellow.png");
+            ChangeFirstPersonWeaponSkin(firstPersonWeapon, selectedSkin);
         }
     }
 
@@ -33,10 +50,6 @@ internal sealed class Mod : MelonMod
         {
             renderer.material.mainTexture = skinTexture;
         }
-        else
-        {
-            Logging.LogError("Weapon does not have a Renderer component.");
-        }
     }
 
     public void ChangeFirstPersonWeaponSkin(GameObject weapon, string skinResourceName)
@@ -50,38 +63,51 @@ internal sealed class Mod : MelonMod
 
     public void ApplySkinToFirstPersonModel(GameObject root, Texture2D skinTexture)
     {
-        // Locate the 'GAME_DATA' object and its 'mesh' child
         Transform gameData = root.transform.Find("FPHAnd_FlareGun_rig/GAME_DATA/mesh");
-        if (gameData == null)
-        {
-            Logging.LogError("'GAME_DATA/mesh' not found in first-person weapon model.");
-            return;
-        }
+        if (gameData == null) return;
 
-        // Iterate through all child objects under 'mesh'
         for (int i = 0; i < gameData.childCount; i++)
         {
-            var child = gameData.GetChild(i); // Get the child Transform
+            var child = gameData.GetChild(i);
 
-            if (child != null)
+            if (child != null && child.name != "mesh_Shell")
             {
-                // Skip the mesh named 'mesh_Shell'
-                if (child.name == "mesh_Shell")
-                {
-                    Logging.Log($"Skipped applying texture to {child.name}");
-                    continue;
-                }
-
-                var renderer = child.GetComponent<Renderer>(); // Use Il2CppRenderer instead of Renderer
+                var renderer = child.GetComponent<Renderer>();
                 if (renderer != null)
                 {
                     renderer.material.mainTexture = skinTexture;
-                    Logging.Log($"Applied texture to {child.gameObject.name}"); // Ensure name is resolved properly
                 }
-                else
+            }
+        }
+    }
+
+    [HarmonyPatch(typeof(Utils), nameof(Utils.GetInventoryIconTexture), typeof(GearItem))]
+    private static class GenericIconTextureSwap
+    {
+        private static bool Prefix(GearItem gi, ref Texture2D __result)
+        {
+            if (gi.name == "GEAR_FlareGun" && InputManager.GetKeyDown(InputManager.m_CurrentContext, KeyCode.T))
+            {
+                string iconResourceName = $"AdaptiveArsenal.WeaponSkins.FlareGun.Icons.{GetCurrentColor()}.png";
+                Texture2D customIcon = WeaponSkinLoader.LoadEmbeddedTexture(iconResourceName);
+                if (customIcon != null)
                 {
-                    Logging.LogWarning($"No renderer found for {child.gameObject.name}");
+                    __result = customIcon;
+                    return false;
                 }
+            }
+            return true;
+        }
+
+        private static string GetCurrentColor()
+        {
+            switch (Mod.Instance.currentSkinIndex)
+            {
+                case 0: return "Blue";
+                case 1: return "Yellow";
+                case 2: return "Green";
+                case 3: return "Red";
+                default: return "Blue";
             }
         }
     }
