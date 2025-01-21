@@ -5,32 +5,44 @@ namespace AdaptiveArsenal;
 internal sealed class Mod : MelonMod
 {
     public static Mod Instance { get; private set; }
-    
+
     private int currentSkinIndex = 0;
-    private readonly string[] weaponSkins = 
+    private readonly Dictionary<GunType, string[]> weaponSkins = new()
     {
-        "AdaptiveArsenal.WeaponSkins.FlareGun.Blue.png",
-        "AdaptiveArsenal.WeaponSkins.FlareGun.Yellow.png",
-        "AdaptiveArsenal.WeaponSkins.FlareGun.Green.png",
-        "AdaptiveArsenal.WeaponSkins.FlareGun.Red.png"
+        { GunType.Revolver, [
+                "AdaptiveArsenal.WeaponSkins.Revolver.Silver.png", "AdaptiveArsenal.WeaponSkins.Revolver.Black.png"
+            ]
+        },
+        { GunType.Rifle, [
+                "AdaptiveArsenal.WeaponSkins.Rifle.Olive.png", "AdaptiveArsenal.WeaponSkins.Rifle.Noir.png", "AdaptiveArsenal.WeaponSkins.Rifle.Red.png"
+            ]
+        },
+        { GunType.FlareGun, [
+                "AdaptiveArsenal.WeaponSkins.FlareGun.Blue.png", "AdaptiveArsenal.WeaponSkins.FlareGun.Yellow.png", "AdaptiveArsenal.WeaponSkins.FlareGun.Green.png", "AdaptiveArsenal.WeaponSkins.FlareGun.Red.png"
+            ]
+        },
     };
 
     public override void OnInitializeMelon()
     {
         Instance = this;
     }
-    
+
     public override void OnUpdate()
     {
         if (InputManager.GetKeyDown(InputManager.m_CurrentContext, KeyCode.T))
         {
-            currentSkinIndex = (currentSkinIndex + 1) % weaponSkins.Length;
+            var gunItem = GameManager.GetPlayerManagerComponent().m_ItemInHands?.m_GunItem;
+            if (gunItem == null) return;
 
-            string selectedSkin = weaponSkins[currentSkinIndex];
-            ChangeWeaponSkin(GameManager.GetPlayerManagerComponent().m_ItemInHands.gameObject, selectedSkin);
+            GunType gunType = gunItem.m_GunType;
+            if (!weaponSkins.ContainsKey(gunType)) return;
 
-            GameObject firstPersonWeapon = GameManager.GetVpFPSCamera().m_CurrentWeapon.m_FirstPersonWeaponRightHand.gameObject;
-            ChangeFirstPersonWeaponSkin(firstPersonWeapon, selectedSkin);
+            currentSkinIndex = (currentSkinIndex + 1) % weaponSkins[gunType].Length;
+            string selectedSkin = weaponSkins[gunType][currentSkinIndex];
+
+            ChangeWeaponSkin(gunItem.gameObject, selectedSkin);
+            ChangeFirstPersonWeaponSkin(selectedSkin, gunType);
         }
     }
 
@@ -52,12 +64,64 @@ internal sealed class Mod : MelonMod
         }
     }
 
-    public void ChangeFirstPersonWeaponSkin(GameObject weapon, string skinResourceName)
+    public void ChangeFirstPersonWeaponSkin(string skinResourceName, GunType gunType)
     {
         Texture2D texture = WeaponSkinLoader.LoadEmbeddedTexture(skinResourceName);
         if (texture != null)
         {
-            ApplySkinToFirstPersonModel(weapon, texture);
+            if (gunType == GunType.Rifle)
+            {
+                ApplySkinToSpecificRifleMeshes(GameManager.GetVpFPSCamera().m_CurrentWeapon.m_FirstPersonWeaponShoulder.gameObject, texture);
+            }
+            else if (gunType == GunType.Revolver)
+            {
+                ApplySkinToSpecificRevolverMeshes(GameManager.GetVpFPSCamera().m_CurrentWeapon.m_FirstPersonWeaponShoulder.gameObject, texture);
+            }
+            else
+            {
+                ApplySkinToFirstPersonModel(GameManager.GetVpFPSCamera().m_CurrentWeapon.m_FirstPersonWeaponRightHand.gameObject, texture);
+            }
+        }
+    }
+
+    public void ApplySkinToSpecificRifleMeshes(GameObject root, Texture2D skinTexture)
+    {
+        Transform gameData = root.transform.Find("FPH_Revolver_44Mag_Rig/GAME_DATA/mesh/FPH_Revolver_44Mag:OBJ_Revolver_44Mag");
+        if (gameData == null) return;
+
+        for (int i = 0; i < gameData.childCount; i++)
+        {
+            var child = gameData.GetChild(i);
+
+            if (child != null)
+            {
+                var renderer = child.GetComponent<Renderer>();
+                if (renderer != null)
+                {
+                    renderer.material.mainTexture = skinTexture;
+                }
+            }
+        }
+    }
+    
+    public void ApplySkinToSpecificRevolverMeshes(GameObject root, Texture2D skinTexture)
+    {
+        Transform gameData = root.transform.Find("GAME_DATA/Meshes");
+        if (gameData == null) return;
+
+        string[] rifleMeshes = { "mesh_bolt", "mesh_rifle", "mesh_trigger" };
+
+        foreach (var meshName in rifleMeshes)
+        {
+            Transform child = gameData.Find(meshName);
+            if (child != null)
+            {
+                Renderer renderer = child.GetComponent<Renderer>();
+                if (renderer != null)
+                {
+                    renderer.material.mainTexture = skinTexture;
+                }
+            }
         }
     }
 
@@ -77,37 +141,6 @@ internal sealed class Mod : MelonMod
                 {
                     renderer.material.mainTexture = skinTexture;
                 }
-            }
-        }
-    }
-
-    [HarmonyPatch(typeof(Utils), nameof(Utils.GetInventoryIconTexture), typeof(GearItem))]
-    private static class GenericIconTextureSwap
-    {
-        private static bool Prefix(GearItem gi, ref Texture2D __result)
-        {
-            if (gi.name == "GEAR_FlareGun" && InputManager.GetKeyDown(InputManager.m_CurrentContext, KeyCode.T))
-            {
-                string iconResourceName = $"AdaptiveArsenal.WeaponSkins.FlareGun.Icons.{GetCurrentColor()}.png";
-                Texture2D customIcon = WeaponSkinLoader.LoadEmbeddedTexture(iconResourceName);
-                if (customIcon != null)
-                {
-                    __result = customIcon;
-                    return false;
-                }
-            }
-            return true;
-        }
-
-        private static string GetCurrentColor()
-        {
-            switch (Mod.Instance.currentSkinIndex)
-            {
-                case 0: return "Blue";
-                case 1: return "Yellow";
-                case 2: return "Green";
-                case 3: return "Red";
-                default: return "Blue";
             }
         }
     }

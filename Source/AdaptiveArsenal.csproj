@@ -59,6 +59,12 @@
 	  <EmbeddedResource Include="WeaponSkins\FlareGun\Icons\Yellow.png" />
 	  <None Remove="WeaponSkins\FlareGun\Yellow.png" />
 	  <EmbeddedResource Include="WeaponSkins\FlareGun\Yellow.png" />
+	  <None Remove="WeaponSkins\Rifle\Noir.png" />
+	  <EmbeddedResource Include="WeaponSkins\Rifle\Noir.png" />
+	  <None Remove="WeaponSkins\Rifle\Olive.png" />
+	  <EmbeddedResource Include="WeaponSkins\Rifle\Olive.png" />
+	  <None Remove="WeaponSkins\Rifle\Red.png" />
+	  <EmbeddedResource Include="WeaponSkins\Rifle\Red.png" />
 	</ItemGroup>
 	<ItemGroup>
 	  <Folder Include="WeaponSkins\Revolver\Icons\" />
