@@ -44,7 +44,7 @@ internal static class vp_FPSShooterPatches
             ProjectileUtilities.SetBulletEmissionLocator(__instance);
             ProjectileUtilities.CalculateProjectileTransform(__instance, out var position, out var rotation);
 
-            var isHipFire = __instance.m_Weapon.m_GunItem.m_AllowHipFire && !GameManager.GetPlayerAnimationComponent().IsAllowedToFire(false);
+            bool isHipFire = __instance.m_Weapon.m_GunItem.m_AllowHipFire && !GameManager.GetPlayerAnimationComponent().IsAllowedToFire(false);
             
             var accuracy = ProjectileItem.CalculateAccuracy(__instance.m_Weapon.m_GunItem, isHipFire, !GameManager.GetPlayerManagerComponent().PlayerIsCrouched(), GameManager.GetPlayerManagerComponent().PlayerIsWalking());
             var inaccuracyAngle = Mathf.Lerp(0f, 10f, 1f - accuracy / 100f);
