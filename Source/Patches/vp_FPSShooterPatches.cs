@@ -19,7 +19,7 @@ internal static class vp_FPSShooterPatches
 
             if (gearItem == null) return;
             
-            var newProjectilePrefab = Addressables.LoadAsset<GameObject>(gearItem).WaitForCompletion();
+            GameObject newProjectilePrefab = Addressables.LoadAsset<GameObject>(gearItem).WaitForCompletion();
             if (newProjectilePrefab == null) return;
             
             _ = newProjectilePrefab.GetComponent<ProjectileItem>() ?? newProjectilePrefab.AddComponent<ProjectileItem>();
