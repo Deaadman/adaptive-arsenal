@@ -6,27 +6,60 @@ namespace AdaptiveArsenal.Components;
 [RegisterTypeInIl2Cpp(false)]
 public class ProjectileItem : MonoBehaviour
 {
-    private AmmoItem m_AmmoItem;
+    /// <summary>
+    /// Represents the current ammunition item associated with the object.
+    /// </summary>
+    private AmmoItem? m_AmmoItem;
+
+    /// <summary>
+    /// Represents the type of gun associated with this instance.
+    /// </summary>
     private GunType m_GunType;
-    private LineRenderer m_LineRenderer;
-    private Rigidbody m_Rigidbody;
+
+    /// <summary>
+    /// Represents the <see cref="LineRenderer"/> instance used to render lines in the scene.
+    /// </summary>
+    private LineRenderer? m_LineRenderer;
+
+    /// <summary>
+    /// Represents the Rigidbody component associated with the object, if available.
+    /// </summary>
+    private Rigidbody? m_Rigidbody;
     
     private const float Damage = 100f;
     private const float MaxRange = 500f;
     private const float MinDamage = 10f;
     private const float ScaleMultiplier = 0.5f;
+
+    /// <summary>
+    /// Represents the effective range values for a revolver.
+    /// </summary>
     private static readonly int[] RevolverEffectiveRange = [40, 50, 60, 80, 100];
     
     private bool LineRendererStartFadeOut;
     private const float LineRendererFadeDuration = 2f;
     private const float LineRendererMaxLength = 200f;
+
+    /// <summary>
+    /// Represents the interval, in seconds, at which the trajectory is updated.
+    /// </summary>
     private const float TrajectoryUpdateInterval = 0.05f;
     private float LastTrajectoryUpdateTime;
     private float LineRendererFadeTimer;
     private const int InitialTrajectoryCapacity = 100;
+
+    // TODO Unused, remove if not needed later
     private int CurrentTrajectoryIndex;
+
+    /// <summary>
+    /// Represents the initial position of an object in 3D space.
+    /// </summary>
     private Vector3 InitialPosition;
-    private List<Vector3> TrajectoryPoints;
+
+    /// <summary>
+    /// Represents a collection of points that define a trajectory in 3D space.
+    /// </summary>
+    private List<Vector3>? TrajectoryPoints;
     
     private static readonly Dictionary<string, int> GunMuzzleVelocities = new()
     {
@@ -52,24 +85,32 @@ public class ProjectileItem : MonoBehaviour
         enabled = false;
     }
 
+    /// <summary>
+    /// Calculates the accuracy of a gun based on its type, firing stance, and movement state.
+    /// </summary>
+    /// <param name="gunItem">The gun for which the accuracy is being calculated. Must not be <see langword="null"/>.</param>
+    /// <param name="isHipFire">A value indicating whether the gun is being fired from the hip. If <see langword="true"/>, the accuracy is
+    /// reduced.</param>
+    /// <param name="isStanding">A value indicating whether the shooter is standing. If <see langword="true"/>, the accuracy is reduced.</param>
+    /// <param name="isMoving">A value indicating whether the shooter is moving. If <see langword="true"/>, the accuracy is reduced.</param>
     public static float CalculateAccuracy(GunItem gunItem, bool isHipFire, bool isStanding, bool isMoving)
     {
-        var baseAccuracy = gunItem.m_GunType switch
+        Single baseAccuracy = gunItem.m_GunType switch
         {
             GunType.Rifle => GameManager.GetSkillRifle().GetEffectiveRange(),
             GunType.Revolver => GetEffectiveRevolverRange() + gunItem.m_AccuracyRange,
             _ => gunItem.m_AccuracyRange
         };
 
-        var accuracyMultiplier = 1.2f;
-        
+        float accuracyMultiplier = 1.2f;
+
         if (isHipFire) accuracyMultiplier *= 0.7f;
         if (isStanding) accuracyMultiplier *= 0.8f;
         if (isMoving) accuracyMultiplier *= 0.9f;
-        
+
         return baseAccuracy * accuracyMultiplier;
     }
-    
+
     private static float CalculateDamageByDistance(float distance) => Mathf.Lerp(Damage, MinDamage, Mathf.Clamp01(distance / MaxRange));
 
     private void ConfigureComponents()
