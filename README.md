@@ -16,7 +16,6 @@
 
 Adaptive Arsenal is a modification that improves upon existing weapon mechanics within [**The Long Dark**](https://www.hinterlandgames.com/the-long-dark/).
 
-#### Projectile Bullet System
 - **Accuracy:** Skills, crouching, standing and moving now all have an effect on how accurate of a shot your character is.
 - **Bullet System Overhaul:** Replaced the existing Raycast / Hitscan bullet system with projectiles.
 - **Damage Drop-off:** Each weapon has a unique damage drop-off threshold; once it's passed, the damage will decrease from that point onwards.
@@ -25,7 +24,8 @@ Adaptive Arsenal is a modification that improves upon existing weapon mechanics 
 - **Muzzle Velocities:** Each weapon has a unique muzzle velocity parameter set, determining how far the bullet can travel.
 - **Visuals:** A trail follows behind the bullet for visual representation of its landing location.
 
----
+## Showcase
+Coming Soon™
 
 ## Compatibility
 
@@ -39,8 +39,6 @@ For this mod to work, ensure you have the following mods below:
 Avoid using the following mods below as they are incompatible with this mod:
 
 - [**Target Practice & Master Hunter**](https://github.com/RomainDeschampsFR/TargetPracticeAndMasterHunter)
-
----
 
 ## Installation
 
