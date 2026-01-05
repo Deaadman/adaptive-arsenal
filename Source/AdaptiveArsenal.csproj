@@ -1,50 +1,71 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
+    
+    <PropertyGroup>
+        <TargetFramework>net6.0</TargetFramework>
+        <LangVersion>default</LangVersion>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+        <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+        <DebugType>embedded</DebugType>
+        <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
+        <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
+    </PropertyGroup>
 
-	<!-- These define the critical project details. Such as the net version, C# language version, null enable and do not generate assembly info (we need a custom one) -->
-	<PropertyGroup>
-		<TargetFramework>net6.0</TargetFramework>
-		<LangVersion>Latest</LangVersion>
-		<ImplicitUsings>enable</ImplicitUsings>
-		<Nullable>enable</Nullable>
-		<GenerateAssemblyInfo>false</GenerateAssemblyInfo>
-		<DebugType>none</DebugType>
-	</PropertyGroup>
+    <PropertyGroup>
+        <Authors>Deadman</Authors>
+        <Copyright>Copyright (c) 2026 $(Authors)</Copyright>
+        <Product>Adaptive Arsenal</Product>
+        <VersionPrefix>1.0.9</VersionPrefix>
+    </PropertyGroup>
 
-	<PropertyGroup>
-		<!-- This should point to wherever your games primary EXE is -->
-		<TheLongDarkPath>C:\Program Files (x86)\Steam\steamapps\common\TheLongDark</TheLongDarkPath>
-		<ReleaseFolderPath>D:\The Long Dark\Projects\Maintained\AdaptiveArsenal\Release</ReleaseFolderPath>
-	</PropertyGroup>
+    <PropertyGroup>
+        <BuildInfoFile>$(IntermediateOutputPath)BuildInfo.g.cs</BuildInfoFile>
+        <TheLongDarkPath>D:\SteamLibrary\steamapps\common\TheLongDark</TheLongDarkPath>
+    </PropertyGroup>
 
-	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
-	  <WarningLevel>6</WarningLevel>
-	</PropertyGroup>
-
-	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
-	  <WarningLevel>6</WarningLevel>
-	</PropertyGroup>
-
-	<!-- List of used references -->
 	<ItemGroup>
-		<PackageReference Include="STBlade.Modding.TLD.Il2CppAssemblies.Windows" Version="2.36.0" />
-		<PackageReference Include="STBlade.Modding.TLD.LocalizationUtilities" Version="2.0.0" />
+		<PackageReference Include="STBlade.Modding.TLD.Il2CppAssemblies.Windows" Version="*" />
+		<PackageReference Include="STBlade.Modding.TLD.LocalizationUtilities" Version="*" />
 	</ItemGroup>
 
-	<!-- Most commonly used using's. Add to this so you dont need to define them in the cs files -->
-	<ItemGroup>
-		<Using Include="System.Reflection" />
-		<Using Include="System.Diagnostics.CodeAnalysis" />
-		<Using Include="Il2Cpp" />
-		<Using Include="HarmonyLib" />
-		<Using Include="MelonLoader" />
-		<Using Include="UnityEngine" />
-	</ItemGroup>
+    <ItemGroup>
+        <Using Include="HarmonyLib" />
+        <Using Include="Il2Cpp" />
+        <Using Include="MelonLoader" />
+        <Using Include="UnityEngine" />
+        <Using Include="System.Reflection" />
+        <Using Include="System.Diagnostics.CodeAnalysis" />
+    </ItemGroup>
 
-	<!-- This is a build event. It will copy your dll to the currently defined TheLongDarkPath's Mods folder -->
-	<Target Name="PostBuild" AfterTargets="PostBuildEvent">
-		<!-- This copies the mods files to the games mod dir -->
-		<Copy SourceFiles="$(TargetPath)" DestinationFolder="$(TheLongDarkPath)/Mods" />
-		<!-- This copies the mods files to a designated release folder. Speeds up finding the dll after a build -->
-		<Copy SourceFiles="$(TargetPath)" DestinationFolder="$(ReleaseFolderPath)" />
-	</Target>
+<!--    <Target Name="CopyToModsFolder" AfterTargets="Build" Condition="'$(Configuration)' == 'Debug'">-->
+<!--        <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(TheLongDarkPath)/Mods" />-->
+<!--    </Target>-->
+
+    <Target Name="WriteVersion" AfterTargets="Build" Condition="'$(Configuration)' == 'Release'">
+        <WriteLinesToFile File="$(BaseIntermediateOutputPath)Version.txt" Lines="$(InformationalVersion)" Overwrite="true" />
+    </Target>
+
+    <Target Name="GenerateBuildInfo" BeforeTargets="CoreCompile">
+
+        <WriteLinesToFile
+                File="$(BuildInfoFile)"
+                Overwrite="true"
+                Lines="
+namespace AdaptiveArsenal.Properties%3B
+
+internal static class BuildInfo
+{
+	public const string Name = &quot;$(Product)&quot;%3B
+	public const string Version = &quot;$(InformationalVersion)&quot;%3B
+	public const string Author = &quot;$(Authors)&quot;%3B
+	public const string DownloadLink = &quot;https://github.com/Deaadman/AdaptiveArsenal/releases/latest/download/AdaptiveArsenal.dll&quot;%3B
+	public const int Priority = 0%3B
+	public const string MelonLoaderVersion = &quot;0.7.2-ci.2388&quot;%3B
+}
+" />
+
+        <ItemGroup>
+            <Compile Include="$(BuildInfoFile)" />
+        </ItemGroup>
+    </Target>
 </Project>

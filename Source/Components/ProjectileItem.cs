@@ -6,10 +6,10 @@ namespace AdaptiveArsenal.Components;
 [RegisterTypeInIl2Cpp(false)]
 public class ProjectileItem : MonoBehaviour
 {
-    private AmmoItem m_AmmoItem;
+    private AmmoItem? m_AmmoItem;
     private GunType m_GunType;
-    private LineRenderer m_LineRenderer;
-    private Rigidbody m_Rigidbody;
+    private LineRenderer? m_LineRenderer;
+    private Rigidbody? m_Rigidbody;
     
     private const float Damage = 100f;
     private const float MaxRange = 500f;
@@ -24,9 +24,8 @@ public class ProjectileItem : MonoBehaviour
     private float LastTrajectoryUpdateTime;
     private float LineRendererFadeTimer;
     private const int InitialTrajectoryCapacity = 100;
-    private int CurrentTrajectoryIndex;
     private Vector3 InitialPosition;
-    private List<Vector3> TrajectoryPoints;
+    private List<Vector3>? TrajectoryPoints;
     
     private static readonly Dictionary<string, int> GunMuzzleVelocities = new()
     {
@@ -74,6 +73,9 @@ public class ProjectileItem : MonoBehaviour
 
     private void ConfigureComponents()
     {
+        if (m_AmmoItem is null || m_Rigidbody is null)
+            return;
+        
         m_Rigidbody.collisionDetectionMode = CollisionDetectionMode.Continuous;
         m_GunType = m_AmmoItem.m_AmmoForGunType;
 
@@ -102,11 +104,17 @@ public class ProjectileItem : MonoBehaviour
         Utils.SetIsKinematic(m_Rigidbody, false);
         transform.parent = null;
 
+        if (m_Rigidbody is null)
+            return;
+        
         m_Rigidbody.velocity = Vector3.zero;
         m_Rigidbody.mass = 0.02f;
         m_Rigidbody.drag = 0.1f;
         m_Rigidbody.angularDrag = 0.1f;
 
+        if (m_LineRenderer is null)
+            return;
+        
         m_LineRenderer.startColor = new Color(1f, 1f, 1f, 0f);
         m_LineRenderer.endColor = Color.white * 0.7f;
         
@@ -114,6 +122,10 @@ public class ProjectileItem : MonoBehaviour
         m_Rigidbody.AddForce(muzzleVelocity, ForceMode.VelocityChange);
 
         InitialPosition = transform.position;
+        
+        if (TrajectoryPoints is null)
+            return;
+        
         TrajectoryPoints.Add(InitialPosition);
         m_LineRenderer.positionCount = 1;
         m_LineRenderer.SetPosition(0, InitialPosition);
@@ -166,6 +178,9 @@ public class ProjectileItem : MonoBehaviour
         TryInflictDamage(collision.gameObject, collision.gameObject.name);
         SpawnImpactEffects(collision, transform);
 
+        if (m_Rigidbody is null)
+            return;
+        
         m_Rigidbody.velocity = Vector3.zero;
         m_Rigidbody.isKinematic = true;
 
@@ -207,12 +222,18 @@ public class ProjectileItem : MonoBehaviour
 
     private void Update()
     {
-        if (!m_LineRenderer) return;
+        if (m_LineRenderer is null) 
+            return;
+
         if (!LineRendererStartFadeOut)
         {
             if (Time.time - LastTrajectoryUpdateTime < TrajectoryUpdateInterval) return;
 
             LastTrajectoryUpdateTime = Time.time;
+            
+            if (TrajectoryPoints is null)
+                return;
+            
             TrajectoryPoints.Add(transform.position);
             
             var totalLength = 0f;

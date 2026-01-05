@@ -1,0 +1,22 @@
+name: Feature Request
+description: Suggest a new feature or enhancement for this mod.
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        When requesting for features, follow the guidelines in this template.
+        - Write a descriptive issue title above.
+        - Search [open](https://github.com/Deaadman/AdaptiveArsenal/issues) and [closed](https://github.com/Deaadman/AdaptiveArsenal/issues?q=is%3Aissue%20state%3Aclosed) issues to ensure the feature has not already been requested.
+
+  - type: textarea
+    attributes:
+      label: Describe the problem or limitation that you are having in your game.
+    validations:
+      required: true
+
+  - type: textarea
+    attributes:
+      label: Describe the feature / enhancement and how it helps to overcome the problem or limitation.
+    validations:
+      required: true

@@ -7,13 +7,16 @@ namespace AdaptiveArsenal.Animators;
 [RegisterTypeInIl2Cpp(false)]
 public class AmmoSpriteAnimator : MonoBehaviour
 {
-    private GameObject ammoPrefab;
+    private GameObject? ammoPrefab;
     private readonly List<GameObject> activeAmmoSprites = [];
 
     [HideFromIl2Cpp]
     internal IEnumerator CasingEjectionAnimation(Vector3 startPosition, Transform parentTransform, GunType gunType)
     {
         var casingObject = Instantiate(ammoPrefab, parentTransform);
+        if (casingObject is null)
+            yield break;
+        
         activeAmmoSprites.Add(casingObject);
         casingObject.transform.localPosition = startPosition;
         casingObject.SetActive(true);

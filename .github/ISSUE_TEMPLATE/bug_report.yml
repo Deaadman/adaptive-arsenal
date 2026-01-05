@@ -1,0 +1,56 @@
+name: Bug Report
+description: Report a bug for an issue this mod is causing.
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        When reporting bugs, follow the guidelines in this template.
+        - Write a descriptive issue title above.
+        - The golden rule is to **always open *one* issue for *one* bug**. If you notice several bugs and want to report them, make sure to create one new issue for each of them.
+        - Search [open](https://github.com/Deaadman/AdaptiveArsenal/issues) and [closed](https://github.com/Deaadman/AdaptiveArsenal/issues?q=is%3Aissue%20state%3Aclosed) issues to ensure the bug has not already been reported.
+        - Verify that you are using the [latest mod version](https://github.com/Deaadman/AdaptiveArsenal/releases/latest), and the latest version of the game.
+
+  - type: textarea
+    attributes:
+      label: Tested Versions
+      description: |
+        To properly fix a bug, we need to identify if the bug was recently introduced in the mod, or if it was always present.
+        - Specify the version you found the issue in, including the **Git commit hash** if using a nightly build. The exact version (including the commit hash) can be copied from the terminal window that opens with the game.
+        - If you can, **test earlier versions** and, if applicable, newer versions (nightly build). Mention whether the bug is reproducible or not in the versions you tested. You can find all releases [here](https://github.com/Deaadman/AdaptiveArsenal/releases).
+        - The aim is to identify whether a bug is a **regression**, i.e. an issue that didn't exist in a previous version, but was introduced later on, breaking existing functionality.
+      placeholder: |
+        - Reproducible In: 1.1.0-nightly [d76c1d0e5], 1.0.9 and later.
+        - Not Reproducible In: 1.0.8, 1.0.7 and earlier.
+    validations:
+      required: true
+
+  - type: textarea
+    attributes:
+      label: Issue Description
+      description: |
+        Describe your issue briefly. 
+        - What doesn't work, and how do you expect it to work instead?
+        - **Do not** post screenshots of the logs in your console, instead include the log file produced in the section below.
+    validations:
+      required: true
+
+  - type: textarea
+    attributes:
+      label: Log File
+      description: |
+        Upload the log file produced after closing the game. The log file is called `Latest.log` and is usually found underneath the `MelonLoader` folder within your game's directory.
+        - **Ensure** that **all levels** of logging are enabled before uploading the log file. Enable these through the settings [ComplexLogger](https://github.com/Arkhorse/Complex-Logger) provides in the in-game settings menu.
+    validations:
+      required: true
+
+  - type: textarea
+    attributes:
+      label: Steps to Reproduce
+      description: |
+        List the steps taken to reproduce the issue.
+          - Include how often it happens.
+          - What did you expect to happen, and what actually happened?
+          - If applicable, uploading a short video can help.
+    validations:
+      required: true
