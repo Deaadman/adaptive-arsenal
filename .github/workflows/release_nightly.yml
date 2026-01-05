@@ -94,6 +94,6 @@ jobs:
           gh release create nightly \
             --prerelease \
             --title "${{ env.VERSION }}" \
-            --notes "See [this comparison](compare_url) to see what has changed since the latest release." \
+            --notes "Click on [this comparison](${compare_url}) to see what has changed since the latest release." \
             --target "${{ github.sha }}" \
             out/${{ env.PROJECT_NAME }}.dll
