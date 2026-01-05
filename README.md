@@ -1,20 +1,18 @@
-<p align="center">
-    <a href="#"><img src="https://raw.githubusercontent.com/Deaadman/AdaptiveArsenal/release/Images/MainHeading.png"></a>
-
----
-
 <div align="center">
 
-[![Latest Release](https://img.shields.io/github/v/release/Deaadman/AdaptiveArsenal?label=Latest%20Release&style=for-the-badge)](https://github.com/Deaadman/AdaptiveArsenal/releases/latest)
+<img src="https://raw.githubusercontent.com/Deaadman/AdaptiveArsenal/release/Images/Banner.webp" alt="Adaptive Arsenal Banner">
 
-[![Total Downloads](https://img.shields.io/github/downloads/Deaadman/AdaptiveArsenal/total.svg?style=for-the-badge)](https://github.com/Deaadman/AdaptiveArsenal/releases)
-[![Latest Downloads](https://img.shields.io/github/downloads/Deaadman/AdaptiveArsenal/latest/total.svg?style=for-the-badge)](https://github.com/Deaadman/AdaptiveArsenal/releases)
+[![Latest Release](https://img.shields.io/github/v/release/Deaadman/AdaptiveArsenal?style=for-the-badge&label=Latest%20Release)](https://github.com/Deaadman/AdaptiveArsenal/releases/latest)
+
+[![All Downloads](https://img.shields.io/github/downloads/Deaadman/AdaptiveArsenal/total?style=for-the-badge&label=All%20Downloads)](https://github.com/Deaadman/AdaptiveArsenal/releases)
+[![Latest Downloads](https://img.shields.io/github/downloads/Deaadman/AdaptiveArsenal/latest/total?style=for-the-badge&label=Latest%20Downloads)](https://github.com/Deaadman/AdaptiveArsenal/releases/latest)
+
+[![Nightly Workflow](https://img.shields.io/github/actions/workflow/status/Deaadman/AdaptiveArsenal/release_nightly.yml?style=for-the-badge&label=Nightly%20Build)](https://github.com/Deaadman/AdaptiveArsenal/actions/workflows/release_nightly.yml)
+[![Nightly Downloads](https://img.shields.io/github/downloads/Deaadman/AdaptiveArsenal/nightly/total?style=for-the-badge&label=Nightly%20Downloads)](https://github.com/Deaadman/AdaptiveArsenal/releases/tag/nightly)
 
 </div>
 
----
-
-## GENERAL INFORMATION / FEATURES:
+## Features
 
 Adaptive Arsenal is a modification that improves upon existing weapon mechanics within [**The Long Dark**](https://www.hinterlandgames.com/the-long-dark/).
 
@@ -29,29 +27,25 @@ Adaptive Arsenal is a modification that improves upon existing weapon mechanics 
 
 ---
 
-## COMPATIBILITY:
+## Compatibility
 
-### Required Dependencies:
-For optimal functionality of this modification, ensure you have the following versions or newer for the latest version of this modification.
+### Required Dependencies
+For this mod to work, ensure you have the following mods below:
 
-- [**The Long Dark**](https://store.steampowered.com/news/app/305620) - Version: **v2.39**
-- [**MelonLoader**](https://github.com/LavaGang/MelonLoader/releases) - Version: **v0.6.6**
+- [**Localization Utilities**](https://github.com/dommrogers/LocalizationUtilities/releases)
 
 ### Incompatible Mods:
 
-Avoid using the following mods below with this one as they may result in game crashes, data loss, or unforeseen issues:
+Avoid using the following mods below as they are incompatible with this mod:
 
-- **[Target Practice & Master Hunter](https://github.com/RomainDeschampsFR/TargetPracticeAndMasterHunter)** 
+- [**Target Practice & Master Hunter**](https://github.com/RomainDeschampsFR/TargetPracticeAndMasterHunter)
 
 ---
 
-## INSTALLATION:
+## Installation
 
-1. [**Download**](https://github.com/LavaGang/MelonLoader/releases/latest/download/MelonLoader.Installer.exe) the latest version of MelonLoader.
-2. [**Download**](https://github.com/Deaadman/AdaptiveArsenal/releases/latest/download/AdaptiveArsenal.dll) the latest version of this modification.
-3. Navigate to the game's mod directory: `[Path to The Long Dark Installation]/mods`.
-4. Copy the `AdaptiveArsenal.dll` from your `Downloads` folder and paste it into the `mods` directory.
-5. Launch the game. The mod should be enabled.
-
-> [!NOTE]
-> This modification is not officially a part of The Long Dark and is not affiliated with Hinterland Studio Inc or its affiliates.
+1. [**Download**](https://github.com/LavaGang/MelonLoader/releases/latest/download/MelonLoader.Installer.exe) MelonLoader and install it into your game.
+2. [**Download**](https://github.com/Deaadman/AdaptiveArsenal/releases/latest/download/AdaptiveArsenal.dll) the latest version of this mod.
+3. Navigate to where your game's directory.
+4. Cut the `AdaptiveArsenal.dll` you downloaded and paste it into the `mods` folder of your game's directory.
+5. Launch the game.
