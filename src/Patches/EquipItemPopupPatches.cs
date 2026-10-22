@@ -80,35 +80,57 @@ internal static class EquipItemPopupPatches
     /// carrying, unless <see cref="Settings.m_ShowAmmoCount"/> is on, so the player has to keep count.
     /// </summary>
     /// <remarks>
-    /// The game sets up the round sprites and the carried count every time it updates the panel, so they're hidden
-    /// again after each update, and come back by themselves when the setting is turned on. The carried count is
-    /// emptied rather than hidden for that reason: the game sets its text each update. The icon for the type of ammo
-    /// still shows. Other weapons, like the flare gun and bow, are left as they are.
+    /// The round sprites are made see-through rather than turned off, since the game doesn't turn them back on each
+    /// time it updates the panel. They get their own alpha back when the setting is turned on, or for any other
+    /// weapon, like the flare gun, which shares them. The carried count is emptied after each update, and since the
+    /// game only sets its text when the count changes, it's told to set it again once the count shows. The icon for
+    /// the type of ammo still shows.
     /// </remarks>
     [HarmonyPatch(typeof(EquipItemPopup), nameof(EquipItemPopup.UpdateAmmoStatus))]
     private static class HideAmmoCount
     {
+        /// <summary>The alpha of each round sprite made see-through, by its pointer, to put back.</summary>
+        private static readonly Dictionary<IntPtr, float> s_HiddenSpriteAlphas = [];
+
+        /// <summary>Whether the carried count was emptied, so it needs the game to set it again.</summary>
+        private static bool s_ReserveEmptied;
+
         private static void Postfix(EquipItemPopup __instance)
         {
-            if (Settings.Instance.m_ShowAmmoCount)
-                return;
-
             var itemInHands = GameManager.GetPlayerManagerComponent().m_ItemInHands;
-            if (itemInHands == null || itemInHands.m_GunItem == null)
-                return;
+            var gunType = itemInHands != null && itemInHands.m_GunItem != null ? itemInHands.m_GunItem.m_GunType : (GunType?)null;
+            var hide = !Settings.Instance.m_ShowAmmoCount && gunType is GunType.Rifle or GunType.Revolver;
 
-            var gunType = itemInHands.m_GunItem.m_GunType;
-            if (gunType != GunType.Rifle && gunType != GunType.Revolver)
+            if (!hide && s_HiddenSpriteAlphas.Count == 0 && !s_ReserveEmptied)
                 return;
 
             foreach (var roundSprite in __instance.m_ListAmmoSprites)
             {
-                if (roundSprite != null)
-                    roundSprite.gameObject.SetActive(false);
+                if (roundSprite == null)
+                    continue;
+
+                if (hide)
+                {
+                    s_HiddenSpriteAlphas.TryAdd(roundSprite.Pointer, roundSprite.alpha);
+                    roundSprite.alpha = 0f;
+                }
+                else if (s_HiddenSpriteAlphas.Remove(roundSprite.Pointer, out var alpha))
+                {
+                    roundSprite.alpha = alpha;
+                }
             }
 
-            if (__instance.m_LabelAmmoReserve != null)
+            if (hide && __instance.m_LabelAmmoReserve != null)
+            {
                 __instance.m_LabelAmmoReserve.text = string.Empty;
+                s_ReserveEmptied = true;
+            }
+            else if (!hide && s_ReserveEmptied)
+            {
+                // The game only sets the carried count when it changes from this, so a count it can't be sets it again.
+                __instance.m_LastReserveValue = -1;
+                s_ReserveEmptied = false;
+            }
         }
     }
 }
