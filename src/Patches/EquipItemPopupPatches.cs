@@ -12,8 +12,12 @@ internal static class EquipItemPopupPatches
     [HarmonyPatch(typeof(EquipItemPopup), nameof(EquipItemPopup.Awake))]
     private static class AddAmmoSpriteAnimator
     {
-        private static void Postfix(EquipItemPopup __instance) =>
-            _ = __instance.GetComponent<AmmoSpriteAnimator>() ?? __instance.gameObject.AddComponent<AmmoSpriteAnimator>();
+        private static void Postfix(EquipItemPopup __instance)
+        {
+            // Unity objects need == null, not ??, to tell when they've been destroyed.
+            if (__instance.GetComponent<AmmoSpriteAnimator>() == null)
+                __instance.gameObject.AddComponent<AmmoSpriteAnimator>();
+        }
     }
 
     /// <summary>

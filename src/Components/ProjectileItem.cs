@@ -45,6 +45,9 @@ public class ProjectileItem : MonoBehaviour
     /// <summary>How many trail points to make room for up front.</summary>
     private const int InitialTrailCapacity = 100;
 
+    /// <summary>The arrow's trail material, which every bullet's trail uses, looked up the first time it's needed.</summary>
+    private static Material? s_TrailMaterial;
+
     private GunType m_GunType;
     private Rigidbody? m_Rigidbody;
 
@@ -143,8 +146,11 @@ public class ProjectileItem : MonoBehaviour
 
         m_Rigidbody.collisionDetectionMode = CollisionDetectionMode.Continuous;
 
-        var arrowTrailMaterial = PrefabMaterials.GetLineRendererMaterial("GEAR_Arrow", "LineRenderer");
-        if (arrowTrailMaterial == null)
+        // Unity objects need == null, not ??=, to tell when they've been destroyed.
+        if (s_TrailMaterial == null)
+            s_TrailMaterial = PrefabMaterials.GetLineRendererMaterial("GEAR_Arrow", "LineRenderer");
+
+        if (s_TrailMaterial == null)
         {
             Mod.Logger.Log("Couldn't find the arrow's trail material, so bullets have no trail.", FlaggedLoggingLevel.Warning);
             return;
@@ -153,7 +159,7 @@ public class ProjectileItem : MonoBehaviour
         GameObject trailObject = new("LineRenderer") { transform = { parent = transform } };
 
         m_Trail = trailObject.AddComponent<LineRenderer>();
-        m_Trail.material = arrowTrailMaterial;
+        m_Trail.material = s_TrailMaterial;
         m_Trail.startWidth = 0.4f;
         m_Trail.endWidth = 0.1f;
 

@@ -50,9 +50,11 @@ public class AmmoSpriteAnimator : MonoBehaviour
     [HideFromIl2Cpp]
     internal IEnumerator AnimateCasingEjection(Vector3 startPosition, Transform parent, GunType gunType)
     {
-        var round = Instantiate(m_RoundSpriteTemplate, parent);
-        if (round is null)
+        // Unity objects need == null, not is null, to tell when they've been destroyed.
+        if (m_RoundSpriteTemplate == null)
             yield break;
+
+        var round = Instantiate(m_RoundSpriteTemplate, parent);
 
         m_EjectingRounds.Add(round);
         round.transform.localPosition = startPosition;
@@ -84,8 +86,21 @@ public class AmmoSpriteAnimator : MonoBehaviour
         Destroy(round);
     }
 
-    /// <summary>Copies one of the ammo display's own round sprites, so the ejected round looks the same.</summary>
-    private void Start() => m_RoundSpriteTemplate = GetComponent<EquipItemPopup>().m_ListAmmoSprites[1].gameObject;
+    /// <summary>
+    /// Copies one of the ammo display's own round sprites, so the ejected round looks the same: the second, or the
+    /// first if there's only one. With none, rounds aren't animated.
+    /// </summary>
+    private void Start()
+    {
+        var ammoSprites = GetComponent<EquipItemPopup>().m_ListAmmoSprites;
+        if (ammoSprites.Length == 0)
+        {
+            Mod.Logger.Log("The HUD's ammo display has no round sprites, so spent rounds aren't animated.", FlaggedLoggingLevel.Warning);
+            return;
+        }
+
+        m_RoundSpriteTemplate = ammoSprites[Math.Min(1, ammoSprites.Length - 1)].gameObject;
+    }
 
     /// <summary>Removes any rounds still mid-animation when the HUD panel is hidden.</summary>
     private void OnDisable()

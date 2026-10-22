@@ -76,7 +76,6 @@ internal static class vp_FPSShooterPatches
             if (!__instance.ProjectilePrefab.GetComponent<ProjectileItem>())
                 return;
 
-            ProjectileUtilities.SetBulletEmissionLocator(__instance);
             if (!ProjectileUtilities.CalculateProjectileTransform(__instance, out var position, out var aimRotation))
             {
                 Mod.Logger.Log($"{__instance.gameObject.name} has no sights or bullet emission point, so it fires no bullet.", FlaggedLoggingLevel.Warning);

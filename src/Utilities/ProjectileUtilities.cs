@@ -12,7 +12,9 @@ internal static class ProjectileUtilities
     /// The first-person weapon is drawn by its own weapon camera, so its sights aren't where they appear to be in the
     /// world. This projects them onto the screen with the weapon camera, then back into the world with the main
     /// camera, and aims along the line from the rear sight to the front sight. A weapon without sights aims along its
-    /// bullet emission point instead.
+    /// bullet emission point instead. Along the way, it points the shooter's
+    /// <see cref="vp_FPSShooter.BulletEmissionLocator"/> at the emission point of the weapon in the right hand, or
+    /// failing that, the one on the shoulder.
     /// </remarks>
     /// <param name="shooter">The weapon's shooter.</param>
     /// <param name="position">The world-space position to fire from.</param>
@@ -70,22 +72,5 @@ internal static class ProjectileUtilities
         }
 
         return false;
-    }
-
-    /// <summary>
-    /// Points the shooter's <see cref="vp_FPSShooter.BulletEmissionLocator"/> at the bullet emission point of the
-    /// weapon in the right hand, or failing that, the one on the shoulder.
-    /// </summary>
-    /// <param name="shooter">The weapon's shooter.</param>
-    internal static void SetBulletEmissionLocator(vp_FPSShooter shooter)
-    {
-        if (shooter.m_Weapon.m_FirstPersonWeaponRightHand && shooter.m_Weapon.m_FirstPersonWeaponRightHand.m_BulletEmissionPoint)
-        {
-            shooter.BulletEmissionLocator = shooter.m_Weapon.m_FirstPersonWeaponRightHand.m_BulletEmissionPoint.transform;
-        }
-        else if (shooter.m_Weapon.m_FirstPersonWeaponShoulder && shooter.m_Weapon.m_FirstPersonWeaponShoulder.m_BulletEmissionPoint)
-        {
-            shooter.BulletEmissionLocator = shooter.m_Weapon.m_FirstPersonWeaponShoulder.m_BulletEmissionPoint.transform;
-        }
     }
 }
