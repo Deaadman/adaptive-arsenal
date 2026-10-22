@@ -13,7 +13,7 @@ Adaptive Arsenal is a [MelonLoader](https://github.com/LavaGang/MelonLoader) mod
 1. Install [MelonLoader](https://github.com/LavaGang/MelonLoader/releases/latest/download/MelonLoader.Installer.exe) into The Long Dark.
 2. Install the mods it needs, in the `Mods` folder in the game's folder:
    - [Complex Logger](https://github.com/Arkhorse/Complex-Logger/releases/latest)
-   - [ModSettings](https://github.com/DigitalzombieTLD/ModSettings), which Complex Logger needs
+   - [ModSettings](https://github.com/DigitalzombieTLD/ModSettings), for the mod's settings menu (Complex Logger needs it too)
 3. Download [AdaptiveArsenal.dll](https://github.com/Deaadman/adaptive-arsenal/releases/latest/download/AdaptiveArsenal.dll) and put it in the `Mods` folder too.
 4. Start the game.
 
@@ -38,8 +38,10 @@ Every change is built straight away and published as the [nightly release](https
 | Muzzle velocity | Each rifle and revolver fires its bullets at its own speed |
 | Damage drop-off | The further a bullet travels, the less damage it does |
 | Bullet trails | A trail follows each bullet, so you can see where it landed |
-| HUD animation | Firing plays an animation of the spent round on the ammo display |
+| Hidden ammo count | The HUD doesn't show how many rounds are loaded, so you keep count yourself |
+| HUD animation | With the ammo count shown, firing plays an animation of the spent round on the ammo display |
 | Revolver movement | You can walk while aiming a revolver |
+| Settings | Turn real bullets, trails, revolver movement and the ammo count on or off, and tune accuracy, speed and damage, in the game's Mod Settings menu |
 
 [How it all works](docs/features.md) has the numbers for each weapon.
 

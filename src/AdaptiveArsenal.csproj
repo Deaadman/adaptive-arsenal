@@ -33,6 +33,11 @@
         <PackageReference Include="STBlade.Modding.TLD.Il2CppAssemblies.Windows" Version="2.55.0" />
     </ItemGroup>
 
+    <!-- ModSettings, for the mod's settings menu. Players install it themselves (Complex Logger needs it too), so it isn't copied to the output. -->
+    <ItemGroup>
+        <PackageReference Include="STBlade.Modding.TLD.ModSettings" Version="1.9.0" ExcludeAssets="runtime" />
+    </ItemGroup>
+
     <ItemGroup>
         <Using Include="HarmonyLib" />
         <Using Include="Il2Cpp" />

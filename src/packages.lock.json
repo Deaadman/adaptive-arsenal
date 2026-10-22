@@ -17,6 +17,15 @@
           "Newtonsoft.Json": "13.0.4"
         }
       },
+      "STBlade.Modding.TLD.ModSettings": {
+        "type": "Direct",
+        "requested": "[1.9.0, )",
+        "resolved": "1.9.0",
+        "contentHash": "Vs1sg4sP6Jr0qrOHiFSVnksKgYjW28EdGVPq78/Avs6hgOouNwQ/4cJCSy2JX6RWVPaw3QUR6ScKFhhWhduxdw==",
+        "dependencies": {
+          "STBlade.Modding.TLD.Il2CppAssemblies.Windows": "2.10.0"
+        }
+      },
       "AsmResolver": {
         "type": "Transitive",
         "resolved": "6.0.0-beta.3",

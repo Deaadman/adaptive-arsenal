@@ -13,6 +13,9 @@ internal sealed class Mod : MelonMod
     internal static readonly ComplexLogger.ComplexLogger<Mod> Logger = new();
 
     /// <inheritdoc />
-    public override void OnInitializeMelon() =>
+    public override void OnInitializeMelon()
+    {
+        Settings.Initialize();
         Logger.Log($"{Properties.BuildInfo.Name} {Properties.BuildInfo.Version} initialized.", FlaggedLoggingLevel.Debug);
+    }
 }

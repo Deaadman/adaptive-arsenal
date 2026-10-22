@@ -50,3 +50,25 @@ Hits count towards your Rifle or Revolver skill and the wildlife hits statistic,
 ## Revolver movement
 
 Without the mod, aiming a revolver stops you moving. With it, you can walk while you aim, and the HUD no longer shows the limited-movement icon for it. Rifles still stop you moving while you aim.
+
+## Ammo count
+
+The HUD doesn't show how many rounds are loaded in your rifle or revolver, so you have to keep count. It still shows the ammo type and how many rounds you're carrying.
+
+## Settings
+
+Everything above is how the mod plays by default. To change it, open **Options**, then **Mod Settings**, then **Adaptive Arsenal**. The settings are saved in `Mods\AdaptiveArsenal.json`.
+
+| Setting | Default | What it does |
+| --- | --- | --- |
+| Real bullets | On | Off, rifles and revolvers fire the game's own instant shots, and the bullet settings below are hidden. |
+| Bullet trails | On | Shows the trail behind each bullet. |
+| Trail length | 200 m | How far behind the bullet its trail reaches. |
+| Bullet speed | × 1 | Multiplies every weapon's muzzle velocity. |
+| Base accuracy | × 1.2 | Multiplies the accuracy of every shot. |
+| Hip fire, Standing, Moving | × 0.7, × 0.8, × 0.9 | Multiply accuracy in those situations. 1 means no penalty. |
+| Worst spread | 10° | How far the least accurate shot can land from where you aimed. |
+| Drop-off distance | 500 m | How far a bullet flies before its damage has fallen as far as it will. |
+| Long-range damage | 0.1 | How much of its damage a bullet still does at that distance. 1 means no drop-off. |
+| Walk while aiming revolver | On | Lets you walk while aiming a revolver. |
+| Show loaded rounds | Off | Shows the loaded rounds on the HUD, with the spent round animation. |

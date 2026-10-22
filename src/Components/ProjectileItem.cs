@@ -24,9 +24,6 @@ public class ProjectileItem : MonoBehaviour
     /// <summary>The layer of a collider on part of an animal's body, whose parent has the <see cref="BaseAi"/>.</summary>
     private const int AiBodyPartLayer = 27;
 
-    /// <summary>The longest the trail gets, in metres. Older points are dropped past this.</summary>
-    private const float TrailMaxLength = 200f;
-
     /// <summary>How often, in seconds, the bullet's position is added to the trail.</summary>
     private const float TrailUpdateInterval = 0.05f;
 
@@ -143,13 +140,19 @@ public class ProjectileItem : MonoBehaviour
         SpawnImpactEffects(collision.collider, contact.point);
     }
 
-    /// <summary>Sets up the rigidbody for fast movement and creates the trail using the arrow's trail material.</summary>
+    /// <summary>
+    /// Sets up the rigidbody for fast movement and, if <see cref="Settings.m_TrailsEnabled"/> is on, creates the trail
+    /// using the arrow's trail material.
+    /// </summary>
     private void ConfigureComponents()
     {
         if (m_Rigidbody is null)
             return;
 
         m_Rigidbody.collisionDetectionMode = CollisionDetectionMode.Continuous;
+
+        if (!Settings.Instance.m_TrailsEnabled)
+            return;
 
         // Unity objects need == null, not ??=, to tell when they've been destroyed.
         if (s_TrailMaterial == null)
@@ -374,7 +377,7 @@ public class ProjectileItem : MonoBehaviour
 
     /// <summary>
     /// Every <see cref="TrailUpdateInterval"/>, adds the bullet's position to the trail, then drops the oldest points
-    /// past <see cref="TrailMaxLength"/>.
+    /// past <see cref="Settings.m_TrailLength"/>.
     /// </summary>
     private void ExtendTrail()
     {
@@ -388,7 +391,7 @@ public class ProjectileItem : MonoBehaviour
 
         m_TrailPoints.Add(transform.position);
 
-        var pointsToDrop = Curves.PointsToDrop(m_TrailPoints, Vector3.Distance, TrailMaxLength);
+        var pointsToDrop = Curves.PointsToDrop(m_TrailPoints, Vector3.Distance, Settings.Instance.m_TrailLength);
         if (pointsToDrop > 0)
             m_TrailPoints.RemoveRange(0, pointsToDrop);
 

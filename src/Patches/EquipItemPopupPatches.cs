@@ -4,7 +4,8 @@ namespace AdaptiveArsenal.Patches;
 
 /// <summary>
 /// Patches on <see cref="EquipItemPopup"/>, the HUD panel that shows the rounds in the weapon in the player's hands,
-/// to play <see cref="AmmoSpriteAnimator"/>'s animation when a round is used.
+/// to hide them unless <see cref="Settings.m_ShowAmmoCount"/> is on, and to play <see cref="AmmoSpriteAnimator"/>'s
+/// animation when a round is used.
 /// </summary>
 internal static class EquipItemPopupPatches
 {
@@ -26,7 +27,7 @@ internal static class EquipItemPopupPatches
     /// </summary>
     /// <remarks>
     /// Switching weapons only resets the count, so equipping a gun with fewer rounds doesn't play the animation. The
-    /// flare gun is left out.
+    /// flare gun is left out, and so is everything while the rounds are hidden, since the animation would count them.
     /// </remarks>
     [HarmonyPatch(typeof(EquipItemPopup), nameof(EquipItemPopup.UpdateAmmoStatus))]
     private static class EjectRoundOnShot
@@ -63,7 +64,7 @@ internal static class EquipItemPopupPatches
             var roundWasUsed = roundsInClip < s_LastRoundsInClip;
             var slotIsShown = roundsInClip < gunItem.m_ClipSize && roundsInClip < __instance.m_ListAmmoSprites.Length;
 
-            if (roundWasUsed && slotIsShown)
+            if (roundWasUsed && slotIsShown && Settings.Instance.m_ShowAmmoCount)
             {
                 var startPosition = __instance.m_ListAmmoSprites[roundsInClip].transform.localPosition;
                 var spriteParent = __instance.m_ListAmmoSprites[0].transform.parent;
@@ -71,6 +72,39 @@ internal static class EquipItemPopupPatches
             }
 
             s_LastRoundsInClip = roundsInClip;
+        }
+    }
+
+    /// <summary>
+    /// Hides the rounds loaded in the rifle or revolver in the player's hands, unless
+    /// <see cref="Settings.m_ShowAmmoCount"/> is on, so the player has to keep count.
+    /// </summary>
+    /// <remarks>
+    /// The game sets up the round sprites every time it updates the panel, so they're hidden again after each update,
+    /// and come back by themselves when the setting is turned on. The ammo type and the rounds in the player's inventory
+    /// still show. Other weapons, like the flare gun and bow, are left as they are.
+    /// </remarks>
+    [HarmonyPatch(typeof(EquipItemPopup), nameof(EquipItemPopup.UpdateAmmoStatus))]
+    private static class HideLoadedRounds
+    {
+        private static void Postfix(EquipItemPopup __instance)
+        {
+            if (Settings.Instance.m_ShowAmmoCount)
+                return;
+
+            var itemInHands = GameManager.GetPlayerManagerComponent().m_ItemInHands;
+            if (itemInHands == null || itemInHands.m_GunItem == null)
+                return;
+
+            var gunType = itemInHands.m_GunItem.m_GunType;
+            if (gunType != GunType.Rifle && gunType != GunType.Revolver)
+                return;
+
+            foreach (var roundSprite in __instance.m_ListAmmoSprites)
+            {
+                if (roundSprite != null)
+                    roundSprite.gameObject.SetActive(false);
+            }
         }
     }
 }

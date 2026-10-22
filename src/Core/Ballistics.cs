@@ -7,6 +7,9 @@ namespace AdaptiveArsenal.Core;
 /// Everything in <c>src/Core</c> is plain C#, with nothing from Unity, the game or MelonLoader, so the tests in
 /// <c>tests</c> can run it without the game. The test project compiles these files itself, so using a game type here
 /// breaks the test build.
+///
+/// The numbers players can change in the mod's settings are properties, which <c>Settings</c> sets. Their defaults
+/// are the mod's own values, which the tests check.
 /// </remarks>
 internal static class Ballistics
 {
@@ -14,28 +17,31 @@ internal static class Ballistics
     internal const float DefaultMuzzleDamage = 100f;
 
     /// <summary>The share of its muzzle damage a bullet still does at <see cref="DamageFalloffRange"/> and beyond.</summary>
-    internal const float MinDamageFraction = 0.1f;
+    internal static float MinDamageFraction { get; set; } = 0.1f;
 
     /// <summary>The distance, in metres, over which damage falls to <see cref="MinDamageFraction"/> of the muzzle damage.</summary>
-    internal const float DamageFalloffRange = 500f;
+    internal static float DamageFalloffRange { get; set; } = 500f;
 
     /// <summary>Every shot's accuracy is multiplied by this.</summary>
-    internal const float BaseAccuracyMultiplier = 1.2f;
+    internal static float BaseAccuracyMultiplier { get; set; } = 1.2f;
 
     /// <summary>Accuracy is multiplied by this when firing from the hip.</summary>
-    internal const float HipFireAccuracyMultiplier = 0.7f;
+    internal static float HipFireAccuracyMultiplier { get; set; } = 0.7f;
 
     /// <summary>Accuracy is multiplied by this when standing rather than crouching.</summary>
-    internal const float StandingAccuracyMultiplier = 0.8f;
+    internal static float StandingAccuracyMultiplier { get; set; } = 0.8f;
 
     /// <summary>Accuracy is multiplied by this when moving.</summary>
-    internal const float MovingAccuracyMultiplier = 0.9f;
+    internal static float MovingAccuracyMultiplier { get; set; } = 0.9f;
 
     /// <summary>The accuracy at which a shot lands exactly where it was aimed.</summary>
     internal const float FullAccuracy = 100f;
 
     /// <summary>How far, in degrees, a shot with an accuracy of 0 can land from where it was aimed.</summary>
-    internal const float MaxInaccuracyDegrees = 10f;
+    internal static float MaxInaccuracyDegrees { get; set; } = 10f;
+
+    /// <summary>Every weapon's muzzle velocity is multiplied by this.</summary>
+    internal static float MuzzleVelocityMultiplier { get; set; } = 1f;
 
     /// <summary>The base accuracy of a revolver at each Revolver skill tier.</summary>
     private static readonly int[] RevolverAccuracyBySkillTier = [40, 50, 60, 80, 100];
@@ -128,12 +134,12 @@ internal static class Ballistics
 
     /// <summary>
     /// The muzzle velocity for a weapon, in metres per second, from the first entry in <see cref="MuzzleVelocities"/>
-    /// whose name its gear name contains.
+    /// whose name its gear name contains, times <see cref="MuzzleVelocityMultiplier"/>.
     /// </summary>
     /// <param name="gearItemName">The weapon's gear name, which may have a suffix like <c>(Clone)</c>.</param>
     /// <returns>The muzzle velocity, or 0 for a weapon that isn't listed.</returns>
     internal static float GetMuzzleVelocity(string gearItemName) =>
-        MuzzleVelocities.FirstOrDefault(entry => gearItemName.Contains(entry.GearName)).Velocity;
+        MuzzleVelocities.FirstOrDefault(entry => gearItemName.Contains(entry.GearName)).Velocity * MuzzleVelocityMultiplier;
 
     /// <summary>The same as Unity's <c>Mathf.Clamp01</c>.</summary>
     private static float Clamp01(float value) => value < 0f ? 0f : value > 1f ? 1f : value;

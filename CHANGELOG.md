@@ -24,6 +24,8 @@ See docs/development.md, "Releasing". CI checks this file's format.
 - **Breaking:** The mod logs through [Complex Logger](https://github.com/Arkhorse/Complex-Logger), which it now needs, along with [ModSettings](https://github.com/DigitalzombieTLD/ModSettings). Turn on its debug levels when reporting a bug.
 - The log warns when a weapon has no bullet trail or muzzle velocity, or fires the game's own shots instead of the mod's.
 - Bullets knock loose items around when they hit them, as the game's own bullets do.
+- A settings page in Options, Mod Settings, to turn real bullets, bullet trails and walking while aiming a revolver on or off, and to tune accuracy, bullet speed, trail length and damage drop-off.
+- **Breaking:** The HUD no longer shows how many rounds are loaded in your rifle or revolver, so you have to keep count. Turn on **Show loaded rounds** in the mod's settings to bring it back.
 
 ### Changed
 

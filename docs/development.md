@@ -24,6 +24,7 @@ dotnet build
 - `src/Animators`: the round animation on the HUD.
 - `src/Utilities`: helpers for the game's objects: building the bullet each gun fires, where a shot starts, and borrowing materials.
 - `src/Dependencies`: DLLs that aren't on NuGet. [Complex Logger](https://github.com/Arkhorse/Complex-Logger) 1.0.8, which the mod logs through with `Mod.Logger`.
+- `src/Settings.cs`: the mod's page in the game's Mod Settings menu, from the [ModSettings](https://github.com/DigitalzombieTLD/ModSettings) NuGet package. Its numbers go into `src/Core` when the game starts and when the player confirms a change.
 - `src/Properties/AssemblyInfo.cs`: what MelonLoader reads about the mod, including the MelonLoader version it needs and the mods it won't load with.
 - `tests/AdaptiveArsenal.Tests`: unit tests for `src/Core`.
 - `docs`: the pages linked from the README. `assets` has the Photoshop files for the banner and thumbnail.
@@ -78,8 +79,9 @@ Before a release, and after a game update, load a save with a rifle, a revolver 
 - Shooting an animal hurts it, counts towards your Rifle or Revolver skill, and a close shot does more than a far one.
 - Bullets hitting the ground, rock and wood show the right impact effect, a bullet hole where they hit, and a sound that gets quieter with distance. Their trails fade out after the hit.
 - Saving with a bullet in the air, then loading, leaves no loose rounds of ammo where it was.
-- The HUD plays the round animation after each shot, but not when you switch weapons.
-- You can walk while aiming the revolver.
+- The HUD doesn't show the loaded rounds. With **Show loaded rounds** on, it does, and plays the round animation after each shot, but not when you switch weapons.
+- You can walk while aiming the revolver, and the limited-movement icon only shows for the rifle.
+- In Mod Settings, turning off **Real bullets** hides the bullet settings and makes the next shot the game's own instant one, without restarting. Changed numbers take effect from the next shot.
 - The flare gun, bow and camera work as they do without the mod.
 - The console shows the mod's version when the game starts, with no errors in `MelonLoader\Latest.log`.
 
