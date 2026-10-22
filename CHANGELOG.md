@@ -28,6 +28,14 @@ See docs/development.md, "Releasing". CI checks this file's format.
 
 - The mod no longer needs Localization Utilities.
 
+### Fixed
+
+- Bullets still in the air when the game saves no longer turn into loose rounds of ammo when you load.
+- Bullet holes appear where the bullet hit, instead of somewhere else on the object or not at all.
+- Bullet impact sounds come from where the bullet hit, so they get quieter with distance.
+- Bullet trails fade out after the bullet hits something, instead of vanishing at once.
+- Bullets still fly at full speed if their trail can't be made.
+
 ## [1.0.9] - 2026-01-05
 
 ### Changed

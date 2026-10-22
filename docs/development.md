@@ -22,7 +22,7 @@ dotnet build
 - `src/Components/ProjectileItem.cs`: the bullet: its flight, trail and hits, using `src/Core` for the numbers.
 - `src/Patches`: the [Harmony](https://harmony.pardeike.net) patches on the game: firing bullets instead of instant hits, revolver movement, and the HUD.
 - `src/Animators`: the round animation on the HUD.
-- `src/Utilities`: helpers for the game's objects: where a shot starts, and borrowing materials.
+- `src/Utilities`: helpers for the game's objects: building the bullet each gun fires, where a shot starts, and borrowing materials.
 - `src/Dependencies`: DLLs that aren't on NuGet. [Complex Logger](https://github.com/Arkhorse/Complex-Logger) 1.0.8, which the mod logs through with `Mod.Logger`.
 - `src/Properties/AssemblyInfo.cs`: what MelonLoader reads about the mod, including the MelonLoader version it needs and the mods it won't load with.
 - `tests/AdaptiveArsenal.Tests`: unit tests for `src/Core`.
@@ -76,7 +76,8 @@ Before a release, and after a game update, load a save with a rifle, a revolver 
 
 - Rifle and revolver shots leave a trail and hit where you aim, with more spread from the hip, standing and moving.
 - Shooting an animal hurts it, counts towards your Rifle or Revolver skill, and a close shot does more than a far one.
-- Bullets hitting the ground, rock and wood show the right impact effect and sound.
+- Bullets hitting the ground, rock and wood show the right impact effect, a bullet hole where they hit, and a sound that gets quieter with distance. Their trails fade out after the hit.
+- Saving with a bullet in the air, then loading, leaves no loose rounds of ammo where it was.
 - The HUD plays the round animation after each shot, but not when you switch weapons.
 - You can walk while aiming the revolver.
 - The flare gun, bow and camera work as they do without the mod.

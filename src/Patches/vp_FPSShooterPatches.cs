@@ -2,8 +2,6 @@ using AdaptiveArsenal.Components;
 using AdaptiveArsenal.Core;
 using AdaptiveArsenal.Utilities;
 
-using UnityEngine.AddressableAssets;
-
 using Random = UnityEngine.Random;
 
 namespace AdaptiveArsenal.Patches;
@@ -15,8 +13,7 @@ namespace AdaptiveArsenal.Patches;
 internal static class vp_FPSShooterPatches
 {
     /// <summary>
-    /// Gives each rifle and revolver shooter a bullet prefab: the single round of its ammo, with a
-    /// <see cref="ProjectileItem"/> added.
+    /// Gives each rifle and revolver shooter its bullet template from <see cref="ProjectileTemplates"/>.
     /// </summary>
     /// <remarks>
     /// The shooter's object name says which weapon it's for. Other weapons, like the flare gun and bow, are left as
@@ -27,26 +24,24 @@ internal static class vp_FPSShooterPatches
     {
         private static void Prefix(vp_FPSShooter __instance)
         {
-            string? ammoGearName = null;
+            GunType gunType;
 
             if (__instance.gameObject.name.Contains("Rifle"))
-                ammoGearName = "GEAR_RifleAmmoSingle";
+                gunType = GunType.Rifle;
             else if (__instance.gameObject.name.Contains("Revolver"))
-                ammoGearName = "GEAR_RevolverAmmoSingle";
-
-            if (ammoGearName == null)
+                gunType = GunType.Revolver;
+            else
                 return;
 
-            var projectilePrefab = Addressables.LoadAssetAsync<GameObject>(ammoGearName).WaitForCompletion();
-            if (projectilePrefab == null)
+            var template = ProjectileTemplates.Get(gunType);
+            if (template == null)
             {
-                Mod.Logger.Log($"Couldn't load {ammoGearName}, so {__instance.gameObject.name} fires the game's own shots.", FlaggedLoggingLevel.Warning);
+                Mod.Logger.Log($"{__instance.gameObject.name} has no bullet, so it fires the game's own shots.", FlaggedLoggingLevel.Warning);
                 return;
             }
 
-            _ = projectilePrefab.GetComponent<ProjectileItem>() ?? projectilePrefab.AddComponent<ProjectileItem>();
             __instance.ProjectileCustomPrefab = true;
-            __instance.ProjectilePrefab = projectilePrefab;
+            __instance.ProjectilePrefab = template;
         }
     }
 
@@ -93,10 +88,11 @@ internal static class vp_FPSShooterPatches
             var maxSpread = Ballistics.MaxSpreadDegrees(accuracy);
             var spread = Quaternion.Euler(new Vector3(Random.Range(-maxSpread, maxSpread), Random.Range(-maxSpread, maxSpread), 0));
 
+            var gunType = weapon.m_GunItem.m_GunType;
             if (isHipFire)
-                ProjectileItem.SpawnAndFire(__instance.ProjectilePrefab, position, spread * Quaternion.LookRotation(GameManager.GetVpFPSCamera().transform.forward));
+                ProjectileItem.SpawnAndFire(__instance.ProjectilePrefab, gunType, position, spread * Quaternion.LookRotation(GameManager.GetVpFPSCamera().transform.forward));
             else
-                ProjectileItem.SpawnAndFire(__instance.ProjectilePrefab, position, aimRotation * spread);
+                ProjectileItem.SpawnAndFire(__instance.ProjectilePrefab, gunType, position, aimRotation * spread);
         }
     }
 }

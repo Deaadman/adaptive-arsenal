@@ -10,8 +10,10 @@ namespace AdaptiveArsenal.Components;
 /// instantly like the game's own shots, and draws a trail behind it.
 /// </summary>
 /// <remarks>
-/// <see cref="Patches.vp_FPSShooterPatches"/> adds this component to the single-round ammo prefabs, and fires a copy
-/// of one with <see cref="SpawnAndFire"/> for each shot. It stays disabled on the prefab, and only runs once fired.
+/// <see cref="ProjectileTemplates"/> builds an inactive template with this component for each gun, and
+/// <see cref="Patches.vp_FPSShooterPatches"/> fires a copy of it with <see cref="SpawnAndFire"/> for each shot. When it
+/// hits something, it stops and hides, and lingers for <see cref="ImpactLingerDuration"/> while its trail fades and
+/// its impact sound plays.
 /// </remarks>
 [RegisterTypeInIl2Cpp(false)]
 public class ProjectileItem : MonoBehaviour
@@ -28,24 +30,30 @@ public class ProjectileItem : MonoBehaviour
     /// <summary>How often, in seconds, the bullet's position is added to the trail.</summary>
     private const float TrailUpdateInterval = 0.05f;
 
-    /// <summary>How long, in seconds, the trail takes to fade out after the bullet hits something.</summary>
-    private const float TrailFadeDuration = 2f;
+    /// <summary>
+    /// How long, in seconds, the bullet stays after it hits something: its trail fades out over this time, and its
+    /// impact sound, which plays from it, has this long to finish.
+    /// </summary>
+    private const float ImpactLingerDuration = 2f;
 
     /// <summary>How many trail points to make room for up front.</summary>
     private const int InitialTrailCapacity = 100;
 
-    private AmmoItem? m_AmmoItem;
     private GunType m_GunType;
     private Rigidbody? m_Rigidbody;
 
     /// <summary>Where the bullet was fired from, to work out how far it has travelled when it hits.</summary>
     private Vector3 m_FirePosition;
 
+    /// <summary>Whether the bullet has hit something, so it only hits once.</summary>
+    private bool m_HasHit;
+
+    /// <summary>How long, in seconds, since the bullet hit something.</summary>
+    private float m_TimeSinceHit;
+
     private LineRenderer? m_Trail;
     private List<Vector3>? m_TrailPoints;
     private float m_LastTrailUpdateTime;
-    private bool m_IsTrailFading;
-    private float m_TrailFadeTimer;
 
     /// <summary>
     /// Works out how accurate a shot is: higher is more accurate. At 100 or more, a shot lands exactly where it was
@@ -71,23 +79,24 @@ public class ProjectileItem : MonoBehaviour
         return baseAccuracy * Ballistics.AccuracyMultiplier(isHipFire, isStanding, isMoving);
     }
 
-    /// <summary>Makes a copy of a bullet prefab and fires it.</summary>
-    /// <param name="prefab">A prefab with a <see cref="ProjectileItem"/>.</param>
+    /// <summary>Makes a copy of a bullet template and fires it.</summary>
+    /// <param name="template">An inactive template from <see cref="ProjectileTemplates"/>.</param>
+    /// <param name="gunType">The gun firing it. Il2Cpp doesn't copy this component's fields, so it's passed here.</param>
     /// <param name="position">Where to fire it from, in world space.</param>
     /// <param name="rotation">The direction to fire it in, in world space.</param>
-    internal static void SpawnAndFire(GameObject prefab, Vector3 position, Quaternion rotation)
+    internal static void SpawnAndFire(GameObject template, GunType gunType, Vector3 position, Quaternion rotation)
     {
-        var bullet = Instantiate(prefab, position, rotation);
-        bullet.name = prefab.name;
-        bullet.transform.parent = null;
-        bullet.GetComponent<ProjectileItem>().Fire();
+        var bullet = Instantiate(template, position, rotation);
+        bullet.name = template.name;
+
+        // The template is inactive, so the copy only wakes up here.
+        bullet.SetActive(true);
+        bullet.GetComponent<ProjectileItem>().Fire(gunType);
     }
 
     private void Awake()
     {
         m_Rigidbody = GetComponent<Rigidbody>();
-        m_AmmoItem = GetComponent<AmmoItem>();
-
         m_TrailPoints = new List<Vector3>(InitialTrailCapacity);
 
         ConfigureComponents();
@@ -96,44 +105,32 @@ public class ProjectileItem : MonoBehaviour
 
     private void Update()
     {
-        if (m_Trail is null)
-            return;
-
-        if (m_IsTrailFading)
-            FadeTrail();
+        if (m_HasHit)
+            Linger();
         else
             ExtendTrail();
     }
 
     private void OnCollisionEnter(Collision collision)
     {
-        TryInflictDamage(collision.gameObject, collision.gameObject.name);
-        SpawnImpactEffects(collision, transform);
+        if (m_HasHit)
+            return;
 
+        m_HasHit = true;
+        var contact = collision.GetContact(0);
+
+        TryInflictDamage(collision.gameObject, collision.gameObject.name);
+        StopAt(contact.point);
+        SpawnImpactEffects(collision.collider, contact.point);
+    }
+
+    /// <summary>Sets up the rigidbody for fast movement and creates the trail using the arrow's trail material.</summary>
+    private void ConfigureComponents()
+    {
         if (m_Rigidbody is null)
             return;
 
-        m_Rigidbody.velocity = Vector3.zero;
-        m_Rigidbody.isKinematic = true;
-
-        m_IsTrailFading = true;
-        m_TrailFadeTimer = 0f;
-
-        // The trail is a child of the bullet, so it's destroyed here too, before FadeTrail gets to run.
-        Destroy(gameObject);
-    }
-
-    /// <summary>
-    /// Sets up the rigidbody for fast movement, reads which gun the ammo is for, and creates the trail using the
-    /// arrow's trail material.
-    /// </summary>
-    private void ConfigureComponents()
-    {
-        if (m_AmmoItem is null || m_Rigidbody is null)
-            return;
-
         m_Rigidbody.collisionDetectionMode = CollisionDetectionMode.Continuous;
-        m_GunType = m_AmmoItem.m_AmmoForGunType;
 
         var arrowTrailMaterial = PrefabMaterials.GetLineRendererMaterial("GEAR_Arrow", "LineRenderer");
         if (arrowTrailMaterial == null)
@@ -159,11 +156,13 @@ public class ProjectileItem : MonoBehaviour
     }
 
     /// <summary>
-    /// Counts the shot in the player's statistics, releases the bullet from the gun and launches it at the muzzle
-    /// velocity of the weapon in the player's hands.
+    /// Counts the shot in the player's statistics, releases the bullet and launches it at the muzzle velocity of the
+    /// weapon in the player's hands, then starts its trail.
     /// </summary>
-    private void Fire()
+    /// <param name="gunType">The gun firing it.</param>
+    private void Fire(GunType gunType)
     {
+        m_GunType = gunType;
         enabled = true;
 
         StatsManager.IncrementValue(m_GunType == GunType.Rifle ? StatID.RifleShot : StatID.RevolverShot);
@@ -179,12 +178,6 @@ public class ProjectileItem : MonoBehaviour
         m_Rigidbody.drag = 0.1f;
         m_Rigidbody.angularDrag = 0.1f;
 
-        if (m_Trail is null)
-            return;
-
-        m_Trail.startColor = new Color(1f, 1f, 1f, 0f);
-        m_Trail.endColor = Color.white * 0.7f;
-
         var weaponName = GameManager.GetPlayerManagerComponent().m_ItemInHands.name;
         var muzzleVelocity = Ballistics.GetMuzzleVelocity(weaponName);
         if (muzzleVelocity == 0)
@@ -195,15 +188,24 @@ public class ProjectileItem : MonoBehaviour
 
         m_FirePosition = transform.position;
 
-        if (m_TrailPoints is null)
+        // Lets a cougar react to a shot that only just misses it, as it does to the game's own shots.
+        GameManager.GetCougarManager().MaybeAimNearMiss(velocity.normalized);
+
+        StartTrail();
+    }
+
+    /// <summary>Starts the trail at the fire position, if the bullet has one.</summary>
+    private void StartTrail()
+    {
+        if (m_Trail is null || m_TrailPoints is null)
             return;
+
+        m_Trail.startColor = new Color(1f, 1f, 1f, 0f);
+        m_Trail.endColor = Color.white * 0.7f;
 
         m_TrailPoints.Add(m_FirePosition);
         m_Trail.positionCount = 1;
         m_Trail.SetPosition(0, m_FirePosition);
-
-        // Lets a cougar react to a shot that only just misses it, as it does to the game's own shots.
-        GameManager.GetCougarManager().MaybeAimNearMiss(velocity.normalized);
     }
 
     /// <summary>
@@ -251,13 +253,48 @@ public class ProjectileItem : MonoBehaviour
     }
 
     /// <summary>
-    /// Plays the game's bullet impact particles, decal and sound for the surface the bullet hit.
+    /// Stops the bullet where it hit and hides it, so it can stay a little longer for its trail and impact sound
+    /// without hitting anything else.
     /// </summary>
-    /// <param name="collision">The collision with the surface.</param>
-    /// <param name="bulletTransform">The bullet's transform, where the effects are placed.</param>
-    private static void SpawnImpactEffects(Collision collision, Transform bulletTransform)
+    /// <param name="point">Where the bullet hit, in world space.</param>
+    private void StopAt(Vector3 point)
     {
-        var materialTag = Utils.GetMaterialTagForObjectAtPosition(collision.collider.gameObject, collision.gameObject.transform.position);
+        if (m_Rigidbody is not null)
+        {
+            m_Rigidbody.velocity = Vector3.zero;
+            m_Rigidbody.isKinematic = true;
+        }
+
+        transform.position = point;
+
+        var bulletCollider = GetComponent<Collider>();
+        if (bulletCollider != null)
+            bulletCollider.enabled = false;
+
+        foreach (var meshRenderer in GetComponentsInChildren<MeshRenderer>())
+            meshRenderer.enabled = false;
+
+        // The trail ends where the bullet hit.
+        if (m_Trail is not null && m_TrailPoints is not null)
+        {
+            m_TrailPoints.Add(point);
+            m_Trail.positionCount = m_TrailPoints.Count;
+            m_Trail.SetPositions(m_TrailPoints.ToArray());
+        }
+    }
+
+    /// <summary>
+    /// Plays the game's bullet impact particles, decal and sound for the surface the bullet hit, at the point it hit.
+    /// </summary>
+    /// <remarks>The sound plays from the bullet, which <see cref="StopAt"/> has moved to that point.</remarks>
+    /// <param name="surface">The collider the bullet hit.</param>
+    /// <param name="point">Where the bullet hit, in world space.</param>
+    private void SpawnImpactEffects(Collider surface, Vector3 point)
+    {
+        if (surface == null)
+            return;
+
+        var materialTag = Utils.GetMaterialTagForObjectAtPosition(surface.gameObject, point);
         var impactEffectType = vp_Bullet.GetImpactEffectTypeBasedOnMaterial(materialTag);
         var impactEffectPool = GameManager.GetEffectPoolManager().GetBulletImpactEffectPool();
 
@@ -266,20 +303,14 @@ public class ProjectileItem : MonoBehaviour
             impactEffectType == BulletImpactEffectType.BulletImpactEffect_Untagged
                 ? BulletImpactEffectType.BulletImpactEffect_Stone
                 : impactEffectType,
-            bulletTransform.position,
-            bulletTransform.rotation);
+            point,
+            transform.rotation);
 
         var materialEffectType = ImpactDecals.MapBulletImpactEffectTypeToMaterialEffectType(impactEffectType);
-        GameManager.GetDynamicDecalsManager().AddImpactDecal(ProjectileType.Bullet, materialEffectType, collision.gameObject.transform.position, bulletTransform.forward);
+        GameManager.GetDynamicDecalsManager().AddImpactDecal(ProjectileType.Bullet, materialEffectType, point, transform.forward);
 
-        if (!collision.collider || !collision.collider.gameObject)
-            return;
-
-        GameAudioManager.SetMaterialSwitch(materialTag, collision.collider.gameObject);
-
-        var soundEmitter = GameAudioManager.GetSoundEmitterFromGameObject(collision.collider.gameObject);
-        AkSoundEngine.PostEvent("Play_BulletImpacts", soundEmitter);
-        GameAudioManager.SetAudioSourceTransform(collision.collider.gameObject, collision.collider.gameObject.transform);
+        GameAudioManager.SetMaterialSwitch(materialTag, gameObject);
+        GameAudioManager.Play3DSound("Play_BulletImpacts", gameObject);
     }
 
     /// <summary>
@@ -307,22 +338,25 @@ public class ProjectileItem : MonoBehaviour
     }
 
     /// <summary>
-    /// Fades the trail out over <see cref="TrailFadeDuration"/>, then destroys it.
+    /// After a hit, fades the trail out over <see cref="ImpactLingerDuration"/>, then destroys the bullet.
     /// </summary>
-    private void FadeTrail()
+    private void Linger()
     {
+        m_TimeSinceHit += Time.deltaTime;
+
+        if (m_TimeSinceHit >= ImpactLingerDuration)
+        {
+            Destroy(gameObject);
+            return;
+        }
+
         if (m_Trail is null)
             return;
 
-        m_TrailFadeTimer += Time.deltaTime;
-        var alpha = Mathf.Clamp01(1.0f - (m_TrailFadeTimer / TrailFadeDuration));
-        var startColor = m_Trail.startColor;
-        var endColor = m_Trail.endColor;
-        m_Trail.startColor = new Color(startColor.r, startColor.g, startColor.b, alpha * startColor.a);
-        m_Trail.endColor = new Color(endColor.r, endColor.g, endColor.b, alpha * endColor.a);
-
-        if (m_TrailFadeTimer >= TrailFadeDuration)
-            Destroy(m_Trail);
+        // Scales the colours set in StartTrail, rather than the last frame's, so the fade is steady.
+        var alpha = 1f - m_TimeSinceHit / ImpactLingerDuration;
+        m_Trail.startColor = new Color(1f, 1f, 1f, 0f);
+        m_Trail.endColor = new Color(0.7f, 0.7f, 0.7f, 0.7f * alpha);
     }
 
     /// <summary>The player's current Revolver skill tier.</summary>
