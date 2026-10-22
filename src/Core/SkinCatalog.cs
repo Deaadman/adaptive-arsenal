@@ -14,7 +14,10 @@ namespace AdaptiveArsenal.Core;
 /// <param name="Name">The name players see.</param>
 /// <param name="TexturePath">The full path of the PNG drawn on the weapon's model.</param>
 /// <param name="IconPath">The full path of the PNG shown as the weapon's icon in the inventory.</param>
-internal sealed record SkinDefinition(string Id, string GearName, string Name, string TexturePath, string IconPath)
+/// <param name="Description">What players read about it, or <see langword="null"/> if it has no description.</param>
+/// <param name="Author">Who made it, or <see langword="null"/> if it doesn't say.</param>
+internal sealed record SkinDefinition(string Id, string GearName, string Name, string TexturePath, string IconPath,
+    string? Description = null, string? Author = null)
 {
     /// <summary>The name of the skin's folder: its <see cref="Id"/> without the gear name, like <c>Arctic</c>.</summary>
     internal string FolderName => Id[(GearName.Length + 1)..];
@@ -27,14 +30,16 @@ internal sealed record SkinDefinition(string Id, string GearName, string Name, s
 /// Skins/
 ///   GEAR_Rifle/
 ///     Arctic/
-///       skin.json     {"name": "Arctic"}
+///       skin.json     {"name": "Arctic", "description": "...", "author": "..."}
 ///       texture.png
 ///       icon.png
 /// </code>
+/// Only <c>name</c> is needed in <c>skin.json</c>: <c>description</c> and <c>author</c> are shown in the inventory when
+/// they're there.
 /// </summary>
 internal static class SkinCatalog
 {
-    /// <summary>The file in each skin's folder with its name.</summary>
+    /// <summary>The file in each skin's folder with its name, description and author.</summary>
     internal const string ManifestFileName = "skin.json";
 
     /// <summary>The image in each skin's folder drawn on the weapon's model.</summary>
@@ -124,10 +129,15 @@ internal static class SkinCatalog
             return false;
         }
 
-        skin = new SkinDefinition(id, gearName, manifest.m_Name.Trim(), texturePath, iconPath);
+        skin = new SkinDefinition(id, gearName, manifest.m_Name.Trim(), texturePath, iconPath,
+            NullIfBlank(manifest.m_Description), NullIfBlank(manifest.m_Author));
         problem = null;
         return true;
     }
+
+    /// <summary>Text trimmed, or <see langword="null"/> if there's none.</summary>
+    /// <param name="text">The text.</param>
+    private static string? NullIfBlank(string? text) => string.IsNullOrWhiteSpace(text) ? null : text.Trim();
 
     /// <summary>The shape of <see cref="ManifestFileName"/>.</summary>
     private sealed class Manifest
@@ -135,5 +145,13 @@ internal static class SkinCatalog
         /// <summary>The name players see.</summary>
         [JsonPropertyName("name")]
         public string? m_Name = null;
+
+        /// <summary>What players read about the skin, if anything.</summary>
+        [JsonPropertyName("description")]
+        public string? m_Description = null;
+
+        /// <summary>Who made the skin, if it says.</summary>
+        [JsonPropertyName("author")]
+        public string? m_Author = null;
     }
 }

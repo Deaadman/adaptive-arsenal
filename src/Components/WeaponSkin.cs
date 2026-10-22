@@ -23,9 +23,6 @@ public class WeaponSkin : MonoBehaviour
     /// <summary>The materials the skin is drawn on, each with its own texture to put back.</summary>
     private readonly List<(Material Material, Texture? Original)> m_Materials = [];
 
-    /// <summary>The skin's texture on the model now, or <see langword="null"/> for its own look.</summary>
-    private Texture2D? m_Texture;
-
     /// <summary>Whether <see cref="m_Materials"/> has been filled in.</summary>
     private bool m_HasMaterials;
 
@@ -69,15 +66,11 @@ public class WeaponSkin : MonoBehaviour
             m_HasMaterials = true;
         }
 
-        if (texture == m_Texture)
-            return;
-
+        // Set even when the texture hasn't changed, in case the game has put a material's own texture back since.
         foreach (var (material, original) in m_Materials)
         {
             if (material != null)
                 material.mainTexture = texture == null ? original : texture;
         }
-
-        m_Texture = texture;
     }
 }

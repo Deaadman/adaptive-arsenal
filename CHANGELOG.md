@@ -26,7 +26,7 @@ See docs/development.md, "Releasing". CI checks this file's format.
 - Bullets knock loose items around when they hit them, as the game's own bullets do.
 - A settings page in Options, Mod Settings, to turn real bullets, bullet trails and walking while aiming a revolver on or off, and to tune accuracy, bullet speed, trail length and damage drop-off.
 - **Breaking:** The mod now needs [ModData](https://github.com/dommrogers/ModData/releases/latest), to keep what it remembers about each weapon in your save.
-- Weapons can wear skins, which change how a gun looks in your hands, on the ground and in the inventory. Pick a gun's skin with the **Skins** button in its details in the inventory, which shows its skins in a grid to choose from, and it keeps it in your save. Skins go in `Mods/AdaptiveArsenal/Skins`.
+- Weapons can wear skins, which change how a gun looks in your hands, on the ground and in the inventory. Pick a gun's skin with the **Skins** button in its details in the inventory, which shows its skins in a grid to choose from, and it keeps it in your save. Skins go in `Mods/AdaptiveArsenal/Skins`, and each can have a description and author to show in its details.
 - Rifles you carry freeze in the cold and thaw in the warm, and the more frozen a rifle is, the more likely it is to jam. The inventory shows how frozen each rifle is.
 - **Breaking:** The HUD no longer shows how many rounds are loaded in your rifle or revolver, or how many more you're carrying, so you have to keep count. Turn on **Show ammo count** in the mod's settings to bring it back.
 

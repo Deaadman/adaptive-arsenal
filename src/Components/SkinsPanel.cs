@@ -274,6 +274,7 @@ public class SkinsPanel : MonoBehaviour
         Hide(m_Inventory.m_GearItemCoverflow != null && m_Inventory.m_GearItemCoverflow.m_TextureWithDamage != null
             ? m_Inventory.m_GearItemCoverflow.m_TextureWithDamage.gameObject
             : null);
+        HideCategories(m_Inventory);
 
         GameAudioManager.PlayGUIButtonClick();
         Select(m_SelectedIndex);
@@ -338,11 +339,21 @@ public class SkinsPanel : MonoBehaviour
             m_Page.m_ItemNameLabel.text = (skin?.Name ?? DefaultName).ToUpperInvariant();
 
         if (m_Page != null && m_Page.m_ItemDescLabel != null)
-        {
-            m_Page.m_ItemDescLabel.text = skin == null
-                ? $"The {m_GearItem!.DisplayName}'s own look."
-                : $"A skin for the {m_GearItem!.DisplayName}.";
-        }
+            m_Page.m_ItemDescLabel.text = DescriptionFor(skin);
+    }
+
+    /// <summary>
+    /// What the details say about a skin: its own description, or a line saying what it's for, and who made it.
+    /// </summary>
+    /// <param name="skin">The skin, or <see langword="null"/> for the weapon's own look.</param>
+    [HideFromIl2Cpp]
+    private string DescriptionFor(SkinDefinition? skin)
+    {
+        if (skin == null)
+            return $"The {m_GearItem!.DisplayName}'s own look.";
+
+        var description = skin.Description ?? $"A skin for the {m_GearItem!.DisplayName}.";
+        return skin.Author == null ? description : $"{description}\n\nBy {skin.Author}";
     }
 
     /// <summary>
@@ -405,8 +416,9 @@ public class SkinsPanel : MonoBehaviour
             if (item.m_GearSprite != null)
                 item.m_GearSprite.mainTexture = IconFor(m_Options[index]);
 
-            // Everything but the icon is about an item's condition, weight and so on.
-            SetActive(item.m_EquippedSprite, isWorn);
+            // Everything but the icon is about an item's condition, weight and so on. The slot's item elements also
+            // hold icons the script doesn't name, like the weight's, so all of them go but the ones the panel uses.
+            HideItemElements(item);
             SetActive(item.m_RuinedSprite, false);
             SetActive(item.m_LiquidLabel, false);
             SetActive(item.m_StackLabel, false);
@@ -418,6 +430,13 @@ public class SkinsPanel : MonoBehaviour
             SetActive(item.m_UnitLabel, false);
             SetActive(item.m_UnitSprite, false);
             SetActive(item.m_NotificationFlag, false);
+            SetActive(item.m_HotIndicator, false);
+            SetActive(item.m_ColdIndicator, false);
+            SetActive(item.m_DecorationIndicator, false);
+            SetActive(item.m_PhotoSprite, false);
+            SetActive(item.m_CraftingProgress, false);
+            SetActive(item.m_GearSprite, true);
+            SetActive(item.m_EquippedSprite, isWorn);
             SetActive(item.m_HoverEffect, false);
             SetActive(item.m_SelectedSprite, false);
 
@@ -445,17 +464,96 @@ public class SkinsPanel : MonoBehaviour
         return slot;
     }
 
+    /// <summary>
+    /// Hides everything in a slot's item elements but its icon, its button and the equipped, selected and hover
+    /// sprites, which the panel shows and hides itself.
+    /// </summary>
+    /// <param name="item">The slot's script, before it's removed.</param>
+    [HideFromIl2Cpp]
+    private static void HideItemElements(InventoryGridItem item)
+    {
+        if (item.m_ItemElements == null)
+            return;
+
+        var kept = new List<Transform>();
+        foreach (var component in (Component?[])[item.m_GearSprite, item.m_EquippedSprite, item.m_SelectedSprite])
+        {
+            if (component != null)
+                kept.Add(component.transform);
+        }
+
+        if (item.m_HoverEffect != null)
+            kept.Add(item.m_HoverEffect.transform);
+
+        var button = item.m_Button != null ? item.m_Button.transform : null;
+        HideAllBut(item.m_ItemElements.transform, kept, button);
+    }
+
+    /// <summary>
+    /// Hides each child of <paramref name="parent"/> but the kept ones, looking inside the ones that hold a kept one
+    /// or are the button.
+    /// </summary>
+    /// <param name="parent">Where to start.</param>
+    /// <param name="kept">What stays as it is, with everything in it.</param>
+    /// <param name="button">The slot's button, which stays showing so it can be clicked, or <see langword="null"/>.</param>
+    [HideFromIl2Cpp]
+    private static void HideAllBut(Transform parent, List<Transform> kept, Transform? button)
+    {
+        for (var i = 0; i < parent.childCount; i++)
+        {
+            var child = parent.GetChild(i);
+            if (kept.Any(transform => transform == child))
+                continue;
+
+            if (child == button || kept.Any(transform => transform.IsChildOf(child)))
+                HideAllBut(child, kept, button);
+            else
+                child.gameObject.SetActive(false);
+        }
+    }
+
     /// <summary>A skin's icon, or the weapon's own for <see langword="null"/>.</summary>
     /// <param name="skin">The skin.</param>
     [HideFromIl2Cpp]
     private Texture? IconFor(SkinDefinition? skin) =>
         skin == null ? WeaponSkins.GetDefaultIcon(m_GearItem!) : WeaponSkins.GetIcon(skin);
 
+    /// <summary>
+    /// Hides the inventory's category buttons down the side, with what goes with them: the selected category's name
+    /// and weight, and the sort buttons, none of which do anything to the skins.
+    /// </summary>
+    /// <param name="inventory">The inventory.</param>
+    private void HideCategories(Panel_Inventory inventory)
+    {
+        if (inventory.m_FilterButtons != null)
+        {
+            foreach (var button in inventory.m_FilterButtons)
+                Hide(button != null ? button.gameObject : null);
+        }
+
+        Hide(inventory.m_FilterAllButton != null ? inventory.m_FilterAllButton.gameObject : null);
+
+        if (inventory.m_NotificationFlagsFilterButtons != null)
+        {
+            foreach (var flag in inventory.m_NotificationFlagsFilterButtons)
+                Hide(flag);
+        }
+
+        Hide(inventory.m_SectionNavSelectedSprite != null ? inventory.m_SectionNavSelectedSprite.gameObject : null);
+        Hide(inventory.m_SectionNavArrowPrompts);
+        Hide(inventory.m_CategoryLabel != null ? inventory.m_CategoryLabel.gameObject : null);
+        Hide(inventory.m_CategoryWeightBG);
+        Hide(inventory.m_CategoryWeightLabel != null ? inventory.m_CategoryWeightLabel.gameObject : null);
+        Hide(inventory.m_SortButtonsObject);
+        Hide(inventory.m_SortLabel);
+    }
+
     /// <summary>Hides part of the inventory while the panel is open, remembering whether it showed.</summary>
     /// <param name="gameObject">The part, or <see langword="null"/> to do nothing.</param>
     private void Hide(GameObject? gameObject)
     {
-        if (gameObject == null)
+        // Hiding one twice would remember it as hidden the second time, and leave it hidden after.
+        if (gameObject == null || m_Hidden.Any(hidden => hidden.GameObject == gameObject))
             return;
 
         m_Hidden.Add((gameObject, gameObject.activeSelf));
@@ -580,12 +678,34 @@ public class SkinsPanel : MonoBehaviour
             var transform = m_Button.transform;
             transform.localPosition = m_Position;
             transform.localScale = four ? m_Scale * m_FourScale : m_Scale;
-            if (!four)
-                return;
 
-            // Scaling moves the middle unless the button's origin is in it, so it's measured again.
-            var bounds = NGUIMath.CalculateRelativeWidgetBounds(m_Page, transform, true, false);
-            transform.position += m_Page.TransformVector(new Vector3(m_FourCentreX - bounds.center.x, 0f, 0f));
+            if (four)
+            {
+                // Scaling moves the middle unless the button's origin is in it, so it's measured again.
+                var bounds = NGUIMath.CalculateRelativeWidgetBounds(m_Page, transform, true, false);
+                transform.position += m_Page.TransformVector(new Vector3(m_FourCentreX - bounds.center.x, 0f, 0f));
+            }
+
+            RefreshHoverTweens();
+        }
+
+        /// <summary>
+        /// Tells the button's hover effects where it is and how big now. They remember both when the button first
+        /// shows and tween back to them when the mouse leaves, which would undo the layout.
+        /// </summary>
+        private void RefreshHoverTweens()
+        {
+            foreach (var scale in m_Button.GetComponentsInChildren<UIButtonScale>(true))
+            {
+                var target = scale.tweenTarget != null ? scale.tweenTarget : scale.transform;
+                scale.mScale = target.localScale;
+            }
+
+            foreach (var offset in m_Button.GetComponentsInChildren<UIButtonOffset>(true))
+            {
+                var target = offset.tweenTarget != null ? offset.tweenTarget : offset.transform;
+                offset.mPos = target.localPosition;
+            }
         }
     }
 }

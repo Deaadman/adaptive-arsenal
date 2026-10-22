@@ -92,6 +92,30 @@ public sealed class SkinCatalogTests : IDisposable
         Assert.Equal("Arctic", Assert.Single(SkinCatalog.Discover(m_Root, out _)).Name);
     }
 
+    [Fact]
+    public void The_description_and_author_are_read_and_trimmed()
+    {
+        AddSkin("GEAR_Rifle", "Arctic", """{"name": "Arctic", "description": " White for the snow. ", "author": " Deadman "}""");
+
+        var skin = Assert.Single(SkinCatalog.Discover(m_Root, out _));
+        Assert.Equal("White for the snow.", skin.Description);
+        Assert.Equal("Deadman", skin.Author);
+    }
+
+    [Theory]
+    [InlineData("""{"name": "Arctic"}""")]
+    [InlineData("""{"name": "Arctic", "description": "  ", "author": ""}""")]
+    [InlineData("""{"name": "Arctic", "description": null, "author": null}""")]
+    public void A_skin_without_a_description_or_author_still_loads_without_them(string manifest)
+    {
+        AddSkin("GEAR_Rifle", "Arctic", manifest);
+
+        var skin = Assert.Single(SkinCatalog.Discover(m_Root, out var problems));
+        Assert.Empty(problems);
+        Assert.Null(skin.Description);
+        Assert.Null(skin.Author);
+    }
+
     /// <summary>Adds a skin folder with the given manifest and empty images, and returns its path.</summary>
     private string AddSkin(string gearName, string folderName, string manifest)
     {
