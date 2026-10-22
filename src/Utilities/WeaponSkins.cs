@@ -118,9 +118,14 @@ internal static class WeaponSkins
     /// </summary>
     /// <param name="weapon">The first-person weapon.</param>
     /// <param name="gearItem">The weapon equipped.</param>
+    /// <remarks>
+    /// The skin is only drawn on the materials that use one of the weapon's own textures, the ones on its own model.
+    /// The first-person models also hold the rounds shown while reloading, which have the ammo's texture.
+    /// </remarks>
     internal static void ApplyToFirstPerson(vp_FPSWeapon weapon, GearItem gearItem)
     {
         var texture = TryGetSkin(gearItem, out var skin) ? skin.Texture : null;
+        var ownTextureNames = texture != null ? OwnTextureNames(gearItem) : null;
 
         foreach (var firstPersonWeapon in (FirstPersonWeapon?[])[weapon.m_FirstPersonWeaponRightHand, weapon.m_FirstPersonWeaponLeftHand, weapon.m_FirstPersonWeaponShoulder])
         {
@@ -134,8 +139,31 @@ internal static class WeaponSkins
             if (weaponSkin == null)
                 weaponSkin = firstPersonWeapon.gameObject.AddComponent<WeaponSkin>();
 
-            weaponSkin.Apply(FirstPersonRenderers(firstPersonWeapon), texture);
+            weaponSkin.Apply(FirstPersonRenderers(firstPersonWeapon), texture, material =>
+                material.mainTexture != null && ownTextureNames != null && ownTextureNames.Contains(material.mainTexture.name));
+
+            if (texture != null && weaponSkin.MaterialCount == 0)
+            {
+                Mod.Logger.Log($"{firstPersonWeapon.name} has no materials with {gearItem.name}'s textures, so its skin doesn't show in hands.",
+                    FlaggedLoggingLevel.Warning);
+            }
         }
+    }
+
+    /// <summary>The names of the textures on a weapon's own model, before any skin.</summary>
+    /// <param name="gearItem">The weapon.</param>
+    private static HashSet<string> OwnTextureNames(GearItem gearItem)
+    {
+        // Once a skin is on the model, its materials hold the skin's texture, and the component the originals.
+        var weaponSkin = gearItem.GetComponent<WeaponSkin>();
+        var textures = weaponSkin != null && weaponSkin.MaterialCount > 0
+            ? weaponSkin.OriginalTextures
+            : ModelRenderers(gearItem).Where(renderer => renderer != null)
+                .SelectMany(renderer => renderer.sharedMaterials)
+                .Where(material => material != null && material.mainTexture != null)
+                .Select(material => material.mainTexture);
+
+        return textures.Select(texture => texture.name).ToHashSet(StringComparer.Ordinal);
     }
 
     /// <summary>Gets the icon of a weapon's skin, if it has one.</summary>

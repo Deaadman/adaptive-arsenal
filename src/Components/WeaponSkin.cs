@@ -1,3 +1,5 @@
+using Il2CppInterop.Runtime.Attributes;
+
 namespace AdaptiveArsenal.Components;
 
 /// <summary>
@@ -6,7 +8,8 @@ namespace AdaptiveArsenal.Components;
 /// </summary>
 /// <remarks>
 /// <para>
-/// The skin replaces the main texture of every material on the renderers it's given. The first time it does, each
+/// The skin replaces the main texture of every material on the renderers it's given, or of the ones picked out by
+/// the filter <see cref="Apply"/> is given. The first time it does, each
 /// renderer gets its own copies of its materials, so other weapons using the same materials keep their look, and the
 /// original textures are kept to put back.
 /// </para>
@@ -26,10 +29,23 @@ public class WeaponSkin : MonoBehaviour
     /// <summary>Whether <see cref="m_Materials"/> has been filled in.</summary>
     private bool m_HasMaterials;
 
+    /// <summary>How many materials the skin is drawn on, once <see cref="Apply"/> has found them.</summary>
+    internal int MaterialCount => m_Materials.Count;
+
+    /// <summary>The textures the skin replaces, once <see cref="Apply"/> has found them.</summary>
+    [HideFromIl2Cpp]
+    internal IEnumerable<Texture> OriginalTextures =>
+        m_Materials.Select(entry => entry.Original).Where(original => original != null)!;
+
     /// <summary>Draws a skin's texture on the model, or puts the model's own textures back.</summary>
     /// <param name="renderers">The model's renderers, used the first time it's called.</param>
     /// <param name="texture">The skin's texture, or <see langword="null"/> for the model's own look.</param>
-    internal void Apply(IEnumerable<Renderer> renderers, Texture2D? texture)
+    /// <param name="includeMaterial">
+    /// Which of the renderers' materials the skin is drawn on, used the first time it's called. All of them if
+    /// <see langword="null"/>.
+    /// </param>
+    [HideFromIl2Cpp]
+    internal void Apply(IEnumerable<Renderer> renderers, Texture2D? texture, Func<Material, bool>? includeMaterial = null)
     {
         // Nothing to undo, and nothing to copy the materials for.
         if (!m_HasMaterials && texture == null)
@@ -45,7 +61,7 @@ public class WeaponSkin : MonoBehaviour
                 // Reading Renderer.materials gives the renderer its own copies of its materials.
                 foreach (var material in renderer.materials)
                 {
-                    if (material != null)
+                    if (material != null && (includeMaterial == null || includeMaterial(material)))
                         m_Materials.Add((material, material.mainTexture));
                 }
             }
