@@ -79,6 +79,7 @@ body:
     attributes:
       label: MelonLoader log
       description: |
+        First turn on every logging level in Complex Logger's options, in the game's Mod Settings menu, then make the bug happen again.
         Close the game, then drag `MelonLoader\Latest.log` from your game's folder into this box. Please attach the file rather than a screenshot of the console.
     validations:
       required: true

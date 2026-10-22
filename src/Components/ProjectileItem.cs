@@ -137,7 +137,10 @@ public class ProjectileItem : MonoBehaviour
 
         var arrowTrailMaterial = PrefabMaterials.GetLineRendererMaterial("GEAR_Arrow", "LineRenderer");
         if (arrowTrailMaterial == null)
+        {
+            Mod.Logger.Log("Couldn't find the arrow's trail material, so bullets have no trail.", FlaggedLoggingLevel.Warning);
             return;
+        }
 
         GameObject trailObject = new("LineRenderer") { transform = { parent = transform } };
 
@@ -183,7 +186,11 @@ public class ProjectileItem : MonoBehaviour
         m_Trail.endColor = Color.white * 0.7f;
 
         var weaponName = GameManager.GetPlayerManagerComponent().m_ItemInHands.name;
-        var velocity = transform.forward * (Ballistics.GetMuzzleVelocity(weaponName) * Ballistics.MuzzleVelocityScale);
+        var muzzleVelocity = Ballistics.GetMuzzleVelocity(weaponName);
+        if (muzzleVelocity == 0)
+            Mod.Logger.Log($"{weaponName} has no muzzle velocity, so its bullet drops at the muzzle.", FlaggedLoggingLevel.Warning);
+
+        var velocity = transform.forward * (muzzleVelocity * Ballistics.MuzzleVelocityScale);
         m_Rigidbody.AddForce(velocity, ForceMode.VelocityChange);
 
         m_FirePosition = transform.position;

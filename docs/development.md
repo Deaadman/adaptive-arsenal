@@ -22,7 +22,8 @@ dotnet build
 - `src/Components/ProjectileItem.cs`: the bullet: its flight, trail and hits, using `src/Core` for the numbers.
 - `src/Patches`: the [Harmony](https://harmony.pardeike.net) patches on the game: firing bullets instead of instant hits, revolver movement, and the HUD.
 - `src/Animators`: the round animation on the HUD.
-- `src/Utilities`: helpers for the game's objects: where a shot starts, borrowing materials, logging.
+- `src/Utilities`: helpers for the game's objects: where a shot starts, and borrowing materials.
+- `src/Dependencies`: DLLs that aren't on NuGet. [Complex Logger](https://github.com/Arkhorse/Complex-Logger) 1.0.8, which the mod logs through with `Mod.Logger`.
 - `src/Properties/AssemblyInfo.cs`: what MelonLoader reads about the mod, including the MelonLoader version it needs and the mods it won't load with.
 - `tests/AdaptiveArsenal.Tests`: unit tests for `src/Core`.
 - `docs`: the pages linked from the README. `assets` has the Photoshop files for the banner and thumbnail.

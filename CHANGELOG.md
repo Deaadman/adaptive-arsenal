@@ -19,6 +19,11 @@ See docs/development.md, "Releasing". CI checks this file's format.
 
 ## [Unreleased]
 
+### Added
+
+- **Breaking:** The mod logs through [Complex Logger](https://github.com/Arkhorse/Complex-Logger), which it now needs, along with [ModSettings](https://github.com/DigitalzombieTLD/ModSettings). Turn on its debug levels when reporting a bug.
+- The log warns when a weapon has no bullet trail or muzzle velocity, or fires the game's own shots instead of the mod's.
+
 ### Removed
 
 - The mod no longer needs Localization Utilities.

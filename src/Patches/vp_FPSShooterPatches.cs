@@ -39,7 +39,10 @@ internal static class vp_FPSShooterPatches
 
             var projectilePrefab = Addressables.LoadAssetAsync<GameObject>(ammoGearName).WaitForCompletion();
             if (projectilePrefab == null)
+            {
+                Mod.Logger.Log($"Couldn't load {ammoGearName}, so {__instance.gameObject.name} fires the game's own shots.", FlaggedLoggingLevel.Warning);
                 return;
+            }
 
             _ = projectilePrefab.GetComponent<ProjectileItem>() ?? projectilePrefab.AddComponent<ProjectileItem>();
             __instance.ProjectileCustomPrefab = true;

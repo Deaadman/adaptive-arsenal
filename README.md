@@ -11,8 +11,10 @@ Adaptive Arsenal is a [MelonLoader](https://github.com/LavaGang/MelonLoader) mod
 ## Install
 
 1. Install [MelonLoader](https://github.com/LavaGang/MelonLoader/releases/latest/download/MelonLoader.Installer.exe) into The Long Dark.
-2. Download [AdaptiveArsenal.dll](https://github.com/Deaadman/adaptive-arsenal/releases/latest/download/AdaptiveArsenal.dll).
-3. Put it in the `Mods` folder in the game's folder.
+2. Install the mods it needs, in the `Mods` folder in the game's folder:
+   - [Complex Logger](https://github.com/Arkhorse/Complex-Logger/releases/latest)
+   - [ModSettings](https://github.com/DigitalzombieTLD/ModSettings), which Complex Logger needs
+3. Download [AdaptiveArsenal.dll](https://github.com/Deaadman/adaptive-arsenal/releases/latest/download/AdaptiveArsenal.dll) and put it in the `Mods` folder too.
 4. Start the game.
 
 To update, replace `AdaptiveArsenal.dll` with the new one. To uninstall, delete it.
@@ -43,7 +45,7 @@ Every change is built straight away and published as the [nightly release](https
 
 ## Bugs and ideas
 
-Found a bug? Use the [bug report form](https://github.com/Deaadman/adaptive-arsenal/issues/new?template=bug_report.yml). It asks for `MelonLoader\Latest.log` from your game's folder.
+Found a bug? Use the [bug report form](https://github.com/Deaadman/adaptive-arsenal/issues/new?template=bug_report.yml). It asks for `MelonLoader\Latest.log` from your game's folder, with every level turned on in Complex Logger's settings.
 
 Have an idea? Use the [feature request form](https://github.com/Deaadman/adaptive-arsenal/issues/new?template=feature_request.yml).
 
