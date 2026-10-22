@@ -77,7 +77,11 @@ internal static class vp_FPSShooterPatches
                 return;
 
             ProjectileUtilities.SetBulletEmissionLocator(__instance);
-            ProjectileUtilities.CalculateProjectileTransform(__instance, out var position, out var aimRotation);
+            if (!ProjectileUtilities.CalculateProjectileTransform(__instance, out var position, out var aimRotation))
+            {
+                Mod.Logger.Log($"{__instance.gameObject.name} has no sights or bullet emission point, so it fires no bullet.", FlaggedLoggingLevel.Warning);
+                return;
+            }
 
             // Hip fire is when the gun allows it but the player isn't aiming.
             var isHipFire = weapon.m_GunItem.m_AllowHipFire && !playerAnimation.IsAllowedToFire(false);
@@ -88,11 +92,9 @@ internal static class vp_FPSShooterPatches
             var maxSpread = Ballistics.MaxSpreadDegrees(accuracy);
             var spread = Quaternion.Euler(new Vector3(Random.Range(-maxSpread, maxSpread), Random.Range(-maxSpread, maxSpread), 0));
 
-            var gunType = weapon.m_GunItem.m_GunType;
-            if (isHipFire)
-                ProjectileItem.SpawnAndFire(__instance.ProjectilePrefab, gunType, position, spread * Quaternion.LookRotation(GameManager.GetVpFPSCamera().transform.forward));
-            else
-                ProjectileItem.SpawnAndFire(__instance.ProjectilePrefab, gunType, position, aimRotation * spread);
+            // The spread turns the shot around its own axes, so it's the same whichever way the player faces.
+            var direction = isHipFire ? Quaternion.LookRotation(GameManager.GetVpFPSCamera().transform.forward) : aimRotation;
+            ProjectileItem.SpawnAndFire(__instance.ProjectilePrefab, weapon.m_GunItem.m_GunType, position, direction * spread);
         }
     }
 }

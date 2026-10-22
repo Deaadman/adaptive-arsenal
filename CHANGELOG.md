@@ -35,6 +35,9 @@ See docs/development.md, "Releasing". CI checks this file's format.
 - Bullet impact sounds come from where the bullet hit, so they get quieter with distance.
 - Bullet trails fade out after the bullet hits something, instead of vanishing at once.
 - Bullets still fly at full speed if their trail can't be made.
+- Bullets that hit nothing, like shots into the sky, are cleaned up after 10 seconds.
+- Hip-fire spread is the same whichever way you face, instead of changing as you look up, down or around.
+- Shooting an animal in a spot without body-part damage still hurts it, instead of the hit being lost to an error.
 
 ## [1.0.9] - 2026-01-05
 

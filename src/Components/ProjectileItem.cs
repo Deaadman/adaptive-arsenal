@@ -36,6 +36,12 @@ public class ProjectileItem : MonoBehaviour
     /// </summary>
     private const float ImpactLingerDuration = 2f;
 
+    /// <summary>
+    /// How long, in seconds, a bullet can fly without hitting anything before it's removed, like one fired into the
+    /// sky. The slowest bullet, at 150 m/s, covers about 1.5 km in this time.
+    /// </summary>
+    private const float MaxFlightTime = 10f;
+
     /// <summary>How many trail points to make room for up front.</summary>
     private const int InitialTrailCapacity = 100;
 
@@ -44,6 +50,9 @@ public class ProjectileItem : MonoBehaviour
 
     /// <summary>Where the bullet was fired from, to work out how far it has travelled when it hits.</summary>
     private Vector3 m_FirePosition;
+
+    /// <summary>When the bullet was fired, to remove it after <see cref="MaxFlightTime"/>.</summary>
+    private float m_FireTime;
 
     /// <summary>Whether the bullet has hit something, so it only hits once.</summary>
     private bool m_HasHit;
@@ -107,6 +116,8 @@ public class ProjectileItem : MonoBehaviour
     {
         if (m_HasHit)
             Linger();
+        else if (Time.time - m_FireTime > MaxFlightTime)
+            Destroy(gameObject);
         else
             ExtendTrail();
     }
@@ -163,6 +174,7 @@ public class ProjectileItem : MonoBehaviour
     private void Fire(GunType gunType)
     {
         m_GunType = gunType;
+        m_FireTime = Time.time;
         enabled = true;
 
         StatsManager.IncrementValue(m_GunType == GunType.Rifle ? StatID.RifleShot : StatID.RevolverShot);
@@ -213,6 +225,11 @@ public class ProjectileItem : MonoBehaviour
     /// distance travelled, see <see cref="Ballistics.DamageAtDistance"/>, and the hit counts towards the player's skill
     /// and statistics.
     /// </summary>
+    /// <remarks>
+    /// The collider hit usually has a <see cref="LocalizedDamage"/> saying how much that body part scales the damage,
+    /// how fast it bleeds out and its chance of a critical hit. The game's arrows check for one rather than assume it,
+    /// so without one the hit does unscaled damage, leaves the bleed-out time to the game and can't be critical.
+    /// </remarks>
     /// <param name="victim">The object the bullet hit.</param>
     /// <param name="colliderName">The name of the collider that was hit, which the game uses to tell body parts apart.</param>
     private void TryInflictDamage(GameObject victim, string colliderName)
@@ -227,18 +244,11 @@ public class ProjectileItem : MonoBehaviour
         if (baseAi == null)
             return;
 
-        var localizedDamage = victim.GetComponent<LocalizedDamage>();
         var weaponSource = m_GunType.ToWeaponSource();
         baseAi.MaybeFleeOrAttackFromProjectileHit(weaponSource);
-        var bleedOutMinutes = localizedDamage.GetBleedOutMinutes(weaponSource);
-        var bodyPartDamageScale = localizedDamage.GetDamageScale(weaponSource);
 
         var distance = Vector3.Distance(m_FirePosition, transform.position);
-        var damage = Ballistics.DamageAtDistance(distance) * bodyPartDamageScale;
-
-        // A critical hit kills outright. The chance is rolled as a rifle shot for revolvers too.
-        if (!baseAi.m_IgnoreCriticalHits && localizedDamage.RollChanceToKill(WeaponSource.Rifle))
-            damage = float.PositiveInfinity;
+        var damage = Ballistics.DamageAtDistance(distance);
 
         if (baseAi.GetAiMode() != AiMode.Dead)
         {
@@ -247,6 +257,21 @@ public class ProjectileItem : MonoBehaviour
             StatsManager.IncrementValue(hitStat);
             GameManager.GetSkillsManager().IncrementPointsAndNotify(skill, 1, SkillsManager.PointAssignmentMode.AssignOnlyInSandbox);
         }
+
+        var localizedDamage = victim.GetComponent<LocalizedDamage>();
+        if (localizedDamage == null)
+        {
+            Mod.Logger.Log($"{colliderName} has no LocalizedDamage, so the hit does unscaled damage.", FlaggedLoggingLevel.Debug);
+            baseAi.ApplyDamage(damage, DamageSource.Player, colliderName);
+            return;
+        }
+
+        var bleedOutMinutes = localizedDamage.GetBleedOutMinutes(weaponSource);
+        damage *= localizedDamage.GetDamageScale(weaponSource);
+
+        // A critical hit kills outright. The chance is rolled as a rifle shot for revolvers too.
+        if (!baseAi.m_IgnoreCriticalHits && localizedDamage.RollChanceToKill(WeaponSource.Rifle))
+            damage = float.PositiveInfinity;
 
         baseAi.SetupDamageForAnim(transform.position, GameManager.GetPlayerTransform().position, localizedDamage);
         baseAi.ApplyDamage(damage, bleedOutMinutes, DamageSource.Player, colliderName);

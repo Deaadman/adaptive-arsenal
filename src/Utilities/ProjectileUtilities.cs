@@ -12,12 +12,16 @@ internal static class ProjectileUtilities
     /// The first-person weapon is drawn by its own weapon camera, so its sights aren't where they appear to be in the
     /// world. This projects them onto the screen with the weapon camera, then back into the world with the main
     /// camera, and aims along the line from the rear sight to the front sight. A weapon without sights aims along its
-    /// bullet emission point instead. If it has neither, the bullet is placed at the world origin facing forward.
+    /// bullet emission point instead.
     /// </remarks>
     /// <param name="shooter">The weapon's shooter.</param>
     /// <param name="position">The world-space position to fire from.</param>
     /// <param name="rotation">The world-space direction to fire in.</param>
-    internal static void CalculateProjectileTransform(vp_FPSShooter shooter, out Vector3 position, out Quaternion rotation)
+    /// <returns>
+    /// <see langword="false"/> if the weapon has neither sights nor a bullet emission point, so there's nowhere to fire
+    /// from.
+    /// </returns>
+    internal static bool CalculateProjectileTransform(vp_FPSShooter shooter, out Vector3 position, out Quaternion rotation)
     {
         var weaponCamera = shooter.m_Camera.GetWeaponCamera();
         var mainCamera = GameManager.GetMainCamera();
@@ -50,8 +54,10 @@ internal static class ProjectileUtilities
             var aimDirection = Vector3.Normalize(frontSightInWorld - rearSightInWorld);
             position = PlayerManager.MaybeAdjustShotPositionForNearShot(frontSight.position, frontSightInWorld, aimDirection);
             rotation = Quaternion.LookRotation(aimDirection, Vector3.up);
+            return true;
         }
-        else if (shooter.BulletEmissionLocator != null)
+
+        if (shooter.BulletEmissionLocator != null)
         {
             var emissionPoint = shooter.BulletEmissionLocator.transform;
             var muzzleOnScreen = weaponCamera.WorldToScreenPoint(emissionPoint.position);
@@ -60,7 +66,10 @@ internal static class ProjectileUtilities
             var aimDirection = Vector3.Normalize(mainCamera.ScreenToWorldPoint(aheadOfMuzzleOnScreen) - muzzleInWorld);
             position = PlayerManager.MaybeAdjustShotPositionForNearShot(emissionPoint.position, muzzleInWorld, aimDirection);
             rotation = Quaternion.LookRotation(aimDirection, Vector3.up);
+            return true;
         }
+
+        return false;
     }
 
     /// <summary>
