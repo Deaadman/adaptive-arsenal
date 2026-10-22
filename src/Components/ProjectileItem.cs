@@ -1,4 +1,5 @@
 ﻿using AdaptiveArsenal.Utilities;
+
 using Il2CppTLD.Stats;
 
 namespace AdaptiveArsenal.Components;
@@ -10,13 +11,13 @@ public class ProjectileItem : MonoBehaviour
     private GunType m_GunType;
     private LineRenderer? m_LineRenderer;
     private Rigidbody? m_Rigidbody;
-    
+
     private const float Damage = 100f;
     private const float MaxRange = 500f;
     private const float MinDamage = 10f;
     private const float ScaleMultiplier = 0.5f;
     private static readonly int[] RevolverEffectiveRange = [40, 50, 60, 80, 100];
-    
+
     private bool LineRendererStartFadeOut;
     private const float LineRendererFadeDuration = 2f;
     private const float LineRendererMaxLength = 200f;
@@ -26,7 +27,7 @@ public class ProjectileItem : MonoBehaviour
     private const int InitialTrajectoryCapacity = 100;
     private Vector3 InitialPosition;
     private List<Vector3>? TrajectoryPoints;
-    
+
     private static readonly Dictionary<string, int> GunMuzzleVelocities = new()
     {
         {"GEAR_Rifle_Barbs", 800},
@@ -39,14 +40,14 @@ public class ProjectileItem : MonoBehaviour
         {"GEAR_RevolverStubNosed", 300},
         {"GEAR_Revolver", 400}
     };
-    
+
     private void Awake()
     {
         m_Rigidbody = GetComponent<Rigidbody>();
         m_AmmoItem = GetComponent<AmmoItem>();
 
         TrajectoryPoints = new List<Vector3>(InitialTrajectoryCapacity);
-        
+
         ConfigureComponents();
         enabled = false;
     }
@@ -61,21 +62,21 @@ public class ProjectileItem : MonoBehaviour
         };
 
         var accuracyMultiplier = 1.2f;
-        
+
         if (isHipFire) accuracyMultiplier *= 0.7f;
         if (isStanding) accuracyMultiplier *= 0.8f;
         if (isMoving) accuracyMultiplier *= 0.9f;
-        
+
         return baseAccuracy * accuracyMultiplier;
     }
-    
+
     private static float CalculateDamageByDistance(float distance) => Mathf.Lerp(Damage, MinDamage, Mathf.Clamp01(distance / MaxRange));
 
     private void ConfigureComponents()
     {
         if (m_AmmoItem is null || m_Rigidbody is null)
             return;
-        
+
         m_Rigidbody.collisionDetectionMode = CollisionDetectionMode.Continuous;
         m_GunType = m_AmmoItem.m_AmmoForGunType;
 
@@ -106,7 +107,7 @@ public class ProjectileItem : MonoBehaviour
 
         if (m_Rigidbody is null)
             return;
-        
+
         m_Rigidbody.velocity = Vector3.zero;
         m_Rigidbody.mass = 0.02f;
         m_Rigidbody.drag = 0.1f;
@@ -114,27 +115,27 @@ public class ProjectileItem : MonoBehaviour
 
         if (m_LineRenderer is null)
             return;
-        
+
         m_LineRenderer.startColor = new Color(1f, 1f, 1f, 0f);
         m_LineRenderer.endColor = Color.white * 0.7f;
-        
+
         var muzzleVelocity = transform.forward * (GetMuzzleVelocity(GameManager.GetPlayerManagerComponent().m_ItemInHands.name) * ScaleMultiplier);
         m_Rigidbody.AddForce(muzzleVelocity, ForceMode.VelocityChange);
 
         InitialPosition = transform.position;
-        
+
         if (TrajectoryPoints is null)
             return;
-        
+
         TrajectoryPoints.Add(InitialPosition);
         m_LineRenderer.positionCount = 1;
         m_LineRenderer.SetPosition(0, InitialPosition);
-        
+
         GameManager.GetCougarManager().MaybeAimNearMiss(muzzleVelocity.normalized);
     }
 
     private static float GetEffectiveRevolverRange() => RevolverEffectiveRange[GameManager.GetSkillsManager().GetSkill(SkillType.Revolver).GetCurrentTierNumber()];
-    
+
     private static int GetMuzzleVelocity(string gearItemName) => GunMuzzleVelocities.Keys.Where(gearItemName.Contains).Select(key => GunMuzzleVelocities[key]).FirstOrDefault();
 
     private void TryInflictDamage(GameObject victim, string collider)
@@ -145,7 +146,7 @@ public class ProjectileItem : MonoBehaviour
             27 => victim.transform.GetComponentInParent<BaseAi>(),
             _ => null
         };
-        
+
         if (baseAi == null) return;
 
         var localizedDamage = victim.GetComponent<LocalizedDamage>();
@@ -180,13 +181,13 @@ public class ProjectileItem : MonoBehaviour
 
         if (m_Rigidbody is null)
             return;
-        
+
         m_Rigidbody.velocity = Vector3.zero;
         m_Rigidbody.isKinematic = true;
 
         LineRendererStartFadeOut = true;
         LineRendererFadeTimer = 0f;
-        
+
         Destroy(gameObject);
     }
 
@@ -214,7 +215,7 @@ public class ProjectileItem : MonoBehaviour
 
         if (!collision.collider || !collision.collider.gameObject) return;
         GameAudioManager.SetMaterialSwitch(materialTagForObjectAtPosition, collision.collider.gameObject);
-        
+
         var soundEmitterFromGameObject = GameAudioManager.GetSoundEmitterFromGameObject(collision.collider.gameObject);
         AkSoundEngine.PostEvent("Play_BulletImpacts", soundEmitterFromGameObject);
         GameAudioManager.SetAudioSourceTransform(collision.collider.gameObject, collision.collider.gameObject.transform);
@@ -222,7 +223,7 @@ public class ProjectileItem : MonoBehaviour
 
     private void Update()
     {
-        if (m_LineRenderer is null) 
+        if (m_LineRenderer is null)
             return;
 
         if (!LineRendererStartFadeOut)
@@ -230,12 +231,12 @@ public class ProjectileItem : MonoBehaviour
             if (Time.time - LastTrajectoryUpdateTime < TrajectoryUpdateInterval) return;
 
             LastTrajectoryUpdateTime = Time.time;
-            
+
             if (TrajectoryPoints is null)
                 return;
-            
+
             TrajectoryPoints.Add(transform.position);
-            
+
             var totalLength = 0f;
             var removeCount = 0;
             for (var i = TrajectoryPoints.Count - 1; i > 0; i--)

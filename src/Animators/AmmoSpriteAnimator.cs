@@ -1,5 +1,7 @@
 using AdaptiveArsenal.Utilities;
+
 using System.Collections;
+
 using Il2CppInterop.Runtime.Attributes;
 
 namespace AdaptiveArsenal.Animators;
@@ -16,7 +18,7 @@ public class AmmoSpriteAnimator : MonoBehaviour
         var casingObject = Instantiate(ammoPrefab, parentTransform);
         if (casingObject is null)
             yield break;
-        
+
         activeAmmoSprites.Add(casingObject);
         casingObject.transform.localPosition = startPosition;
         casingObject.SetActive(true);
@@ -44,7 +46,7 @@ public class AmmoSpriteAnimator : MonoBehaviour
         while (elapsedTime < duration)
         {
             var t = elapsedTime / duration;
-                
+
             casingObject.transform.localPosition = MathUtils.QuadraticBezier(startPosition, controlPoint, end, t);
             casingObject.transform.Rotate(0, 0, rotationSpeed * Time.deltaTime);
 

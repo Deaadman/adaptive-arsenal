@@ -1,49 +1,58 @@
 <div align="center">
 
-<img src="https://raw.githubusercontent.com/Deaadman/AdaptiveArsenal/release/Images/Banner.webp" alt="Adaptive Arsenal Banner">
+![Adaptive Arsenal](docs/images/banner.webp)
 
-[![Latest Release](https://img.shields.io/github/v/release/Deaadman/AdaptiveArsenal?style=for-the-badge&label=Latest%20Release)](https://github.com/Deaadman/AdaptiveArsenal/releases/latest)
-
-[![All Downloads](https://img.shields.io/github/downloads/Deaadman/AdaptiveArsenal/total?style=for-the-badge&label=All%20Downloads)](https://github.com/Deaadman/AdaptiveArsenal/releases)
-[![Latest Downloads](https://img.shields.io/github/downloads/Deaadman/AdaptiveArsenal/latest/total?style=for-the-badge&label=Latest%20Downloads)](https://github.com/Deaadman/AdaptiveArsenal/releases/latest)
-
-[![Nightly Workflow](https://img.shields.io/github/actions/workflow/status/Deaadman/AdaptiveArsenal/release_nightly.yml?style=for-the-badge&label=Nightly%20Build)](https://github.com/Deaadman/AdaptiveArsenal/actions/workflows/release_nightly.yml)
-[![Nightly Downloads](https://img.shields.io/github/downloads/Deaadman/AdaptiveArsenal/nightly/total?style=for-the-badge&label=Nightly%20Downloads)](https://github.com/Deaadman/AdaptiveArsenal/releases/tag/nightly)
+[![Latest release](https://img.shields.io/github/v/release/Deaadman/adaptive-arsenal?style=flat-square&label=release)](https://github.com/Deaadman/adaptive-arsenal/releases/latest) [![Downloads](https://img.shields.io/github/downloads/Deaadman/adaptive-arsenal/total?style=flat-square)](https://github.com/Deaadman/adaptive-arsenal/releases) [![Nightly](https://img.shields.io/github/actions/workflow/status/Deaadman/adaptive-arsenal/nightly.yml?branch=develop&style=flat-square&label=nightly)](https://github.com/Deaadman/adaptive-arsenal/releases/tag/nightly) [![License](https://img.shields.io/badge/license-GPL--3.0-blue?style=flat-square)](LICENSE)
 
 </div>
 
-## Features
+Adaptive Arsenal is a [MelonLoader](https://github.com/LavaGang/MelonLoader) mod for [The Long Dark](https://www.hinterlandgames.com/the-long-dark/) that makes its rifles and revolvers feel more real. Bullets fly through the air instead of hitting instantly, and where they land depends on your skill, your stance and how far away the target is.
 
-Adaptive Arsenal is a modification that improves upon existing weapon mechanics within [**The Long Dark**](https://www.hinterlandgames.com/the-long-dark/).
+## Install
 
-- **Accuracy:** Skills, crouching, standing and moving now all have an effect on how accurate of a shot your character is.
-- **Bullet System Overhaul:** Replaced the existing Raycast / Hitscan bullet system with projectiles.
-- **Damage Drop-off:** Each weapon has a unique damage drop-off threshold; once it's passed, the damage will decrease from that point onwards.
-- **HUD Animation:** After a bullet has been fired from a Rifle or Revolver, a cool animation plays of the bullet being chambered on the UI.
-- **Improved Revolver:** You can now move freely while aiming with the revolver.
-- **Muzzle Velocities:** Each weapon has a unique muzzle velocity parameter set, determining how far the bullet can travel.
-- **Visuals:** A trail follows behind the bullet for visual representation of its landing location.
+1. Install [MelonLoader](https://github.com/LavaGang/MelonLoader/releases/latest/download/MelonLoader.Installer.exe) into The Long Dark.
+2. Download [AdaptiveArsenal.dll](https://github.com/Deaadman/adaptive-arsenal/releases/latest/download/AdaptiveArsenal.dll).
+3. Put it in the `Mods` folder in the game's folder.
+4. Start the game.
 
-## Showcase
-Coming Soon™
+To update, replace `AdaptiveArsenal.dll` with the new one. To uninstall, delete it.
 
-## Compatibility
+Each release says which version of The Long Dark it was made for. After a game update, the mod may not work until it's updated too.
 
-### Required Dependencies
-For this mod to work, ensure you have the following mods below:
+### Doesn't work with
 
-- [**Localization Utilities**](https://github.com/dommrogers/LocalizationUtilities/releases)
+- [Target Practice & Master Hunter](https://github.com/RomainDeschampsFR/TargetPracticeAndMasterHunter). Both change how bullets work, so the mod won't load alongside it.
 
-### Incompatible Mods:
+### Nightly builds
 
-Avoid using the following mods below as they are incompatible with this mod:
+Every change is built straight away and published as the [nightly release](https://github.com/Deaadman/adaptive-arsenal/releases/tag/nightly). It has the newest fixes and features, but it may be unstable. Back up your saves first.
 
-- [**Target Practice & Master Hunter**](https://github.com/RomainDeschampsFR/TargetPracticeAndMasterHunter)
+## What it does
 
-## Installation
+| Feature | What changes |
+| --- | --- |
+| Real bullets | Bullets are projectiles that take time to reach their target, instead of hitting the instant you fire |
+| Accuracy | Your skill, crouching or standing, moving, and firing from the hip all change how close a shot lands to where you aimed |
+| Muzzle velocity | Each rifle and revolver fires its bullets at its own speed |
+| Damage drop-off | The further a bullet travels, the less damage it does |
+| Bullet trails | A trail follows each bullet, so you can see where it landed |
+| HUD animation | Firing plays an animation of the spent round on the ammo display |
+| Revolver movement | You can walk while aiming a revolver |
 
-1. [**Download**](https://github.com/LavaGang/MelonLoader/releases/latest/download/MelonLoader.Installer.exe) MelonLoader and install it into your game.
-2. [**Download**](https://github.com/Deaadman/AdaptiveArsenal/releases/latest/download/AdaptiveArsenal.dll) the latest version of this mod.
-3. Navigate to where your game's directory.
-4. Cut the `AdaptiveArsenal.dll` you downloaded and paste it into the `mods` folder of your game's directory.
-5. Launch the game.
+[How it all works](docs/features.md) has the numbers for each weapon.
+
+## Bugs and ideas
+
+Found a bug? Use the [bug report form](https://github.com/Deaadman/adaptive-arsenal/issues/new?template=bug_report.yml). It asks for `MelonLoader\Latest.log` from your game's folder.
+
+Have an idea? Use the [feature request form](https://github.com/Deaadman/adaptive-arsenal/issues/new?template=feature_request.yml).
+
+## Learn more
+
+- [How it works](docs/features.md): accuracy, muzzle velocities and damage, in numbers
+- [Building from source](docs/development.md)
+- [Changelog](CHANGELOG.md)
+
+## License
+
+Adaptive Arsenal is licensed under [GPL-3.0](LICENSE).

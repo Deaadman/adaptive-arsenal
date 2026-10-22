@@ -15,7 +15,7 @@ internal static class ProjectileUtilities
             instance.BulletEmissionLocator = instance.m_Weapon.m_FirstPersonWeaponRightHand.m_BulletEmissionPoint.transform;
             transform = instance.m_Weapon.m_FirstPersonWeaponRightHand.m_FrontSight;
             transform2 = instance.m_Weapon.m_FirstPersonWeaponRightHand.m_RearSight;
-            
+
         }
         else if (instance.m_Weapon.m_FirstPersonWeaponShoulder && instance.m_Weapon.m_FirstPersonWeaponShoulder.m_BulletEmissionPoint)
         {
@@ -47,7 +47,7 @@ internal static class ProjectileUtilities
             rotation = Quaternion.LookRotation(vector11, Vector3.up);
         }
     }
-    
+
     internal static void SetBulletEmissionLocator(vp_FPSShooter instance)
     {
         if (instance.m_Weapon.m_FirstPersonWeaponRightHand && instance.m_Weapon.m_FirstPersonWeaponRightHand.m_BulletEmissionPoint)

@@ -9,25 +9,25 @@ internal static class EquipItemPopupPatches
     {
         private static void Postfix(EquipItemPopup __instance) => _ = __instance.GetComponent<AmmoSpriteAnimator>() ?? __instance.gameObject.AddComponent<AmmoSpriteAnimator>();
     }
-    
+
     [HarmonyPatch(typeof(EquipItemPopup), nameof(EquipItemPopup.UpdateAmmoStatus))]
     public static class UpdateAmmoStatusPatch
     {
         private static int lastRoundsInClip = -1;
         private static GunItem? lastGunItem;
-    
+
         private static void Postfix(EquipItemPopup __instance)
         {
             var ammoSpriteAnimator = __instance.GetComponent<AmmoSpriteAnimator>();
-            
+
             var itemInHands = GameManager.GetPlayerManagerComponent().m_ItemInHands;
-            if (itemInHands == null || itemInHands.m_GunItem == null || itemInHands.m_GunItem.m_GunType == GunType.FlareGun) 
+            if (itemInHands == null || itemInHands.m_GunItem == null || itemInHands.m_GunItem.m_GunType == GunType.FlareGun)
             {
                 lastGunItem = null;
                 lastRoundsInClip = -1;
                 return;
             }
-            
+
             var currentGunItem = itemInHands.m_GunItem;
             var roundsInClip = currentGunItem.NumRoundsInClip();
 
@@ -46,7 +46,7 @@ internal static class EquipItemPopupPatches
                     MelonCoroutines.Start(ammoSpriteAnimator.CasingEjectionAnimation(startPosition, __instance.m_ListAmmoSprites[0].transform.parent, currentGunItem.m_GunType));
                 }
             }
-    
+
             lastRoundsInClip = roundsInClip;
         }
     }

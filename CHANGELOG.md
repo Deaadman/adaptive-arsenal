@@ -1,0 +1,138 @@
+# Changelog
+
+All notable changes to this project will be documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/2.0.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+<!--
+A version's section is its GitHub release description, so write it for
+players: one plain sentence each, about what changed for them.
+
+- Add entries under "## [Unreleased]" as you go, grouped under Added,
+  Changed, Deprecated, Removed, Fixed or Security.
+- To release, rename it to "## [1.1.0] - YYYY-MM-DD" (no v), add a fresh
+  "## [Unreleased]" above it, and update the links at the bottom.
+
+See docs/development.md, "Releasing". CI checks this file's format.
+-->
+
+## [Unreleased]
+
+### Removed
+
+- The mod no longer needs Localization Utilities.
+
+## [1.0.9] - 2026-01-05
+
+### Changed
+
+- Updated for The Long Dark 2.51.
+
+## [1.0.8] - 2025-01-11
+
+### Added
+
+- The Trader's (Bunker) rifle has its own muzzle velocity, the highest of any rifle.
+
+### Fixed
+
+- Rifle and revolver hits count towards the right wildlife hits statistic.
+
+## [1.0.7] - 2024-12-17
+
+### Added
+
+- The mod won't load alongside [Target Practice & Master Hunter](https://github.com/RomainDeschampsFR/TargetPracticeAndMasterHunter), which it doesn't work with.
+
+### Changed
+
+- Shots are a little more accurate.
+
+### Fixed
+
+- A cougar you shoot at swipes at you, rather than attacking straight away.
+
+## [1.0.6] - 2024-12-12
+
+### Changed
+
+- Updated for The Long Dark 2.35.
+
+### Fixed
+
+- You can take photos with the camera again.
+
+## [1.0.5] - 2024-07-30
+
+### Added
+
+- You can move while aiming any revolver.
+- How accurate a shot is depends on your skill and on whether you're standing, crouching or moving. At skill level 5, rifles and revolvers are fully accurate.
+- Firing a weapon plays an animation of the round on the HUD.
+
+### Changed
+
+- Simpler muzzle velocity and damage drop-off.
+- Bullet trails cost less performance.
+
+## [1.0.4] - 2024-06-29
+
+### Changed
+
+- Updated for The Long Dark 2.31.
+
+### Fixed
+
+- A jammed gun can't fire endless bullets.
+- Bullets disappear as soon as they hit something, so they can't be picked back up.
+
+## [1.0.3] - 2024-06-27
+
+### Changed
+
+- Bullets are faster, so they feel more like real bullets.
+- Updated for The Long Dark 2.29.
+
+### Removed
+
+- Wind no longer changes where bullets go.
+
+### Fixed
+
+- Bullets leave from the right height when aiming.
+- Revolver bullets no longer veer to the left when firing from the hip.
+
+## [1.0.2] - 2024-02-08
+
+### Fixed
+
+- The mod runs much faster: well over twice as fast as 1.0.1.
+
+## [1.0.1] - 2024-01-29
+
+### Changed
+
+- Bullets are slightly faster.
+
+### Fixed
+
+- The mod works with MelonLoader 0.6.1, not just 0.6.2.
+
+## [1.0.0] - 2024-01-15
+
+### Added
+
+- The first release.
+
+[Unreleased]: https://github.com/Deaadman/adaptive-arsenal/compare/1.0.9...HEAD
+[1.0.9]: https://github.com/Deaadman/adaptive-arsenal/compare/1.0.8...1.0.9
+[1.0.8]: https://github.com/Deaadman/adaptive-arsenal/compare/1.0.7...1.0.8
+[1.0.7]: https://github.com/Deaadman/adaptive-arsenal/compare/1.0.6...1.0.7
+[1.0.6]: https://github.com/Deaadman/adaptive-arsenal/compare/1.0.5...1.0.6
+[1.0.5]: https://github.com/Deaadman/adaptive-arsenal/compare/1.0.4...1.0.5
+[1.0.4]: https://github.com/Deaadman/adaptive-arsenal/compare/1.0.3...1.0.4
+[1.0.3]: https://github.com/Deaadman/adaptive-arsenal/compare/1.0.2...1.0.3
+[1.0.2]: https://github.com/Deaadman/adaptive-arsenal/compare/1.0.1...1.0.2
+[1.0.1]: https://github.com/Deaadman/adaptive-arsenal/compare/1.0.0...1.0.1
+[1.0.0]: https://github.com/Deaadman/adaptive-arsenal/releases/tag/1.0.0

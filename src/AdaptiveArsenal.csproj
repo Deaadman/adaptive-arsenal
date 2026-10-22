@@ -1,0 +1,82 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>net6.0</TargetFramework>
+        <LangVersion>default</LangVersion>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+        <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+        <DebugType>embedded</DebugType>
+        <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
+        <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
+        <!-- packages.lock.json pins every package, including the ones these depend on. CI restores with locked mode. -->
+        <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
+        <!-- Restore checks every package, including the ones these depend on, for security advisories. With warnings as errors, one fails the build. -->
+        <NuGetAuditMode>all</NuGetAuditMode>
+        <!-- A source that can't be reached for advisories is still only a warning; an advisory is an error. -->
+        <WarningsNotAsErrors>NU1900</WarningsNotAsErrors>
+    </PropertyGroup>
+
+    <PropertyGroup>
+        <Authors>Deadman</Authors>
+        <Copyright>Copyright (c) 2026 $(Authors)</Copyright>
+        <Product>Adaptive Arsenal</Product>
+        <!-- The release version. Nightly builds add a suffix: 1.1.0-nightly.20261022+g1a2b3c4. -->
+        <VersionPrefix>1.1.0</VersionPrefix>
+        <RepositoryUrl>https://github.com/Deaadman/adaptive-arsenal</RepositoryUrl>
+    </PropertyGroup>
+
+    <!-- The game's assemblies. The first two numbers of the version are the game version they were made from. -->
+    <ItemGroup>
+        <PackageReference Include="STBlade.Modding.TLD.Il2CppAssemblies.Windows" Version="2.55.0" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <Using Include="HarmonyLib" />
+        <Using Include="Il2Cpp" />
+        <Using Include="MelonLoader" />
+        <Using Include="UnityEngine" />
+        <Using Include="System.Reflection" />
+        <Using Include="System.Diagnostics.CodeAnalysis" />
+    </ItemGroup>
+
+    <!-- Copies the mod into the game after a Debug build, when TheLongDarkPath is set (for example in an environment variable). -->
+    <Target Name="CopyToModsFolder" AfterTargets="Build" Condition="'$(Configuration)' == 'Debug' And '$(TheLongDarkPath)' != ''">
+        <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(TheLongDarkPath)/Mods" />
+    </Target>
+
+    <!-- The full version, for the workflows to name the release with. -->
+    <Target Name="WriteVersion" AfterTargets="Build" Condition="'$(Configuration)' == 'Release'">
+        <WriteLinesToFile File="$(BaseIntermediateOutputPath)Version.txt" Lines="$(InformationalVersion)" Overwrite="true" />
+    </Target>
+
+    <!-- BuildInfo for AssemblyInfo.cs, written to obj. Set inside the target, where IntermediateOutputPath is known. -->
+    <Target Name="GenerateBuildInfo" BeforeTargets="CoreCompile">
+        <PropertyGroup>
+            <BuildInfoFile>$(IntermediateOutputPath)BuildInfo.g.cs</BuildInfoFile>
+        </PropertyGroup>
+
+        <WriteLinesToFile
+                File="$(BuildInfoFile)"
+                Overwrite="true"
+                WriteOnlyWhenDifferent="true"
+                Lines="
+namespace AdaptiveArsenal.Properties%3B
+
+internal static class BuildInfo
+{
+	public const string Name = &quot;$(Product)&quot;%3B
+	public const string Version = &quot;$(InformationalVersion)&quot;%3B
+	public const string Author = &quot;$(Authors)&quot;%3B
+	public const string DownloadLink = &quot;$(RepositoryUrl)/releases/latest/download/AdaptiveArsenal.dll&quot;%3B
+	public const int Priority = 0%3B
+	public const string MelonLoaderVersion = &quot;0.7.2-ci.2388&quot;%3B
+}
+" />
+
+        <ItemGroup>
+            <Compile Include="$(BuildInfoFile)" />
+            <FileWrites Include="$(BuildInfoFile)" />
+        </ItemGroup>
+    </Target>
+</Project>
