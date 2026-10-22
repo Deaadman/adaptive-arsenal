@@ -27,6 +27,26 @@ internal static class ProjectileTemplates
     /// <summary>The templates built so far, by the gun they're for.</summary>
     private static readonly Dictionary<GunType, GameObject> s_Templates = [];
 
+    /// <summary>How hard each gun's shots push loose gear, from the game's own bullet for it.</summary>
+    private static readonly Dictionary<GunType, GearImpactForce> s_GearImpactForces = [];
+
+    /// <summary>Remembers how hard the game's own bullet for a gun pushes loose gear, for the mod's bullets to match.</summary>
+    /// <param name="gunType">The gun the bullet is for.</param>
+    /// <param name="gameBullet">The game's bullet, from the shooter's prefab before the mod replaces it.</param>
+    internal static void RememberGearImpactForce(GunType gunType, vp_Bullet gameBullet)
+    {
+        GearImpactForce force = new(gameBullet.m_GearImpactForce, gameBullet.m_GearImpactUpwardForce, gameBullet.m_GearImpactTorqueForce);
+        if (s_GearImpactForces.TryAdd(gunType, force))
+            Mod.Logger.Log($"{gunType} bullets push gear with {force}.", FlaggedLoggingLevel.Debug);
+    }
+
+    /// <summary>Gets how hard a gun's shots push loose gear.</summary>
+    /// <param name="gunType">The gun that fired.</param>
+    /// <param name="force">The force, if the game's bullet for that gun was found.</param>
+    /// <returns>Whether the force is known.</returns>
+    internal static bool TryGetGearImpactForce(GunType gunType, out GearImpactForce force) =>
+        s_GearImpactForces.TryGetValue(gunType, out force);
+
     /// <summary>Gets the bullet template for a gun, building it the first time.</summary>
     /// <param name="gunType">The gun the bullet is for: a rifle or revolver.</param>
     /// <returns>The inactive template, or <see langword="null"/> if the gun has no ammo or it couldn't be loaded.</returns>
@@ -106,3 +126,9 @@ internal static class ProjectileTemplates
         mesh.AddComponent<MeshRenderer>().sharedMaterials = sourceRenderer.sharedMaterials;
     }
 }
+
+/// <summary>How hard a shot pushes the loose gear it hits, as the game's own bullets do.</summary>
+/// <param name="Force">The push along the bullet's path.</param>
+/// <param name="UpwardForce">The push upwards.</param>
+/// <param name="TorqueForce">The most it can spin the gear, in a random direction.</param>
+internal readonly record struct GearImpactForce(float Force, float UpwardForce, float TorqueForce);

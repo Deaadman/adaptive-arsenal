@@ -6,13 +6,17 @@ namespace AdaptiveArsenal.Patches;
 internal static class PanelHUDPatches
 {
     /// <summary>
-    /// Hides the HUD's "limited mobility while aiming" indicator, since
-    /// <see cref="vp_FPSPlayerPatches"/> lets the player walk while aiming a revolver.
+    /// Hides the HUD's "limited mobility while aiming" indicator while aiming a revolver, since
+    /// <see cref="vp_FPSPlayerPatches"/> lets the player walk then.
     /// </summary>
-    /// <remarks>It's hidden every frame, so it doesn't show for any weapon.</remarks>
+    /// <remarks>Rifles still can't move while aiming, so the game shows it for them as usual.</remarks>
     [HarmonyPatch(typeof(Panel_HUD), nameof(Panel_HUD.Update))]
-    private static class HideAimingLimitedMobility
+    private static class HideAimingLimitedMobilityForRevolver
     {
-        private static void Postfix(Panel_HUD __instance) => __instance.m_AimingLimitedMobility.gameObject.SetActive(false);
+        private static void Postfix(Panel_HUD __instance)
+        {
+            if (GameManager.GetPlayerManagerComponent().GetControlMode() == PlayerControlMode.AimRevolver)
+                __instance.m_AimingLimitedMobility.gameObject.SetActive(false);
+        }
     }
 }

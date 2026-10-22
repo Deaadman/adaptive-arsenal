@@ -49,6 +49,10 @@ public class ProjectileItem : MonoBehaviour
     private static Material? s_TrailMaterial;
 
     private GunType m_GunType;
+
+    /// <summary>The damage the gun that fired the bullet does at the muzzle: its <see cref="GunItem.m_DamageHP"/>.</summary>
+    private float m_MuzzleDamage;
+
     private Rigidbody? m_Rigidbody;
 
     /// <summary>Where the bullet was fired from, to work out how far it has travelled when it hits.</summary>
@@ -93,17 +97,17 @@ public class ProjectileItem : MonoBehaviour
 
     /// <summary>Makes a copy of a bullet template and fires it.</summary>
     /// <param name="template">An inactive template from <see cref="ProjectileTemplates"/>.</param>
-    /// <param name="gunType">The gun firing it. Il2Cpp doesn't copy this component's fields, so it's passed here.</param>
+    /// <param name="gunItem">The gun firing it. Il2Cpp doesn't copy this component's fields, so it's passed here.</param>
     /// <param name="position">Where to fire it from, in world space.</param>
     /// <param name="rotation">The direction to fire it in, in world space.</param>
-    internal static void SpawnAndFire(GameObject template, GunType gunType, Vector3 position, Quaternion rotation)
+    internal static void SpawnAndFire(GameObject template, GunItem gunItem, Vector3 position, Quaternion rotation)
     {
         var bullet = Instantiate(template, position, rotation);
         bullet.name = template.name;
 
         // The template is inactive, so the copy only wakes up here.
         bullet.SetActive(true);
-        bullet.GetComponent<ProjectileItem>().Fire(gunType);
+        bullet.GetComponent<ProjectileItem>().Fire(gunItem);
     }
 
     private void Awake()
@@ -134,6 +138,7 @@ public class ProjectileItem : MonoBehaviour
         var contact = collision.GetContact(0);
 
         TryInflictDamage(collision.gameObject, collision.gameObject.name);
+        TryPushGear(collision.collider);
         StopAt(contact.point);
         SpawnImpactEffects(collision.collider, contact.point);
     }
@@ -176,10 +181,11 @@ public class ProjectileItem : MonoBehaviour
     /// Counts the shot in the player's statistics, releases the bullet and launches it at the muzzle velocity of the
     /// weapon in the player's hands, then starts its trail.
     /// </summary>
-    /// <param name="gunType">The gun firing it.</param>
-    private void Fire(GunType gunType)
+    /// <param name="gunItem">The gun firing it.</param>
+    private void Fire(GunItem gunItem)
     {
-        m_GunType = gunType;
+        m_GunType = gunItem.m_GunType;
+        m_MuzzleDamage = gunItem.m_DamageHP;
         m_FireTime = Time.time;
         enabled = true;
 
@@ -201,7 +207,7 @@ public class ProjectileItem : MonoBehaviour
         if (muzzleVelocity == 0)
             Mod.Logger.Log($"{weaponName} has no muzzle velocity, so its bullet drops at the muzzle.", FlaggedLoggingLevel.Warning);
 
-        var velocity = transform.forward * (muzzleVelocity * Ballistics.MuzzleVelocityScale);
+        var velocity = transform.forward * muzzleVelocity;
         m_Rigidbody.AddForce(velocity, ForceMode.VelocityChange);
 
         m_FirePosition = transform.position;
@@ -254,7 +260,7 @@ public class ProjectileItem : MonoBehaviour
         baseAi.MaybeFleeOrAttackFromProjectileHit(weaponSource);
 
         var distance = Vector3.Distance(m_FirePosition, transform.position);
-        var damage = Ballistics.DamageAtDistance(distance);
+        var damage = Ballistics.DamageAtDistance(distance, m_MuzzleDamage);
 
         if (baseAi.GetAiMode() != AiMode.Dead)
         {
@@ -275,12 +281,34 @@ public class ProjectileItem : MonoBehaviour
         var bleedOutMinutes = localizedDamage.GetBleedOutMinutes(weaponSource);
         damage *= localizedDamage.GetDamageScale(weaponSource);
 
-        // A critical hit kills outright. The chance is rolled as a rifle shot for revolvers too.
-        if (!baseAi.m_IgnoreCriticalHits && localizedDamage.RollChanceToKill(WeaponSource.Rifle))
+        // A critical hit kills outright, with the body part's chance for the gun that fired.
+        if (!baseAi.m_IgnoreCriticalHits && localizedDamage.RollChanceToKill(weaponSource))
             damage = float.PositiveInfinity;
 
         baseAi.SetupDamageForAnim(transform.position, GameManager.GetPlayerTransform().position, localizedDamage);
         baseAi.ApplyDamage(damage, bleedOutMinutes, DamageSource.Player, colliderName);
+    }
+
+    /// <summary>
+    /// Pushes the loose gear the bullet hit, if it hit some, as hard as the game's own bullet for the gun would: along
+    /// the bullet's path and upwards, with a spin in a random direction.
+    /// </summary>
+    /// <remarks>
+    /// The forces come from the game's bullet, see <see cref="ProjectileTemplates.RememberGearImpactForce"/>. How the game
+    /// combines them isn't known, so this is a guess at it.
+    /// </remarks>
+    /// <param name="surface">The collider the bullet hit.</param>
+    private void TryPushGear(Collider surface)
+    {
+        if (surface == null || !ProjectileTemplates.TryGetGearImpactForce(m_GunType, out var impact))
+            return;
+
+        var gearItem = surface.GetComponentInParent<GearItem>();
+        if (gearItem == null)
+            return;
+
+        var force = transform.forward * impact.Force + Vector3.up * impact.UpwardForce;
+        gearItem.ApplyForce(force, UnityEngine.Random.insideUnitSphere * impact.TorqueForce);
     }
 
     /// <summary>

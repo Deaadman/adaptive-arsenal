@@ -33,6 +33,11 @@ internal static class vp_FPSShooterPatches
             else
                 return;
 
+            // The game's own bullet, before it's replaced, says how hard a shot pushes loose gear.
+            var gameBullet = __instance.ProjectilePrefab != null ? __instance.ProjectilePrefab.GetComponent<vp_Bullet>() : null;
+            if (gameBullet != null)
+                ProjectileTemplates.RememberGearImpactForce(gunType, gameBullet);
+
             var template = ProjectileTemplates.Get(gunType);
             if (template == null)
             {
@@ -89,11 +94,12 @@ internal static class vp_FPSShooterPatches
             var accuracy = ProjectileItem.CalculateAccuracy(weapon.m_GunItem, isHipFire, !playerManager.PlayerIsCrouched(), playerManager.PlayerIsWalking());
 
             var maxSpread = Ballistics.MaxSpreadDegrees(accuracy);
-            var spread = Quaternion.Euler(new Vector3(Random.Range(-maxSpread, maxSpread), Random.Range(-maxSpread, maxSpread), 0));
+            var (pitch, yaw) = Ballistics.SpreadOffset(maxSpread, Random.value, Random.value);
+            var spread = Quaternion.Euler(pitch, yaw, 0f);
 
             // The spread turns the shot around its own axes, so it's the same whichever way the player faces.
             var direction = isHipFire ? Quaternion.LookRotation(GameManager.GetVpFPSCamera().transform.forward) : aimRotation;
-            ProjectileItem.SpawnAndFire(__instance.ProjectilePrefab, weapon.m_GunItem.m_GunType, position, direction * spread);
+            ProjectileItem.SpawnAndFire(__instance.ProjectilePrefab, weapon.m_GunItem, position, direction * spread);
         }
     }
 }

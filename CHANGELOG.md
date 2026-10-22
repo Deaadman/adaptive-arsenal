@@ -23,6 +23,15 @@ See docs/development.md, "Releasing". CI checks this file's format.
 
 - **Breaking:** The mod logs through [Complex Logger](https://github.com/Arkhorse/Complex-Logger), which it now needs, along with [ModSettings](https://github.com/DigitalzombieTLD/ModSettings). Turn on its debug levels when reporting a bug.
 - The log warns when a weapon has no bullet trail or muzzle velocity, or fires the game's own shots instead of the mod's.
+- Bullets knock loose items around when they hit them, as the game's own bullets do.
+
+### Changed
+
+- Each rifle and revolver does its own damage, as the game sets it, instead of every gun doing the same.
+- Revolver hits have the game's own chance of a critical hit for revolvers, instead of the rifle's.
+- Shots spread evenly in a circle around where you aim, instead of in a square that reached further out at the corners.
+- The limited-movement icon still shows while aiming a rifle, and is only hidden for the revolver, which you can walk with.
+- [How it works](https://github.com/Deaadman/adaptive-arsenal/blob/develop/docs/features.md) lists muzzle velocities in metres per second. Bullets fly at the same speeds as before.
 
 ### Removed
 

@@ -24,31 +24,29 @@ Then the score is multiplied:
 | Standing (not crouching) | × 0.8 |
 | Moving | × 0.9 |
 
-At a score of 0, a shot can land up to 10° away from where you aimed. At 100 or more, it lands exactly where you aimed. So at skill level 5, rifles and revolvers are fully accurate.
+At a score of 0, a shot can land up to 10° away from where you aimed, in any direction. At 100 or more, it lands exactly where you aimed. So at skill level 5, rifles and revolvers are fully accurate.
 
 ## Muzzle velocity
 
 Each weapon fires its bullets at its own speed. Faster bullets reach the target sooner and drop less on the way.
 
-| Weapon | Game ID | Muzzle velocity |
+| Weapon | Game ID | Muzzle velocity (m/s) |
 | --- | --- | --- |
-| Trader's (Bunker) rifle | `GEAR_Rifle_Traders` | 1100 |
-| Curator's rifle | `GEAR_Rifle_Curators` | 1000 |
-| Hunting rifle | `GEAR_Rifle` | 800 |
-| Barbara's rifle | `GEAR_Rifle_Barbs` | 800 |
-| Vaughn's rifle | `GEAR_Rifle_Vaughns` | 700 |
-| Revolver | `GEAR_RevolverFancy` | 600 |
-| Revolver | `GEAR_Revolver`, `GEAR_RevolverGreen` | 400 |
-| Revolver | `GEAR_RevolverStubNosed` | 300 |
-
-These are the mod's own values, not metres per second.
+| Trader's (Bunker) rifle | `GEAR_Rifle_Traders` | 550 |
+| Curator's rifle | `GEAR_Rifle_Curators` | 500 |
+| Hunting rifle | `GEAR_Rifle` | 400 |
+| Barbara's rifle | `GEAR_Rifle_Barbs` | 400 |
+| Vaughn's rifle | `GEAR_Rifle_Vaughns` | 350 |
+| Revolver | `GEAR_RevolverFancy` | 300 |
+| Revolver | `GEAR_Revolver`, `GEAR_RevolverGreen` | 200 |
+| Revolver | `GEAR_RevolverStubNosed` | 150 |
 
 ## Damage drop-off
 
-A bullet does the most damage close up. Its damage falls steadily with distance, to a tenth at 500 metres. Where it hits still matters, as it does without the mod, and a hit can still kill outright.
+A bullet does its weapon's full damage close up, the same as the game gives that weapon. Its damage falls steadily with distance, to a tenth at 500 metres. Where it hits still matters, as it does without the mod, and a hit can still kill outright, with the game's own chance for that weapon.
 
-Hits count towards your Rifle or Revolver skill and the wildlife hits statistic, as they do without the mod.
+Hits count towards your Rifle or Revolver skill and the wildlife hits statistic, as they do without the mod. Bullets also knock loose items around, as the game's own bullets do.
 
 ## Revolver movement
 
-Without the mod, aiming a revolver stops you moving. With it, you can walk while you aim.
+Without the mod, aiming a revolver stops you moving. With it, you can walk while you aim, and the HUD no longer shows the limited-movement icon for it. Rifles still stop you moving while you aim.
