@@ -1,4 +1,5 @@
 using AdaptiveArsenal.Components;
+using AdaptiveArsenal.Core;
 using AdaptiveArsenal.Utilities;
 
 using UnityEngine.AddressableAssets;
@@ -13,12 +14,6 @@ namespace AdaptiveArsenal.Patches;
 /// </summary>
 internal static class vp_FPSShooterPatches
 {
-    /// <summary>How far, in degrees, a shot with an accuracy of 0 can land from where it was aimed.</summary>
-    private const float MaxInaccuracyDegrees = 10f;
-
-    /// <summary>The accuracy at which a shot lands exactly where it was aimed.</summary>
-    private const float FullAccuracy = 100f;
-
     /// <summary>
     /// Gives each rifle and revolver shooter a bullet prefab: the single round of its ammo, with a
     /// <see cref="ProjectileItem"/> added.
@@ -92,7 +87,7 @@ internal static class vp_FPSShooterPatches
             var playerManager = GameManager.GetPlayerManagerComponent();
             var accuracy = ProjectileItem.CalculateAccuracy(weapon.m_GunItem, isHipFire, !playerManager.PlayerIsCrouched(), playerManager.PlayerIsWalking());
 
-            var maxSpread = Mathf.Lerp(0f, MaxInaccuracyDegrees, 1f - accuracy / FullAccuracy);
+            var maxSpread = Ballistics.MaxSpreadDegrees(accuracy);
             var spread = Quaternion.Euler(new Vector3(Random.Range(-maxSpread, maxSpread), Random.Range(-maxSpread, maxSpread), 0));
 
             if (isHipFire)

@@ -1,4 +1,5 @@
-﻿using AdaptiveArsenal.Utilities;
+﻿using AdaptiveArsenal.Core;
+using AdaptiveArsenal.Utilities;
 
 using Il2CppTLD.Stats;
 
@@ -15,53 +16,6 @@ namespace AdaptiveArsenal.Components;
 [RegisterTypeInIl2Cpp(false)]
 public class ProjectileItem : MonoBehaviour
 {
-    /// <summary>The damage a bullet does at the muzzle, before the hit location is taken into account.</summary>
-    private const float MaxDamage = 100f;
-
-    /// <summary>The damage a bullet does at <see cref="DamageFalloffRange"/> and beyond.</summary>
-    private const float MinDamage = 10f;
-
-    /// <summary>The distance, in metres, over which damage falls from <see cref="MaxDamage"/> to <see cref="MinDamage"/>.</summary>
-    private const float DamageFalloffRange = 500f;
-
-    /// <summary>Converts a value in <see cref="MuzzleVelocities"/> to a speed in metres per second.</summary>
-    private const float MuzzleVelocityScale = 0.5f;
-
-    /// <summary>Every shot's accuracy is multiplied by this.</summary>
-    private const float BaseAccuracyMultiplier = 1.2f;
-
-    /// <summary>Accuracy is multiplied by this when firing from the hip.</summary>
-    private const float HipFireAccuracyMultiplier = 0.7f;
-
-    /// <summary>Accuracy is multiplied by this when standing rather than crouching.</summary>
-    private const float StandingAccuracyMultiplier = 0.8f;
-
-    /// <summary>Accuracy is multiplied by this when moving.</summary>
-    private const float MovingAccuracyMultiplier = 0.9f;
-
-    /// <summary>The base accuracy of a revolver at each Revolver skill tier.</summary>
-    private static readonly int[] RevolverAccuracyBySkillTier = [40, 50, 60, 80, 100];
-
-    /// <summary>
-    /// The muzzle velocity of each weapon, keyed by part of its gear name. Scaled by <see cref="MuzzleVelocityScale"/>.
-    /// </summary>
-    /// <remarks>
-    /// <see cref="GetMuzzleVelocity"/> uses the first key the gear name contains, so the more specific names come
-    /// before <c>GEAR_Rifle</c> and <c>GEAR_Revolver</c>, which every rifle and revolver name contains.
-    /// </remarks>
-    private static readonly Dictionary<string, int> MuzzleVelocities = new()
-    {
-        { "GEAR_Rifle_Barbs", 800 },
-        { "GEAR_Rifle_Curators", 1000 },
-        { "GEAR_Rifle_Traders", 1100 },
-        { "GEAR_Rifle_Vaughns", 700 },
-        { "GEAR_Rifle", 800 },
-        { "GEAR_RevolverFancy", 600 },
-        { "GEAR_RevolverGreen", 400 },
-        { "GEAR_RevolverStubNosed", 300 },
-        { "GEAR_Revolver", 400 }
-    };
-
     /// <summary>The layer of an animal's own object, which has the <see cref="BaseAi"/>.</summary>
     private const int AiLayer = 16;
 
@@ -103,24 +57,18 @@ public class ProjectileItem : MonoBehaviour
     /// <param name="isMoving">Whether the player is moving.</param>
     /// <returns>
     /// The rifle's skill-based range, or the revolver's skill-based accuracy plus its own, multiplied by
-    /// <see cref="BaseAccuracyMultiplier"/> and the multiplier for each of the conditions that apply.
+    /// <see cref="Ballistics.AccuracyMultiplier"/>.
     /// </returns>
     public static float CalculateAccuracy(GunItem gunItem, bool isHipFire, bool isStanding, bool isMoving)
     {
         var baseAccuracy = gunItem.m_GunType switch
         {
             GunType.Rifle => GameManager.GetSkillRifle().GetEffectiveRange(),
-            GunType.Revolver => GetRevolverSkillAccuracy() + gunItem.m_AccuracyRange,
+            GunType.Revolver => Ballistics.RevolverSkillAccuracy(GetRevolverSkillTier()) + gunItem.m_AccuracyRange,
             _ => gunItem.m_AccuracyRange
         };
 
-        var accuracyMultiplier = BaseAccuracyMultiplier;
-
-        if (isHipFire) accuracyMultiplier *= HipFireAccuracyMultiplier;
-        if (isStanding) accuracyMultiplier *= StandingAccuracyMultiplier;
-        if (isMoving) accuracyMultiplier *= MovingAccuracyMultiplier;
-
-        return baseAccuracy * accuracyMultiplier;
+        return baseAccuracy * Ballistics.AccuracyMultiplier(isHipFire, isStanding, isMoving);
     }
 
     /// <summary>Makes a copy of a bullet prefab and fires it.</summary>
@@ -235,7 +183,7 @@ public class ProjectileItem : MonoBehaviour
         m_Trail.endColor = Color.white * 0.7f;
 
         var weaponName = GameManager.GetPlayerManagerComponent().m_ItemInHands.name;
-        var velocity = transform.forward * (GetMuzzleVelocity(weaponName) * MuzzleVelocityScale);
+        var velocity = transform.forward * (Ballistics.GetMuzzleVelocity(weaponName) * Ballistics.MuzzleVelocityScale);
         m_Rigidbody.AddForce(velocity, ForceMode.VelocityChange);
 
         m_FirePosition = transform.position;
@@ -253,7 +201,7 @@ public class ProjectileItem : MonoBehaviour
 
     /// <summary>
     /// Damages the animal the bullet hit, if it hit one, the way the game's own shots do. The damage falls with the
-    /// distance travelled, see <see cref="CalculateDamageByDistance"/>, and the hit counts towards the player's skill
+    /// distance travelled, see <see cref="Ballistics.DamageAtDistance"/>, and the hit counts towards the player's skill
     /// and statistics.
     /// </summary>
     /// <param name="victim">The object the bullet hit.</param>
@@ -277,7 +225,7 @@ public class ProjectileItem : MonoBehaviour
         var bodyPartDamageScale = localizedDamage.GetDamageScale(weaponSource);
 
         var distance = Vector3.Distance(m_FirePosition, transform.position);
-        var damage = CalculateDamageByDistance(distance) * bodyPartDamageScale;
+        var damage = Ballistics.DamageAtDistance(distance) * bodyPartDamageScale;
 
         // A critical hit kills outright. The chance is rolled as a rifle shot for revolvers too.
         if (!baseAi.m_IgnoreCriticalHits && localizedDamage.RollChanceToKill(WeaponSource.Rifle))
@@ -343,19 +291,7 @@ public class ProjectileItem : MonoBehaviour
 
         m_TrailPoints.Add(transform.position);
 
-        // Walk back from the newest point; once the trail is too long, drop every point before the one reached.
-        var length = 0f;
-        var pointsToDrop = 0;
-        for (var i = m_TrailPoints.Count - 1; i > 0; i--)
-        {
-            length += Vector3.Distance(m_TrailPoints[i], m_TrailPoints[i - 1]);
-            if (!(length > TrailMaxLength))
-                continue;
-
-            pointsToDrop = i;
-            break;
-        }
-
+        var pointsToDrop = Curves.PointsToDrop(m_TrailPoints, Vector3.Distance, TrailMaxLength);
         if (pointsToDrop > 0)
             m_TrailPoints.RemoveRange(0, pointsToDrop);
 
@@ -382,22 +318,7 @@ public class ProjectileItem : MonoBehaviour
             Destroy(m_Trail);
     }
 
-    /// <summary>
-    /// The damage a bullet does after travelling <paramref name="distance"/> metres: <see cref="MaxDamage"/> at the
-    /// muzzle, falling steadily to <see cref="MinDamage"/> at <see cref="DamageFalloffRange"/>.
-    /// </summary>
-    private static float CalculateDamageByDistance(float distance) =>
-        Mathf.Lerp(MaxDamage, MinDamage, Mathf.Clamp01(distance / DamageFalloffRange));
-
-    /// <summary>The revolver's base accuracy at the player's current Revolver skill tier.</summary>
-    private static float GetRevolverSkillAccuracy() =>
-        RevolverAccuracyBySkillTier[GameManager.GetSkillsManager().GetSkill(SkillType.Revolver).GetCurrentTierNumber()];
-
-    /// <summary>
-    /// The muzzle velocity for a weapon, from the first key in <see cref="MuzzleVelocities"/> its gear name contains.
-    /// </summary>
-    /// <param name="gearItemName">The weapon's gear name, which may have a suffix like <c>(Clone)</c>.</param>
-    /// <returns>The muzzle velocity, or 0 for a weapon that isn't listed.</returns>
-    private static int GetMuzzleVelocity(string gearItemName) =>
-        MuzzleVelocities.Keys.Where(gearItemName.Contains).Select(key => MuzzleVelocities[key]).FirstOrDefault();
+    /// <summary>The player's current Revolver skill tier.</summary>
+    private static int GetRevolverSkillTier() =>
+        GameManager.GetSkillsManager().GetSkill(SkillType.Revolver).GetCurrentTierNumber();
 }

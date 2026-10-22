@@ -1,3 +1,4 @@
 <Solution>
   <Project Path="src/AdaptiveArsenal.csproj" />
+  <Project Path="tests/AdaptiveArsenal.Tests/AdaptiveArsenal.Tests.csproj" />
 </Solution>

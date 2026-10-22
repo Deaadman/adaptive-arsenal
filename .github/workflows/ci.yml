@@ -1,8 +1,8 @@
 # Checks every push to main and every pull request: the changelog's format,
-# formatting, then a Release build with warnings as errors. Restoring checks
-# every NuGet package for security advisories, and packages.lock.json must
-# match the project. The nightly and release workflows run this first and only
-# publish when it passes.
+# formatting, a Release build with warnings as errors, and the unit tests.
+# Restoring checks every NuGet package for security advisories, and each
+# packages.lock.json must match its project. The nightly and release
+# workflows run this first and only publish when it passes.
 
 name: CI
 
@@ -39,10 +39,10 @@ jobs:
         shell: pwsh
         run: ./scripts/release-notes.ps1 -Check
       - name: Restore
-        run: dotnet restore src --locked-mode
+        run: dotnet restore AdaptiveArsenal.slnx --locked-mode
       # Fails if any file differs from what .editorconfig asks for.
       - name: Format
-        run: dotnet format whitespace src/AdaptiveArsenal.csproj --verify-no-changes
+        run: dotnet format whitespace AdaptiveArsenal.slnx --verify-no-changes
 
   build:
     name: Build
@@ -64,3 +64,19 @@ jobs:
         run: |
           $kb = (Get-Item src/bin/Release/net6.0/AdaptiveArsenal.dll).Length / 1KB
           "AdaptiveArsenal.dll **$(Get-Content src/obj/Version.txt)**: {0:N0} KB" -f $kb >> $env:GITHUB_STEP_SUMMARY
+
+  test:
+    name: Tests
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: 10.0.x
+      - name: Restore
+        run: dotnet restore tests/AdaptiveArsenal.Tests --locked-mode
+      # The game-free code in src/Core. The rest of the mod needs the game: see docs/development.md, "Testing".
+      - name: Test
+        run: dotnet test --project tests/AdaptiveArsenal.Tests --no-restore

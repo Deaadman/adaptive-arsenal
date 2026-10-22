@@ -1,7 +1,9 @@
+using AdaptiveArsenal.Core;
+
 namespace AdaptiveArsenal.Utilities;
 
 /// <summary>
-/// Maths the game's own libraries don't provide.
+/// <see cref="Curves"/> for Unity's vectors.
 /// </summary>
 internal static class MathUtils
 {
@@ -13,9 +15,9 @@ internal static class MathUtils
     /// <param name="end">Where the curve ends.</param>
     /// <param name="t">How far along the curve, from 0 at <paramref name="start"/> to 1 at <paramref name="end"/>.</param>
     /// <returns>The point at <paramref name="t"/>.</returns>
-    internal static Vector3 QuadraticBezier(Vector3 start, Vector3 control, Vector3 end, float t)
-    {
-        var u = 1 - t;
-        return u * u * start + 2 * u * t * control + t * t * end;
-    }
+    internal static Vector3 QuadraticBezier(Vector3 start, Vector3 control, Vector3 end, float t) =>
+        new(
+            Curves.QuadraticBezier(start.x, control.x, end.x, t),
+            Curves.QuadraticBezier(start.y, control.y, end.y, t),
+            Curves.QuadraticBezier(start.z, control.z, end.z, t));
 }

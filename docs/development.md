@@ -4,6 +4,7 @@ You need the [.NET SDK](https://dotnet.microsoft.com/download) 10 or newer, whic
 
 ```powershell
 dotnet build -c Release
+dotnet test --project tests/AdaptiveArsenal.Tests
 ```
 
 The mod is `src/bin/Release/net6.0/AdaptiveArsenal.dll`.
@@ -17,11 +18,16 @@ dotnet build
 
 ## How it's laid out
 
-- `src/Components/ProjectileItem.cs`: the bullet: its flight, trail, accuracy, muzzle velocity and damage.
+- `src/Core`: the numbers behind each shot (accuracy, spread, muzzle velocity, damage) and the trail and animation curves. It's plain C#, with nothing from Unity, the game or MelonLoader, so it can be [tested](#testing) without the game.
+- `src/Components/ProjectileItem.cs`: the bullet: its flight, trail and hits, using `src/Core` for the numbers.
 - `src/Patches`: the [Harmony](https://harmony.pardeike.net) patches on the game: firing bullets instead of instant hits, revolver movement, and the HUD.
 - `src/Animators`: the round animation on the HUD.
+- `src/Utilities`: helpers for the game's objects: where a shot starts, borrowing materials, logging.
 - `src/Properties/AssemblyInfo.cs`: what MelonLoader reads about the mod, including the MelonLoader version it needs and the mods it won't load with.
+- `tests/AdaptiveArsenal.Tests`: unit tests for `src/Core`.
 - `docs`: the pages linked from the README. `assets` has the Photoshop files for the banner and thumbnail.
+
+Every type and member has an XML comment. Keep it that way: the build checks them (see [CI](#ci)).
 
 ## Versions
 
@@ -31,7 +37,7 @@ Nightly builds add a suffix with the date and commit, like `1.1.0-nightly.202610
 
 ## Packages
 
-[`src/packages.lock.json`](../src/packages.lock.json) pins every NuGet package, including the ones they depend on. After changing a package version, run `dotnet restore src` and commit the lock file with it.
+[`src/packages.lock.json`](../src/packages.lock.json) and the test project's lock file pin every NuGet package, including the ones they depend on. After changing a package version, run `dotnet restore AdaptiveArsenal.slnx` and commit the lock file with it.
 
 The first two numbers of the `STBlade.Modding.TLD.Il2CppAssemblies.Windows` version are the game version its assemblies come from. So a new version of it usually means a game update: build against it, then check the mod in the game.
 
@@ -45,10 +51,35 @@ The first two numbers of the `STBlade.Modding.TLD.Il2CppAssemblies.Windows` vers
 [CI](../.github/workflows/ci.yml) runs on Windows for every push to `main` and every pull request. It checks:
 
 - that `CHANGELOG.md` follows the format below
-- formatting, with `dotnet format whitespace --verify-no-changes`. Run `dotnet format whitespace src/AdaptiveArsenal.csproj` to fix it.
-- that `packages.lock.json` matches the project
+- formatting, with `dotnet format whitespace --verify-no-changes`. Run `dotnet format whitespace AdaptiveArsenal.slnx` to fix it.
+- that each `packages.lock.json` matches its project
 - that no package has a security advisory: restoring checks them all
 - that a Release build works with warnings as errors, and shows the DLL's version and size. That includes the XML comments: public types and members need one, and every `<see cref="..."/>` must point at something that exists.
+- that the [unit tests](#testing) pass
+
+## Testing
+
+Most of the mod can only be tested in the game. Everything it touches, down to Unity's `Vector3` and `Mathf`, calls into the running game through Il2CppInterop, so it can't run in a test.
+
+The exception is `src/Core`: the maths behind each shot, with nothing from Unity, the game or MelonLoader. [`tests/AdaptiveArsenal.Tests`](../tests/AdaptiveArsenal.Tests) tests it with [xUnit](https://xunit.net):
+
+```powershell
+dotnet test --project tests/AdaptiveArsenal.Tests
+```
+
+The test project compiles the files in `src/Core` itself rather than referencing the mod. So if something in `src/Core` uses a game type, the tests stop building, and it has to move out. When you add a rule with numbers in it, like a new chance or duration, put the maths in `src/Core` and test it there, and keep the game-facing part in `src/Components` or `src/Patches`.
+
+### In the game
+
+Before a release, and after a game update, load a save with a rifle, a revolver and ammo, and check:
+
+- Rifle and revolver shots leave a trail and hit where you aim, with more spread from the hip, standing and moving.
+- Shooting an animal hurts it, counts towards your Rifle or Revolver skill, and a close shot does more than a far one.
+- Bullets hitting the ground, rock and wood show the right impact effect and sound.
+- The HUD plays the round animation after each shot, but not when you switch weapons.
+- You can walk while aiming the revolver.
+- The flare gun, bow and camera work as they do without the mod.
+- The console shows the mod's version when the game starts, with no errors in `MelonLoader\Latest.log`.
 
 Once a week, [Dependabot](../.github/dependabot.yml) opens a pull request against `develop` for NuGet packages and actions with a newer version, with the minor and patch updates together. Merge it when CI passes.
 

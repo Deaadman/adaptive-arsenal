@@ -10,7 +10,7 @@ version: 2
 
 updates:
   - package-ecosystem: nuget
-    directory: /src
+    directories: [/src, /tests/AdaptiveArsenal.Tests]
     target-branch: develop
     schedule:
       interval: weekly
