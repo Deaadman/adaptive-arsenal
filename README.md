@@ -61,6 +61,6 @@ Adaptive Arsenal is licensed under [GPL-3.0](LICENSE).
 
 ## Disclaimers
 
-**AI assistance.** Parts of this project, including some of its code, were written with the help of AI coding tools. Every change is reviewed, built and tested before it's released.
+**AI assistance.** Parts of this project, including some of its code, were written with the help of AI coding agents.
 
 **Not affiliated with Hinterland.** Adaptive Arsenal is an unofficial fan-made mod. It isn't made, endorsed or supported by Hinterland Studio. The Long Dark and its assets are the property of Hinterland Studio. Please report problems with the mod here, not to Hinterland.
