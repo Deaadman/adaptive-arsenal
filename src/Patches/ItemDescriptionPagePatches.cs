@@ -4,37 +4,43 @@ namespace AdaptiveArsenal.Patches;
 
 /// <summary>
 /// Patches on <see cref="ItemDescriptionPage"/>, the details of the item selected in the inventory and other item
-/// lists, to show a <see cref="SkinPicker"/> for weapons with skins.
+/// lists, to show the <see cref="SkinsPanel"/>'s buttons for weapons with skins.
 /// </summary>
 internal static class ItemDescriptionPagePatches
 {
-    /// <summary>Shows the skin picker for the item the page now shows, building it the first time.</summary>
+    /// <summary>Tells the skins panel which item the page now shows, building it the first time.</summary>
     [HarmonyPatch(typeof(ItemDescriptionPage), nameof(ItemDescriptionPage.UpdateGearItemDescription))]
-    private static class ShowSkinPicker
+    private static class ShowItemInSkinsPanel
     {
         private static void Postfix(ItemDescriptionPage __instance, GearItem gi)
         {
-            var picker = __instance.GetComponent<SkinPicker>();
-            if (picker == null)
-            {
-                picker = __instance.gameObject.AddComponent<SkinPicker>();
-                if (!picker.Build(__instance))
-                    Mod.Logger.Log("The item description page has nothing to build the skin picker from.", FlaggedLoggingLevel.Warning);
-            }
-
-            picker.Show(gi);
+            var panel = SkinsPanel.GetOrAdd(__instance);
+            if (panel != null)
+                panel.ShowItem(gi);
         }
     }
 
-    /// <summary>Hides the skin picker when the page shows a decoration rather than an item.</summary>
+    /// <summary>Hides SKINS when the page shows a decoration rather than an item.</summary>
     [HarmonyPatch(typeof(ItemDescriptionPage), nameof(ItemDescriptionPage.UpdateDecorationItemDescription))]
-    private static class HideSkinPickerForDecorations
+    private static class HideSkinsForDecorations
     {
         private static void Postfix(ItemDescriptionPage __instance)
         {
-            var picker = __instance.GetComponent<SkinPicker>();
-            if (picker != null)
-                picker.Hide();
+            var panel = SkinsPanel.Find(__instance);
+            if (panel != null)
+                panel.ShowItem(null);
+        }
+    }
+
+    /// <summary>Shows SKINS, or CANCEL and SAVE, after the game sets the page's buttons, which it does often.</summary>
+    [HarmonyPatch(typeof(ItemDescriptionPage), nameof(ItemDescriptionPage.UpdateButtons))]
+    private static class ShowSkinsButtons
+    {
+        private static void Postfix(ItemDescriptionPage __instance)
+        {
+            var panel = SkinsPanel.Find(__instance);
+            if (panel != null)
+                panel.UpdateButtons();
         }
     }
 }

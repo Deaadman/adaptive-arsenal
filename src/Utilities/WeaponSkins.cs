@@ -175,6 +175,16 @@ internal static class WeaponSkins
         return icon != null;
     }
 
+    /// <summary>The icon of a loaded skin, or <see langword="null"/> if it isn't loaded.</summary>
+    /// <param name="skin">The skin.</param>
+    internal static Texture2D? GetIcon(SkinDefinition skin) =>
+        s_Skins.TryGetValue(skin.Id, out var loaded) ? loaded.Icon : null;
+
+    /// <summary>A weapon's own icon, whatever skin it wears.</summary>
+    /// <param name="gearItem">The weapon.</param>
+    internal static Texture2D GetDefaultIcon(GearItem gearItem) =>
+        Utils.GetInventoryIconTextureFromPrefabName(Utils.SanitizePrefabName(gearItem.name), false);
+
     /// <summary>Gets the loaded skin a weapon wears, if it wears one that's loaded.</summary>
     /// <param name="gearItem">The weapon.</param>
     /// <param name="skin">The skin, or <see langword="null"/>.</param>
