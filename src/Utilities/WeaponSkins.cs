@@ -60,6 +60,13 @@ internal static class WeaponSkins
     }
 
     /// <summary>
+    /// The <see cref="SkinDefinition.Id"/> of the loaded skin a weapon wears, or <see langword="null"/> for its own look.
+    /// </summary>
+    /// <param name="gearItem">The weapon.</param>
+    internal static string? GetSkinId(GearItem gearItem) =>
+        TryGetSkin(gearItem, out var skin) ? skin.Definition.Id : null;
+
+    /// <summary>
     /// Puts a skin on a weapon, or takes it off, and shows the change on its model, and on the first-person model if
     /// it's in the player's hands. Returns <see langword="false"/> if there's no such skin for that weapon.
     /// </summary>

@@ -1,8 +1,8 @@
 namespace AdaptiveArsenal.Utilities;
 
 /// <summary>
-/// The <c>aa_skin</c> command in the game's developer console, to try skins on the weapon in the player's hands until
-/// there's a way to pick them in the inventory.
+/// The <c>aa_skin</c> command in the game's developer console, to try skins on the weapon in the player's hands
+/// without going through the <see cref="Components.SkinPicker"/> in the inventory.
 /// </summary>
 /// <remarks>
 /// <c>aa_skin</c> lists the skins for the weapon in hands, <c>aa_skin &lt;folder&gt;</c> puts one on, and
