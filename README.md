@@ -14,6 +14,7 @@ Adaptive Arsenal is a [MelonLoader](https://github.com/LavaGang/MelonLoader) mod
 2. Install the mods it needs, in the `Mods` folder in the game's folder:
    - [Complex Logger](https://github.com/Arkhorse/Complex-Logger/releases/latest)
    - [ModSettings](https://github.com/DigitalzombieTLD/ModSettings), for the mod's settings menu (Complex Logger needs it too)
+   - [ModData](https://github.com/dommrogers/ModData/releases/latest), to keep what the mod remembers about each weapon in your save
 3. Download [AdaptiveArsenal.dll](https://github.com/Deaadman/adaptive-arsenal/releases/latest/download/AdaptiveArsenal.dll) and put it in the `Mods` folder too.
 4. Start the game.
 

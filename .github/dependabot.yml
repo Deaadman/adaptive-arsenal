@@ -17,6 +17,9 @@ updates:
     groups:
       packages:
         update-types: [minor, patch]
+    ignore:
+      # Only referenced to leave its files out: ModData depends on it. See src/AdaptiveArsenal.csproj.
+      - dependency-name: ds5678.Modding.TLD.Il2CppAssemblies.Windows
 
   - package-ecosystem: github-actions
     directory: /
