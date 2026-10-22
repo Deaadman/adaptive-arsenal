@@ -17,7 +17,11 @@ internal static class GameManagerPatches
     [HarmonyPatch(typeof(GameManager), nameof(GameManager.LoadSaveGameSlot), [typeof(SaveSlotInfo)])]
     private static class LoadWeaponData
     {
-        private static void Postfix() => WeaponDataManager.Load();
+        private static void Postfix()
+        {
+            WeaponDataManager.Load();
+            FrozenRifles.Reset();
+        }
     }
 
     /// <summary>Forgets each weapon's data when the player leaves their game, so it doesn't carry into the next one.</summary>
@@ -25,6 +29,10 @@ internal static class GameManagerPatches
     [HarmonyPatch(typeof(GameManager), nameof(GameManager.LoadMainMenu))]
     private static class ClearWeaponData
     {
-        private static void Postfix() => WeaponDataManager.Clear();
+        private static void Postfix()
+        {
+            WeaponDataManager.Clear();
+            FrozenRifles.Reset();
+        }
     }
 }

@@ -18,4 +18,8 @@ internal sealed class Mod : MelonMod
         Settings.Initialize();
         Logger.Log($"{Properties.BuildInfo.Name} {Properties.BuildInfo.Version} initialized.", FlaggedLoggingLevel.Debug);
     }
+
+    /// <inheritdoc />
+    /// <remarks>Freezes and thaws the rifles the player carries.</remarks>
+    public override void OnUpdate() => Utilities.FrozenRifles.Update();
 }

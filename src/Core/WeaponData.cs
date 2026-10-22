@@ -15,4 +15,9 @@ internal sealed class WeaponData
     /// item that ends up with the same instance ID.
     /// </summary>
     public string m_GearName = string.Empty;
+
+    /// <summary>
+    /// How frozen the weapon is, from 0 (not at all) to 100 (frozen solid). See <see cref="RifleFreezing"/>.
+    /// </summary>
+    public float m_PercentFrozen = 0f;
 }
