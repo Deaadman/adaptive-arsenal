@@ -37,7 +37,10 @@ internal static class ProjectileTemplates
     {
         GearImpactForce force = new(gameBullet.m_GearImpactForce, gameBullet.m_GearImpactUpwardForce, gameBullet.m_GearImpactTorqueForce);
         if (s_GearImpactForces.TryAdd(gunType, force))
-            Mod.Logger.Log($"{gunType} bullets push gear with {force}.", FlaggedLoggingLevel.Debug);
+        {
+            // Complex Logger formats the message with string.Format, so it can't hold the braces a record prints.
+            Mod.Logger.Log($"{gunType} bullets push gear with force {force.Force}, upward force {force.UpwardForce} and torque {force.TorqueForce}.", FlaggedLoggingLevel.Debug);
+        }
     }
 
     /// <summary>Gets how hard a gun's shots push loose gear.</summary>
