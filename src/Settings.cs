@@ -91,9 +91,9 @@ internal sealed class Settings : JsonModSettings
     [Description("You can walk while aiming a revolver, which the game doesn't otherwise allow.")]
     public bool m_RevolverWalkWhileAiming = true;
 
-    /// <summary>Whether the HUD shows the rounds loaded in a rifle or revolver.</summary>
-    [Name("Show loaded rounds")]
-    [Description("Shows how many rounds are loaded in your rifle or revolver on the HUD. Off, you'll have to keep count yourself.")]
+    /// <summary>Whether the HUD shows the rounds loaded in a rifle or revolver, and how many more the player is carrying.</summary>
+    [Name("Show ammo count")]
+    [Description("Shows how many rounds are loaded in your rifle or revolver on the HUD, and how many more you're carrying. Off, you'll have to keep count yourself.")]
     public bool m_ShowAmmoCount = false;
 
     /// <summary>The settings only real bullets use, hidden while <see cref="m_ProjectilesEnabled"/> is off.</summary>

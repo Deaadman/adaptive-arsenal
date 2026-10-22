@@ -79,7 +79,7 @@ Before a release, and after a game update, load a save with a rifle, a revolver 
 - Shooting an animal hurts it, counts towards your Rifle or Revolver skill, and a close shot does more than a far one.
 - Bullets hitting the ground, rock and wood show the right impact effect, a bullet hole where they hit, and a sound that gets quieter with distance. Their trails fade out after the hit.
 - Saving with a bullet in the air, then loading, leaves no loose rounds of ammo where it was.
-- The HUD doesn't show the loaded rounds. With **Show loaded rounds** on, it does, and plays the round animation after each shot, but not when you switch weapons.
+- The HUD doesn't show the loaded or carried rounds for the rifle and revolver, but does for the flare gun and bow. With **Show ammo count** on, it does, and plays the round animation after each shot, but not when you switch weapons.
 - You can walk while aiming the revolver, and the limited-movement icon only shows for the rifle.
 - In Mod Settings, turning off **Real bullets** hides the bullet settings and makes the next shot the game's own instant one, without restarting. Changed numbers take effect from the next shot.
 - The flare gun, bow and camera work as they do without the mod.

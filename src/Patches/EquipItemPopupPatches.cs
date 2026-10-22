@@ -76,16 +76,17 @@ internal static class EquipItemPopupPatches
     }
 
     /// <summary>
-    /// Hides the rounds loaded in the rifle or revolver in the player's hands, unless
-    /// <see cref="Settings.m_ShowAmmoCount"/> is on, so the player has to keep count.
+    /// Hides the rounds loaded in the rifle or revolver in the player's hands, and how many more the player is
+    /// carrying, unless <see cref="Settings.m_ShowAmmoCount"/> is on, so the player has to keep count.
     /// </summary>
     /// <remarks>
-    /// The game sets up the round sprites every time it updates the panel, so they're hidden again after each update,
-    /// and come back by themselves when the setting is turned on. The ammo type and the rounds in the player's inventory
-    /// still show. Other weapons, like the flare gun and bow, are left as they are.
+    /// The game sets up the round sprites and the carried count every time it updates the panel, so they're hidden
+    /// again after each update, and come back by themselves when the setting is turned on. The carried count is
+    /// emptied rather than hidden for that reason: the game sets its text each update. The icon for the type of ammo
+    /// still shows. Other weapons, like the flare gun and bow, are left as they are.
     /// </remarks>
     [HarmonyPatch(typeof(EquipItemPopup), nameof(EquipItemPopup.UpdateAmmoStatus))]
-    private static class HideLoadedRounds
+    private static class HideAmmoCount
     {
         private static void Postfix(EquipItemPopup __instance)
         {
@@ -105,6 +106,9 @@ internal static class EquipItemPopupPatches
                 if (roundSprite != null)
                     roundSprite.gameObject.SetActive(false);
             }
+
+            if (__instance.m_LabelAmmoReserve != null)
+                __instance.m_LabelAmmoReserve.text = string.Empty;
         }
     }
 }

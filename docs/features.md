@@ -53,7 +53,7 @@ Without the mod, aiming a revolver stops you moving. With it, you can walk while
 
 ## Ammo count
 
-The HUD doesn't show how many rounds are loaded in your rifle or revolver, so you have to keep count. It still shows the ammo type and how many rounds you're carrying.
+The HUD doesn't show how many rounds are loaded in your rifle or revolver, or how many more you're carrying, so you have to keep count. It still shows the icon for the type of ammo the weapon takes.
 
 ## Settings
 
@@ -71,4 +71,4 @@ Everything above is how the mod plays by default. To change it, open **Options**
 | Drop-off distance | 500 m | How far a bullet flies before its damage has fallen as far as it will. |
 | Long-range damage | 0.1 | How much of its damage a bullet still does at that distance. 1 means no drop-off. |
 | Walk while aiming revolver | On | Lets you walk while aiming a revolver. |
-| Show loaded rounds | Off | Shows the loaded rounds on the HUD, with the spent round animation. |
+| Show ammo count | Off | Shows the loaded and carried rounds on the HUD, with the spent round animation. |

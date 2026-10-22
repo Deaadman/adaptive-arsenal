@@ -38,7 +38,7 @@ Every change is built straight away and published as the [nightly release](https
 | Muzzle velocity | Each rifle and revolver fires its bullets at its own speed |
 | Damage drop-off | The further a bullet travels, the less damage it does |
 | Bullet trails | A trail follows each bullet, so you can see where it landed |
-| Hidden ammo count | The HUD doesn't show how many rounds are loaded, so you keep count yourself |
+| Hidden ammo count | The HUD doesn't show how many rounds are loaded or carried, so you keep count yourself |
 | HUD animation | With the ammo count shown, firing plays an animation of the spent round on the ammo display |
 | Revolver movement | You can walk while aiming a revolver |
 | Settings | Turn real bullets, trails, revolver movement and the ammo count on or off, and tune accuracy, speed and damage, in the game's Mod Settings menu |
