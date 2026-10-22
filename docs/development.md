@@ -23,6 +23,7 @@ dotnet build
 - `src/Patches`: the [Harmony](https://harmony.pardeike.net) patches on the game: firing bullets instead of instant hits, revolver movement, and the HUD.
 - `src/Animators`: the round animation on the HUD.
 - `src/Utilities`: helpers for the game's objects: building the bullet each gun fires, where a shot starts, and borrowing materials.
+- `src/Utilities/WeaponDataManager.cs`: what the mod remembers about each weapon (`src/Core/WeaponData.cs`), saved with the player's game through [ModData](https://github.com/dommrogers/ModData). A feature that needs to remember something per weapon, like its skin or how cold it is, adds a field to `WeaponData` and reads it with `WeaponDataManager.Get`. The save and load patches are in `src/Patches/SaveGameSystemPatches.cs` and `GameManagerPatches.cs`.
 - `src/Dependencies`: DLLs that aren't on NuGet. [Complex Logger](https://github.com/Arkhorse/Complex-Logger) 1.0.8, which the mod logs through with `Mod.Logger`.
 - `src/Settings.cs`: the mod's page in the game's Mod Settings menu, from the [ModSettings](https://github.com/DigitalzombieTLD/ModSettings) NuGet package. Its numbers go into `src/Core` when the game starts and when the player confirms a change.
 - `src/Properties/AssemblyInfo.cs`: what MelonLoader reads about the mod, including the MelonLoader version it needs and the mods it won't load with.
@@ -97,6 +98,7 @@ Before a release, and after a game update, load a save with a rifle, a revolver 
 - You can walk while aiming the revolver, and the limited-movement icon only shows for the rifle.
 - In Mod Settings, turning off **Real bullets** hides the bullet settings and makes the next shot the game's own instant one, without restarting. Changed numbers take effect from the next shot.
 - The flare gun, bow and camera work as they do without the mod.
+- With ModData installed, saving and loading shows `Loaded data for N weapons.` in the log at debug level, with no errors, and quitting to the menu then starting a new game doesn't load the last game's weapons.
 - The console shows the mod's version when the game starts, with no errors in `MelonLoader\Latest.log`.
 
 Once a week, [Dependabot](../.github/dependabot.yml) opens a pull request against `develop` for NuGet packages and actions with a newer version, with the minor and patch updates together. Merge it when CI passes.

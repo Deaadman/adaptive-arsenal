@@ -48,6 +48,17 @@
         <PackageReference Include="STBlade.Modding.TLD.ModSettings" Version="1.9.0" ExcludeAssets="runtime" />
     </ItemGroup>
 
+    <!--
+    ModData, to keep each weapon's data in the player's save. Players install it themselves, so it isn't copied to the
+    output. Its package depends on an old copy of the game's assemblies, whose Assembly-CSharp would clash with the one
+    above, so that package is referenced here only to leave its files out. ModData's API hasn't changed since this
+    package, so it works with the newer ModData players install from GitHub.
+    -->
+    <ItemGroup>
+        <PackageReference Include="STBlade.Modding.TLD.ModData" Version="1.5.1" ExcludeAssets="runtime" />
+        <PackageReference Include="ds5678.Modding.TLD.Il2CppAssemblies.Windows" Version="2.6.0" ExcludeAssets="all" />
+    </ItemGroup>
+
     <ItemGroup>
         <Using Include="HarmonyLib" />
         <Using Include="Il2Cpp" />
