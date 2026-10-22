@@ -2,7 +2,7 @@
 
 ![Adaptive Arsenal](docs/images/banner.webp)
 
-[![Latest release](https://img.shields.io/github/v/release/Deaadman/adaptive-arsenal?style=flat-square&label=release)](https://github.com/Deaadman/adaptive-arsenal/releases/latest) [![Downloads](https://img.shields.io/github/downloads/Deaadman/adaptive-arsenal/total?style=flat-square)](https://github.com/Deaadman/adaptive-arsenal/releases) [![Nightly](https://img.shields.io/github/actions/workflow/status/Deaadman/adaptive-arsenal/nightly.yml?branch=develop&style=flat-square&label=nightly)](https://github.com/Deaadman/adaptive-arsenal/releases/tag/nightly) [![License](https://img.shields.io/badge/license-GPL--3.0-blue?style=flat-square)](LICENSE)
+[![Latest release](https://img.shields.io/github/v/release/Deaadman/adaptive-arsenal?style=flat-square&label=release)](https://github.com/Deaadman/adaptive-arsenal/releases/latest) [![Downloads](https://img.shields.io/github/downloads/Deaadman/adaptive-arsenal/total?style=flat-square)](https://github.com/Deaadman/adaptive-arsenal/releases) [![Latest downloads](https://img.shields.io/github/downloads/Deaadman/adaptive-arsenal/latest/total?style=flat-square&label=latest%20downloads)](https://github.com/Deaadman/adaptive-arsenal/releases/latest) [![Nightly](https://img.shields.io/github/actions/workflow/status/Deaadman/adaptive-arsenal/nightly.yml?branch=develop&style=flat-square&label=nightly)](https://github.com/Deaadman/adaptive-arsenal/releases/tag/nightly) [![License](https://img.shields.io/badge/license-GPL--3.0-blue?style=flat-square)](LICENSE)
 
 </div>
 
@@ -56,3 +56,9 @@ Have an idea? Use the [feature request form](https://github.com/Deaadman/adaptiv
 ## License
 
 Adaptive Arsenal is licensed under [GPL-3.0](LICENSE).
+
+## Disclaimers
+
+**AI assistance.** Parts of this project, including some of its code, were written with the help of AI coding tools. Every change is reviewed, built and tested before it's released.
+
+**Not affiliated with Hinterland.** Adaptive Arsenal is an unofficial fan-made mod. It isn't made, endorsed or supported by Hinterland Studio. The Long Dark and its assets are the property of Hinterland Studio. Please report problems with the mod here, not to Hinterland.
