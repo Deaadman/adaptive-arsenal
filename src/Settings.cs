@@ -85,6 +85,30 @@ internal sealed class Settings : JsonModSettings
     [Slider(0f, 1f, 21)]
     public float m_MinDamageFraction = 0.1f;
 
+    /// <summary>Whether rifles freeze in the cold and jam more when frozen: <see cref="Utilities.FrozenRifles"/>.</summary>
+    [Section("Frozen rifles")]
+    [Name("Frozen rifles")]
+    [Description("Rifles you carry freeze in the cold, and the more frozen they are, the more likely they are to jam. They thaw when it's warm, like indoors or by a fire.")]
+    public bool m_FrozenRiflesEnabled = true;
+
+    /// <summary>How long a rifle takes to freeze solid: <see cref="RifleFreezing.HoursToFreeze"/>.</summary>
+    [Name("Hours to freeze")]
+    [Description("How many in-game hours a rifle takes to freeze solid at -20°C or colder. It freezes more slowly when it's less cold.")]
+    [Slider(1f, 24f, 47)]
+    public float m_HoursToFreeze = 6f;
+
+    /// <summary>How long a frozen rifle takes to thaw: <see cref="RifleFreezing.HoursToThaw"/>.</summary>
+    [Name("Hours to thaw")]
+    [Description("How many in-game hours a frozen-solid rifle takes to thaw at 10°C. It thaws more slowly just above freezing, and faster by a fire.")]
+    [Slider(0.5f, 12f, 24)]
+    public float m_HoursToThaw = 2f;
+
+    /// <summary>The extra jam chance of a frozen-solid rifle: <see cref="RifleFreezing.MaxJamChance"/>.</summary>
+    [Name("Frozen jam chance")]
+    [Description("The extra chance, in percent, that a frozen-solid rifle jams on each shot. A partly frozen rifle gets part of it.")]
+    [Slider(0f, 100f, 21)]
+    public float m_FrozenJamChance = 25f;
+
     /// <summary>Whether the player can walk while aiming a revolver.</summary>
     [Section("Other")]
     [Name("Walk while aiming revolver")]
@@ -111,6 +135,14 @@ internal sealed class Settings : JsonModSettings
         nameof(m_MinDamageFraction)
     ];
 
+    /// <summary>The settings only frozen rifles use, hidden while <see cref="m_FrozenRiflesEnabled"/> is off.</summary>
+    private static readonly string[] FrozenRifleOnlyFields =
+    [
+        nameof(m_HoursToFreeze),
+        nameof(m_HoursToThaw),
+        nameof(m_FrozenJamChance)
+    ];
+
     /// <summary>Adds the settings to the Mod Settings menu and puts the saved values into effect.</summary>
     internal static void Initialize()
     {
@@ -123,7 +155,9 @@ internal sealed class Settings : JsonModSettings
     protected override void OnChange(FieldInfo field, object? oldValue, object? newValue)
     {
         if (field.Name == nameof(m_ProjectilesEnabled) && newValue is bool projectilesEnabled)
-            RefreshFields(projectilesEnabled);
+            RefreshFields(projectilesEnabled: projectilesEnabled);
+        else if (field.Name == nameof(m_FrozenRiflesEnabled) && newValue is bool frozenRiflesEnabled)
+            RefreshFields(frozenRiflesEnabled: frozenRiflesEnabled);
     }
 
     /// <inheritdoc />
@@ -144,13 +178,22 @@ internal sealed class Settings : JsonModSettings
         Ballistics.MaxInaccuracyDegrees = m_MaxInaccuracyDegrees;
         Ballistics.DamageFalloffRange = m_DamageFalloffRange;
         Ballistics.MinDamageFraction = m_MinDamageFraction;
+        RifleFreezing.HoursToFreeze = m_HoursToFreeze;
+        RifleFreezing.HoursToThaw = m_HoursToThaw;
+        RifleFreezing.MaxJamChance = m_FrozenJamChance;
     }
 
-    /// <summary>Shows the settings only real bullets use when they're on, and hides them when they're off.</summary>
+    /// <summary>
+    /// Shows the settings only real bullets and frozen rifles use when they're on, and hides them when they're off.
+    /// </summary>
     /// <param name="projectilesEnabled">Whether real bullets are on, which may not be saved yet.</param>
-    private void RefreshFields(bool? projectilesEnabled = null)
+    /// <param name="frozenRiflesEnabled">Whether frozen rifles are on, which may not be saved yet.</param>
+    private void RefreshFields(bool? projectilesEnabled = null, bool? frozenRiflesEnabled = null)
     {
         foreach (var fieldName in ProjectileOnlyFields)
             SetFieldVisible(fieldName, projectilesEnabled ?? m_ProjectilesEnabled);
+
+        foreach (var fieldName in FrozenRifleOnlyFields)
+            SetFieldVisible(fieldName, frozenRiflesEnabled ?? m_FrozenRiflesEnabled);
     }
 }

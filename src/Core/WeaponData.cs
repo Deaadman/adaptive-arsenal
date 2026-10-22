@@ -20,4 +20,9 @@ internal sealed class WeaponData
     /// The <see cref="SkinDefinition.Id"/> of the skin the weapon wears, or <see langword="null"/> for its own look.
     /// </summary>
     public string? m_Skin = null;
+
+    /// <summary>
+    /// How frozen the weapon is, from 0 (not at all) to 100 (frozen solid). See <see cref="RifleFreezing"/>.
+    /// </summary>
+    public float m_PercentFrozen = 0f;
 }

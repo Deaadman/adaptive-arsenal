@@ -51,6 +51,12 @@ Hits count towards your Rifle or Revolver skill and the wildlife hits statistic,
 
 Without the mod, aiming a revolver stops you moving. With it, you can walk while you aim, and the HUD no longer shows the limited-movement icon for it. Rifles still stop you moving while you aim.
 
+## Frozen rifles
+
+Rifles you carry freeze in the cold. Below 0°C they freeze, faster the colder it is: at -20°C or colder, a rifle freezes solid in 6 in-game hours. Above 0°C they thaw, taking about 2 hours at 10°C, slower just above freezing and up to three times as fast by a fire. Indoors and near a fire count, since the game's temperature includes them. A rifle left on the ground or in a container stays as it was until you pick it up.
+
+The inventory shows how frozen a rifle is after its name, like frozen clothing. A frozen rifle is more likely to jam: a frozen-solid one has an extra 25% chance on every shot, on top of the game's own chance for its condition, and a partly frozen one gets part of that. Revolvers don't freeze.
+
 ## Ammo count
 
 The HUD doesn't show how many rounds are loaded in your rifle or revolver, or how many more you're carrying, so you have to keep count. It still shows the icon for the type of ammo the weapon takes.
@@ -70,5 +76,9 @@ Everything above is how the mod plays by default. To change it, open **Options**
 | Worst spread | 10° | How far the least accurate shot can land from where you aimed. |
 | Drop-off distance | 500 m | How far a bullet flies before its damage has fallen as far as it will. |
 | Long-range damage | 0.1 | How much of its damage a bullet still does at that distance. 1 means no drop-off. |
+| Frozen rifles | On | Off, rifles don't freeze, and the frozen rifle settings below are hidden. |
+| Hours to freeze | 6 | In-game hours for a rifle to freeze solid at -20°C or colder. |
+| Hours to thaw | 2 | In-game hours for a frozen-solid rifle to thaw at 10°C. |
+| Frozen jam chance | 25% | The extra chance that a frozen-solid rifle jams on each shot. |
 | Walk while aiming revolver | On | Lets you walk while aiming a revolver. |
 | Show ammo count | Off | Shows the loaded and carried rounds on the HUD, with the spent round animation. |

@@ -120,6 +120,57 @@ internal static class vp_FPSShooterPatches
         }
     }
 
+    /// <summary>
+    /// Makes a frozen rifle more likely to jam, adding <see cref="RifleFreezing.JamChance"/> to the game's own chance for
+    /// the shot.
+    /// </summary>
+    /// <remarks>
+    /// The game rolls for a jam in <see cref="vp_FPSShooter.Fire"/>, from the shooter's
+    /// <see cref="vp_FPSShooter.JamConditionThreshold"/>, <see cref="vp_FPSShooter.JamMinimumChance"/> and
+    /// <see cref="vp_FPSShooter.JamMaximumChance"/>. For a frozen rifle, they're set for this one shot so the roll
+    /// always happens, at the combined chance, and put back afterwards. Rifles that aren't frozen are left to the game.
+    /// </remarks>
+    [HarmonyPatch(typeof(vp_FPSShooter), nameof(vp_FPSShooter.Fire))]
+    private static class JamFrozenRifles
+    {
+        // __state is the jam settings to put back, or null when they weren't changed.
+        private static void Prefix(vp_FPSShooter __instance, out (float Threshold, float Minimum, float Maximum)? __state)
+        {
+            __state = null;
+
+            var gunItem = __instance.m_Weapon != null ? __instance.m_Weapon.m_GunItem : null;
+            var gearItem = gunItem != null ? gunItem.GetComponent<GearItem>() : null;
+            if (gearItem == null)
+                return;
+
+            var frozenJamChance = RifleFreezing.JamChance(FrozenRifles.GetPercentFrozen(gearItem));
+            if (frozenJamChance <= 0f)
+                return;
+
+            __state = (__instance.JamConditionThreshold, __instance.JamMinimumChance, __instance.JamMaximumChance);
+
+            var gameJamChance = RifleFreezing.GameJamChance(gearItem.GetNormalizedCondition(), __instance.JamConditionThreshold,
+                __instance.JamMinimumChance, __instance.JamMaximumChance);
+            var jamChance = RifleFreezing.CombineChances(gameJamChance, frozenJamChance);
+
+            // Condition is never above 1, so a threshold above it always rolls, and with both chances the same, the
+            // roll is at that chance whatever the condition.
+            __instance.JamConditionThreshold = 2f;
+            __instance.JamMinimumChance = jamChance;
+            __instance.JamMaximumChance = jamChance;
+        }
+
+        private static void Finalizer(vp_FPSShooter __instance, (float Threshold, float Minimum, float Maximum)? __state)
+        {
+            if (__state is not { } original)
+                return;
+
+            __instance.JamConditionThreshold = original.Threshold;
+            __instance.JamMinimumChance = original.Minimum;
+            __instance.JamMaximumChance = original.Maximum;
+        }
+    }
+
     /// <summary>A shooter's bullets: the game's own, and the mod's template.</summary>
     /// <param name="GamePrefab">The shooter's own <see cref="vp_FPSShooter.ProjectilePrefab"/>.</param>
     /// <param name="GameCustomPrefab">The shooter's own <see cref="vp_FPSShooter.ProjectileCustomPrefab"/>.</param>

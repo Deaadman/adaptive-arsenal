@@ -27,4 +27,8 @@ internal sealed class Mod : MelonMod
         Utilities.WeaponSkins.Initialize();
         Utilities.SkinConsoleCommand.Register();
     }
+
+    /// <inheritdoc />
+    /// <remarks>Freezes and thaws the rifles the player carries.</remarks>
+    public override void OnUpdate() => Utilities.FrozenRifles.Update();
 }
