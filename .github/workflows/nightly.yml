@@ -2,7 +2,8 @@
 # "nightly" pre-release and its tag each time, so there's only ever one. The
 # version is the project's VersionPrefix with a suffix for the day and the
 # commit, like 1.1.0-nightly.20261022+g1a2b3c4, which the game's console
-# shows when the mod loads.
+# shows when the mod loads. Its notes are CHANGELOG.md's Unreleased section,
+# then a link to every commit since the latest release.
 #
 # Inspired by:
 # 1. NeoVim's nightly release: https://github.com/neovim/neovim/blob/master/.github/workflows/release.yml
@@ -74,6 +75,11 @@ jobs:
       GH_REPO: ${{ github.repository }}
       GH_TOKEN: ${{ github.token }}
     steps:
+      # For CHANGELOG.md and the script that reads it.
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
       - uses: actions/download-artifact@v8
         with:
           name: ${{ env.PROJECT_NAME }}
@@ -82,16 +88,35 @@ jobs:
       - name: Read the version
         run: echo "VERSION=$(tr -d '\r' < out/Version.txt)" >> "$GITHUB_ENV"
 
+      # The changelog's Unreleased section, then a link to every commit since the latest release.
+      - name: Write the notes
+        shell: pwsh
+        run: |
+          ./scripts/release-notes.ps1 -Version Unreleased -OutDir notes -Repo "https://github.com/$env:GH_REPO"
+          $latest = gh api "repos/$env:GH_REPO/releases/latest" --jq .tag_name
+          $sha = $env:GITHUB_SHA.Substring(0, 7)
+          $changes = (Get-Content -Raw notes/release-notes.md).Trim()
+          if (-not $changes) { $changes = "_Nothing under Unreleased in the changelog yet._" }
+          $notes = @(
+            "A build of ``develop`` at $sha. It may be unstable, so back up your saves first."
+            ''
+            "## Since $latest"
+            ''
+            $changes
+            ''
+            "**Every commit**: https://github.com/$env:GH_REPO/compare/$latest...nightly"
+          ) -join "`n"
+          [IO.File]::WriteAllText("$PWD/notes/nightly.md", $notes + "`n")
+
       - name: Remove the previous nightly
         run: |
           gh release delete nightly --yes --cleanup-tag || true
 
       - name: Publish
         run: |
-          latest=$(gh api "repos/$GH_REPO/releases/latest" --jq .tag_name)
           gh release create nightly "out/${PROJECT_NAME}.dll" \
             --prerelease \
             --title "$VERSION" \
             --target "$GITHUB_SHA" \
-            --notes "A build of develop at ${GITHUB_SHA::7}. It may be unstable. See [what's changed since $latest](https://github.com/$GH_REPO/compare/$latest...nightly)."
+            --notes-file notes/nightly.md
           echo "Published nightly **$VERSION**" >> "$GITHUB_STEP_SUMMARY"

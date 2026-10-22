@@ -54,7 +54,7 @@ Once a week, [Dependabot](../.github/dependabot.yml) opens a pull request agains
 
 ## Nightly builds
 
-The [nightly workflow](../.github/workflows/nightly.yml) runs on every push to `develop`. It runs CI, builds the mod with the nightly version, and replaces the [`nightly`](https://github.com/Deaadman/adaptive-arsenal/releases/tag/nightly) pre-release with it. Its notes link to what's changed since the latest release.
+The [nightly workflow](../.github/workflows/nightly.yml) runs on every push to `develop`. It runs CI, builds the mod with the nightly version, and replaces the [`nightly`](https://github.com/Deaadman/adaptive-arsenal/releases/tag/nightly) pre-release with it. Its notes are the `## [Unreleased]` section of `CHANGELOG.md`, so testers see what's new, then a link to every commit since the latest release. To preview them, run `.\scripts\release-notes.ps1 -Version Unreleased -OutDir notes`.
 
 ## Releasing
 
