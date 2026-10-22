@@ -6,25 +6,60 @@ using Il2CppInterop.Runtime.Attributes;
 
 namespace AdaptiveArsenal.Animators;
 
+/// <summary>
+/// Plays the animation of a spent round flying off the HUD's ammo display when a rifle or revolver is fired.
+/// </summary>
+/// <remarks>
+/// <see cref="Patches.EquipItemPopupPatches"/> adds this to the <see cref="EquipItemPopup"/>, the HUD panel that
+/// shows the rounds in the weapon, and starts <see cref="AnimateCasingEjection"/> each time a round is used.
+/// </remarks>
 [RegisterTypeInIl2Cpp(false)]
 public class AmmoSpriteAnimator : MonoBehaviour
 {
-    private GameObject? ammoPrefab;
-    private readonly List<GameObject> activeAmmoSprites = [];
+    /// <summary>How long the animation lasts, in seconds.</summary>
+    private const float EjectionDuration = 1f;
 
+    /// <summary>How fast the round spins, in degrees per second.</summary>
+    private const float EjectionSpinSpeed = 360f;
+
+    /// <summary>How far right the round lands from where it starts, in HUD pixels.</summary>
+    private const float EjectionEndOffsetX = 100f;
+
+    /// <summary>How far up the round lands from where it starts, in HUD pixels: it lands below.</summary>
+    private const float EjectionEndOffsetY = -150f;
+
+    /// <summary>The Bézier control point of the round's arc, right of where it starts, in HUD pixels.</summary>
+    private const float EjectionArcOffsetX = 50f;
+
+    /// <summary>The Bézier control point of the round's arc, above where it starts, in HUD pixels.</summary>
+    private const float EjectionArcOffsetY = 100f;
+
+    /// <summary>Draws the round above the rest of the ammo display.</summary>
+    private const int RoundSpriteDepth = 30;
+
+    private GameObject? m_RoundSpriteTemplate;
+    private readonly List<GameObject> m_EjectingRounds = [];
+
+    /// <summary>
+    /// Animates one spent round arcing up and away from the ammo display while it spins, then removes it.
+    /// </summary>
+    /// <param name="startPosition">Where the round starts, local to <paramref name="parent"/>: the slot of the round that was used.</param>
+    /// <param name="parent">The transform the ammo display's round sprites belong to.</param>
+    /// <param name="gunType">The gun that was fired, which picks the round's icon.</param>
+    /// <returns>A coroutine for <see cref="MelonCoroutines.Start"/>.</returns>
     [HideFromIl2Cpp]
-    internal IEnumerator CasingEjectionAnimation(Vector3 startPosition, Transform parentTransform, GunType gunType)
+    internal IEnumerator AnimateCasingEjection(Vector3 startPosition, Transform parent, GunType gunType)
     {
-        var casingObject = Instantiate(ammoPrefab, parentTransform);
-        if (casingObject is null)
+        var round = Instantiate(m_RoundSpriteTemplate, parent);
+        if (round is null)
             yield break;
 
-        activeAmmoSprites.Add(casingObject);
-        casingObject.transform.localPosition = startPosition;
-        casingObject.SetActive(true);
+        m_EjectingRounds.Add(round);
+        round.transform.localPosition = startPosition;
+        round.SetActive(true);
 
-        var sprite = casingObject.GetComponent<UISprite>();
-        sprite.depth = 30;
+        var sprite = round.GetComponent<UISprite>();
+        sprite.depth = RoundSpriteDepth;
         sprite.spriteName = gunType switch
         {
             GunType.Rifle => "ico_ammo_rifle",
@@ -32,40 +67,32 @@ public class AmmoSpriteAnimator : MonoBehaviour
             _ => ""
         };
 
-        var end = new Vector3(startPosition.x + 100f, startPosition.y - 150f, startPosition.z);
-        var controlPoint = new Vector3(
-            startPosition.x + 50f,
-            startPosition.y + 100f,
-            startPosition.z
-        );
+        var end = new Vector3(startPosition.x + EjectionEndOffsetX, startPosition.y + EjectionEndOffsetY, startPosition.z);
+        var control = new Vector3(startPosition.x + EjectionArcOffsetX, startPosition.y + EjectionArcOffsetY, startPosition.z);
 
-        var duration = 1f;
-        var elapsedTime = 0f;
-        var rotationSpeed = 360f;
-
-        while (elapsedTime < duration)
+        var elapsed = 0f;
+        while (elapsed < EjectionDuration)
         {
-            var t = elapsedTime / duration;
+            round.transform.localPosition = MathUtils.QuadraticBezier(startPosition, control, end, elapsed / EjectionDuration);
+            round.transform.Rotate(0, 0, EjectionSpinSpeed * Time.deltaTime);
 
-            casingObject.transform.localPosition = MathUtils.QuadraticBezier(startPosition, controlPoint, end, t);
-            casingObject.transform.Rotate(0, 0, rotationSpeed * Time.deltaTime);
-
-            elapsedTime += Time.deltaTime;
+            elapsed += Time.deltaTime;
             yield return null;
         }
 
-        activeAmmoSprites.Remove(casingObject);
-        Destroy(casingObject);
+        m_EjectingRounds.Remove(round);
+        Destroy(round);
     }
 
-    private void Start() => ammoPrefab = GetComponent<EquipItemPopup>().m_ListAmmoSprites[1].gameObject;
+    /// <summary>Copies one of the ammo display's own round sprites, so the ejected round looks the same.</summary>
+    private void Start() => m_RoundSpriteTemplate = GetComponent<EquipItemPopup>().m_ListAmmoSprites[1].gameObject;
 
+    /// <summary>Removes any rounds still mid-animation when the HUD panel is hidden.</summary>
     private void OnDisable()
     {
-        foreach (var sprite in activeAmmoSprites)
-        {
-            Destroy(sprite);
-        }
-        activeAmmoSprites.Clear();
+        foreach (var round in m_EjectingRounds)
+            Destroy(round);
+
+        m_EjectingRounds.Clear();
     }
 }

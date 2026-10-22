@@ -1,62 +1,82 @@
 namespace AdaptiveArsenal.Utilities;
 
+/// <summary>
+/// Works out where a shot starts and which way it goes, the way the game does for its own shots.
+/// </summary>
 internal static class ProjectileUtilities
 {
-    internal static void CalculateProjectileTransform(vp_FPSShooter instance, out Vector3 position, out Quaternion rotation)
+    /// <summary>
+    /// Works out where a bullet should be fired from, and in which direction, to go where the weapon is aimed.
+    /// </summary>
+    /// <remarks>
+    /// The first-person weapon is drawn by its own weapon camera, so its sights aren't where they appear to be in the
+    /// world. This projects them onto the screen with the weapon camera, then back into the world with the main
+    /// camera, and aims along the line from the rear sight to the front sight. A weapon without sights aims along its
+    /// bullet emission point instead. If it has neither, the bullet is placed at the world origin facing forward.
+    /// </remarks>
+    /// <param name="shooter">The weapon's shooter.</param>
+    /// <param name="position">The world-space position to fire from.</param>
+    /// <param name="rotation">The world-space direction to fire in.</param>
+    internal static void CalculateProjectileTransform(vp_FPSShooter shooter, out Vector3 position, out Quaternion rotation)
     {
-        var weaponCamera = instance.m_Camera.GetWeaponCamera();
+        var weaponCamera = shooter.m_Camera.GetWeaponCamera();
         var mainCamera = GameManager.GetMainCamera();
 
-        Transform? transform = null;
-        Transform? transform2 = null;
+        Transform? frontSight = null;
+        Transform? rearSight = null;
 
-        if (instance.m_Weapon.m_FirstPersonWeaponRightHand && instance.m_Weapon.m_FirstPersonWeaponRightHand.m_BulletEmissionPoint)
+        if (shooter.m_Weapon.m_FirstPersonWeaponRightHand && shooter.m_Weapon.m_FirstPersonWeaponRightHand.m_BulletEmissionPoint)
         {
-            instance.BulletEmissionLocator = instance.m_Weapon.m_FirstPersonWeaponRightHand.m_BulletEmissionPoint.transform;
-            transform = instance.m_Weapon.m_FirstPersonWeaponRightHand.m_FrontSight;
-            transform2 = instance.m_Weapon.m_FirstPersonWeaponRightHand.m_RearSight;
-
+            shooter.BulletEmissionLocator = shooter.m_Weapon.m_FirstPersonWeaponRightHand.m_BulletEmissionPoint.transform;
+            frontSight = shooter.m_Weapon.m_FirstPersonWeaponRightHand.m_FrontSight;
+            rearSight = shooter.m_Weapon.m_FirstPersonWeaponRightHand.m_RearSight;
         }
-        else if (instance.m_Weapon.m_FirstPersonWeaponShoulder && instance.m_Weapon.m_FirstPersonWeaponShoulder.m_BulletEmissionPoint)
+        else if (shooter.m_Weapon.m_FirstPersonWeaponShoulder && shooter.m_Weapon.m_FirstPersonWeaponShoulder.m_BulletEmissionPoint)
         {
-            instance.BulletEmissionLocator = instance.m_Weapon.m_FirstPersonWeaponShoulder.m_BulletEmissionPoint.transform;
-            transform = instance.m_Weapon.m_FirstPersonWeaponShoulder.m_FrontSight;
-            transform2 = instance.m_Weapon.m_FirstPersonWeaponShoulder.m_RearSight;
+            shooter.BulletEmissionLocator = shooter.m_Weapon.m_FirstPersonWeaponShoulder.m_BulletEmissionPoint.transform;
+            frontSight = shooter.m_Weapon.m_FirstPersonWeaponShoulder.m_FrontSight;
+            rearSight = shooter.m_Weapon.m_FirstPersonWeaponShoulder.m_RearSight;
         }
 
         position = Vector3.zero;
         rotation = Quaternion.identity;
 
-        if (transform != null && transform2 != null)
+        if (frontSight != null && rearSight != null)
         {
-            var vector2 = weaponCamera.WorldToScreenPoint(transform.position);
-            var vector3 = weaponCamera.WorldToScreenPoint(transform2.position);
-            var vector4 = mainCamera.ScreenToWorldPoint(vector2);
-            var vector5 = mainCamera.ScreenToWorldPoint(vector3);
-            var vector6 = Vector3.Normalize(vector4 - vector5);
-            position = PlayerManager.MaybeAdjustShotPositionForNearShot(transform.position, vector4, vector6);
-            rotation = Quaternion.LookRotation(vector6, Vector3.up);
+            var frontSightOnScreen = weaponCamera.WorldToScreenPoint(frontSight.position);
+            var rearSightOnScreen = weaponCamera.WorldToScreenPoint(rearSight.position);
+            var frontSightInWorld = mainCamera.ScreenToWorldPoint(frontSightOnScreen);
+            var rearSightInWorld = mainCamera.ScreenToWorldPoint(rearSightOnScreen);
+            var aimDirection = Vector3.Normalize(frontSightInWorld - rearSightInWorld);
+            position = PlayerManager.MaybeAdjustShotPositionForNearShot(frontSight.position, frontSightInWorld, aimDirection);
+            rotation = Quaternion.LookRotation(aimDirection, Vector3.up);
         }
-        else if (instance.BulletEmissionLocator != null)
+        else if (shooter.BulletEmissionLocator != null)
         {
-            var vector8 = weaponCamera.WorldToScreenPoint(instance.BulletEmissionLocator.transform.position);
-            var vector9 = weaponCamera.WorldToScreenPoint(instance.BulletEmissionLocator.transform.position + instance.BulletEmissionLocator.transform.forward);
-            var vector10 = mainCamera.ScreenToWorldPoint(vector8);
-            var vector11 = Vector3.Normalize(mainCamera.ScreenToWorldPoint(vector9) - vector10);
-            position = PlayerManager.MaybeAdjustShotPositionForNearShot(instance.BulletEmissionLocator.transform.position, vector10, vector11);
-            rotation = Quaternion.LookRotation(vector11, Vector3.up);
+            var emissionPoint = shooter.BulletEmissionLocator.transform;
+            var muzzleOnScreen = weaponCamera.WorldToScreenPoint(emissionPoint.position);
+            var aheadOfMuzzleOnScreen = weaponCamera.WorldToScreenPoint(emissionPoint.position + emissionPoint.forward);
+            var muzzleInWorld = mainCamera.ScreenToWorldPoint(muzzleOnScreen);
+            var aimDirection = Vector3.Normalize(mainCamera.ScreenToWorldPoint(aheadOfMuzzleOnScreen) - muzzleInWorld);
+            position = PlayerManager.MaybeAdjustShotPositionForNearShot(emissionPoint.position, muzzleInWorld, aimDirection);
+            rotation = Quaternion.LookRotation(aimDirection, Vector3.up);
         }
     }
 
-    internal static void SetBulletEmissionLocator(vp_FPSShooter instance)
+    /// <summary>
+    /// Points the shooter's <see cref="vp_FPSShooter.BulletEmissionLocator"/> at the bullet emission point of the
+    /// weapon in the right hand, or failing that, the one on the shoulder.
+    /// </summary>
+    /// <param name="shooter">The weapon's shooter.</param>
+    internal static void SetBulletEmissionLocator(vp_FPSShooter shooter)
     {
-        if (instance.m_Weapon.m_FirstPersonWeaponRightHand && instance.m_Weapon.m_FirstPersonWeaponRightHand.m_BulletEmissionPoint)
+        if (shooter.m_Weapon.m_FirstPersonWeaponRightHand && shooter.m_Weapon.m_FirstPersonWeaponRightHand.m_BulletEmissionPoint)
         {
-            instance.BulletEmissionLocator = instance.m_Weapon.m_FirstPersonWeaponRightHand.m_BulletEmissionPoint.transform;
+            shooter.BulletEmissionLocator = shooter.m_Weapon.m_FirstPersonWeaponRightHand.m_BulletEmissionPoint.transform;
         }
-        else if (instance.m_Weapon.m_FirstPersonWeaponShoulder && instance.m_Weapon.m_FirstPersonWeaponShoulder.m_BulletEmissionPoint)
+        else if (shooter.m_Weapon.m_FirstPersonWeaponShoulder && shooter.m_Weapon.m_FirstPersonWeaponShoulder.m_BulletEmissionPoint)
         {
-            instance.BulletEmissionLocator = instance.m_Weapon.m_FirstPersonWeaponShoulder.m_BulletEmissionPoint.transform;
+            shooter.BulletEmissionLocator = shooter.m_Weapon.m_FirstPersonWeaponShoulder.m_BulletEmissionPoint.transform;
         }
     }
 }

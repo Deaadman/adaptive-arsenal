@@ -48,7 +48,7 @@ The first two numbers of the `STBlade.Modding.TLD.Il2CppAssemblies.Windows` vers
 - formatting, with `dotnet format whitespace --verify-no-changes`. Run `dotnet format whitespace src/AdaptiveArsenal.csproj` to fix it.
 - that `packages.lock.json` matches the project
 - that no package has a security advisory: restoring checks them all
-- that a Release build works with warnings as errors, and shows the DLL's version and size
+- that a Release build works with warnings as errors, and shows the DLL's version and size. That includes the XML comments: public types and members need one, and every `<see cref="..."/>` must point at something that exists.
 
 Once a week, [Dependabot](../.github/dependabot.yml) opens a pull request against `develop` for NuGet packages and actions with a newer version, with the minor and patch updates together. Merge it when CI passes.
 

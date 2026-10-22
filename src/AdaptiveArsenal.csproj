@@ -7,6 +7,8 @@
         <Nullable>enable</Nullable>
         <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
         <DebugType>embedded</DebugType>
+        <!-- Checks the XML comments: every public member needs one, and every cref must resolve. -->
+        <GenerateDocumentationFile>true</GenerateDocumentationFile>
         <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
         <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
         <!-- packages.lock.json pins every package, including the ones these depend on. CI restores with locked mode. -->
