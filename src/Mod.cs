@@ -1,8 +1,9 @@
 namespace AdaptiveArsenal;
 
 /// <summary>
-/// The mod's entry point for MelonLoader. Everything it does is in the Harmony patches in
-/// <see cref="Patches"/>, which MelonLoader applies when it loads the mod.
+/// The mod's entry point for MelonLoader. Most of what it does is in the Harmony patches in
+/// <see cref="Patches"/>, which MelonLoader applies when it loads the mod. It sets up the settings and loads the
+/// weapon skins.
 /// </summary>
 internal sealed class Mod : MelonMod
 {
@@ -17,5 +18,13 @@ internal sealed class Mod : MelonMod
     {
         Settings.Initialize();
         Logger.Log($"{Properties.BuildInfo.Name} {Properties.BuildInfo.Version} initialized.", FlaggedLoggingLevel.Debug);
+    }
+
+    /// <inheritdoc />
+    /// <remarks>Loads the weapon skins here, once Unity is running, so their textures can be made.</remarks>
+    public override void OnLateInitializeMelon()
+    {
+        Utilities.WeaponSkins.Initialize();
+        Utilities.SkinConsoleCommand.Register();
     }
 }

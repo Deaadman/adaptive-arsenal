@@ -78,6 +78,24 @@ public class WeaponDataStoreTests
     }
 
     [Fact]
+    public void A_weapons_skin_is_saved_and_its_own_look_is_left_out()
+    {
+        var saved = new WeaponDataStore();
+        saved.GetOrAdd(1, Rifle).m_Skin = "GEAR_Rifle/Arctic";
+        saved.GetOrAdd(2, Rifle);
+        var json = saved.Serialize();
+
+        var loaded = new WeaponDataStore();
+        Assert.True(loaded.Deserialize(json));
+
+        Assert.True(loaded.TryGet(1, Rifle, out var skinned));
+        Assert.Equal("GEAR_Rifle/Arctic", skinned.m_Skin);
+        Assert.True(loaded.TryGet(2, Rifle, out var plain));
+        Assert.Null(plain.m_Skin);
+        Assert.Single(System.Text.RegularExpressions.Regex.Matches(json, "m_Skin"));
+    }
+
+    [Fact]
     public void Loading_replaces_what_was_there()
     {
         var store = new WeaponDataStore();

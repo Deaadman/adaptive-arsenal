@@ -15,4 +15,9 @@ internal sealed class WeaponData
     /// item that ends up with the same instance ID.
     /// </summary>
     public string m_GearName = string.Empty;
+
+    /// <summary>
+    /// The <see cref="SkinDefinition.Id"/> of the skin the weapon wears, or <see langword="null"/> for its own look.
+    /// </summary>
+    public string? m_Skin = null;
 }
