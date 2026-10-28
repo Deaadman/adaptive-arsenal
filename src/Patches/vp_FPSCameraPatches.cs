@@ -35,13 +35,8 @@ internal static class vp_FPSCameraPatches
         /// <summary>Whether the field of view was kept unzoomed last time, so it's only logged when that starts.</summary>
         private static bool s_Keeping;
 
-        /// <summary>TEMPORARY: the last state logged by <see cref="LogState"/>, to find why the patch doesn't work.</summary>
-        private static string? s_LastState;
-
         private static void Postfix(vp_FPSCamera __instance)
         {
-            LogState(__instance);
-
             var keep = !Settings.Instance.m_RifleAimZoom && __instance.m_Camera != null && IsRifleInHands();
             if (keep)
             {
@@ -57,33 +52,6 @@ internal static class vp_FPSCameraPatches
             }
 
             s_Keeping = keep;
-        }
-
-        /// <summary>TEMPORARY: logs what the patch sees whenever it changes, to find why it doesn't work.</summary>
-        /// <param name="camera">The camera the patch ran on.</param>
-        private static void LogState(vp_FPSCamera camera)
-        {
-            var itemInHands = GameManager.GetPlayerManagerComponent().m_ItemInHands;
-            var item = itemInHands == null ? "nothing" : itemInHands.name;
-            var gunType = itemInHands == null || itemInHands.m_GunItem == null ? "no gun" : itemInHands.m_GunItem.m_GunType.ToString();
-            var fov = camera.m_Camera == null ? "no camera" : Math.Round(camera.m_Camera.fieldOfView).ToString();
-            var state = $"zoom setting {Settings.Instance.m_RifleAimZoom}, holding {item} ({gunType}), camera FOV {fov}, unzoomed FOV {camera.m_UnzoomedFieldOfView}, zoomed {camera.IsZoomed}, weapon FOV {WeaponFov(camera)}";
-            if (state == s_LastState)
-                return;
-
-            s_LastState = state;
-            Mod.Logger.Log($"[Zoom test] {state}", FlaggedLoggingLevel.Debug);
-        }
-
-        /// <summary>TEMPORARY: the weapon camera's field of view and the weapon's unzoomed one, for <see cref="LogState"/>.</summary>
-        /// <param name="camera">The camera the patch ran on.</param>
-        /// <returns>The two fields of view, rounded.</returns>
-        private static string WeaponFov(vp_FPSCamera camera)
-        {
-            var weaponCamera = camera.GetWeaponCamera();
-            var current = weaponCamera == null ? "no camera" : Math.Round(weaponCamera.fieldOfView).ToString();
-            var unzoomed = camera.CurrentWeapon == null ? "no weapon" : Math.Round(camera.CurrentWeapon.RenderingFieldOfViewVertical).ToString();
-            return $"{current} (unzoomed {unzoomed})";
         }
 
         /// <summary>Whether the player is holding a rifle.</summary>
