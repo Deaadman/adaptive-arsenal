@@ -55,7 +55,7 @@ When the game updates before the package does, build against the game itself. St
 </Project>
 ```
 
-CI has no game, so it builds against the package, and fails if the code already uses something only the newer game has. Until a package for that game is out, call such methods through `src/Utilities/GameCompatibility.cs`, which finds whichever version the running game has. Once it's out, bump the package, call them directly and drop them from there.
+CI has no game, so it builds against the package, and fails if the code already uses something only the newer game has. Bump the package once a version for that game is out.
 
 `src/Properties/NullableAttribute.cs` is there because, from game version 2.58, `UnityEngine.CoreModule` has a public `NullableAttribute` the compiler would otherwise try to use and fail.
 
