@@ -30,7 +30,13 @@
 
     <!-- The game's assemblies. The first two numbers of the version are the game version they were made from. -->
     <ItemGroup>
-        <PackageReference Include="STBlade.Modding.TLD.Il2CppAssemblies.Windows" Version="2.55.0" />
+        <PackageReference Include="REDcat.Modding.TLD.Il2CppAssemblies" Version="2.58.0" />
+        <!--
+        That package asks for MelonLoader 0.7.3, whose package depends on .NET Framework and .NET 8+ packages that fail
+        the build for net6.0. MelonLoader isn't copied to the output, so this keeps the one the mod built against before,
+        and NU1605 is the warning about going below what the package asks for.
+        -->
+        <PackageReference Include="LavaGang.MelonLoader" Version="0.7.1" NoWarn="NU1605" />
     </ItemGroup>
 
     <!--
@@ -39,13 +45,18 @@
     and the game has made them. The package still brings MelonLoader, Harmony and Il2CppInterop, and CI uses it as is.
     -->
     <ItemGroup Condition="Exists('$(TheLongDarkPath)/MelonLoader/Il2CppAssemblies/Assembly-CSharp.dll')">
-        <PackageReference Update="STBlade.Modding.TLD.Il2CppAssemblies.Windows" ExcludeAssets="compile" />
+        <PackageReference Update="REDcat.Modding.TLD.Il2CppAssemblies" ExcludeAssets="compile" />
         <Reference Include="$(TheLongDarkPath)/MelonLoader/Il2CppAssemblies/*.dll" Private="false" />
     </ItemGroup>
 
-    <!-- ModSettings, for the mod's settings menu. Players install it themselves (Complex Logger needs it too), so it isn't copied to the output. -->
+    <!--
+    ModSettings, for the mod's settings menu. Players install it themselves (Complex Logger needs it too), so it isn't
+    copied to the output. Its package depends on another copy of the game's assemblies, whose Assembly-CSharp would clash
+    with the one above, so that package is referenced here only to leave its files out.
+    -->
     <ItemGroup>
         <PackageReference Include="STBlade.Modding.TLD.ModSettings" Version="1.9.0" ExcludeAssets="runtime" />
+        <PackageReference Include="STBlade.Modding.TLD.Il2CppAssemblies.Windows" Version="2.10.0" ExcludeAssets="all" />
     </ItemGroup>
 
     <!--

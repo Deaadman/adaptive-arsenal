@@ -43,7 +43,7 @@ Nightly builds add a suffix with the date and commit, like `1.1.0-nightly.202610
 
 [`src/packages.lock.json`](../src/packages.lock.json) and the test project's lock file pin every NuGet package, including the ones they depend on. After changing a package version, run `dotnet restore AdaptiveArsenal.slnx` and commit the lock file with it.
 
-The first two numbers of the `STBlade.Modding.TLD.Il2CppAssemblies.Windows` version are the game version its assemblies come from. So a new version of it usually means a game update: build against it, then check the mod in the game.
+The first two numbers of the `REDcat.Modding.TLD.Il2CppAssemblies` version are the game version its assemblies come from. So a new version of it usually means a game update: build against it, then check the mod in the game.
 
 When the game updates before the package does, build against the game itself. Start the updated game once with MelonLoader, which writes its assemblies to `MelonLoader/Il2CppAssemblies` in the game's folder, and set `TheLongDarkPath` (see [Building from source](#building-from-source)). The build then takes the game's assemblies from there instead of the package, which still brings MelonLoader, Harmony and Il2CppInterop. To keep the path to your machine, put it in a git-ignored `src/AdaptiveArsenal.csproj.user`:
 

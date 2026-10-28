@@ -20,6 +20,10 @@ updates:
     ignore:
       # Only referenced to leave its files out: ModData depends on it. See src/AdaptiveArsenal.csproj.
       - dependency-name: ds5678.Modding.TLD.Il2CppAssemblies.Windows
+      # The same, for ModSettings.
+      - dependency-name: STBlade.Modding.TLD.Il2CppAssemblies.Windows
+      # Pinned below what the game's assemblies ask for: 0.7.3's package fails the build. See src/AdaptiveArsenal.csproj.
+      - dependency-name: LavaGang.MelonLoader
 
   - package-ecosystem: github-actions
     directory: /
