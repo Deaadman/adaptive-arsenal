@@ -86,7 +86,7 @@ internal static class vp_FPSShooterPatches
 
             if (Time.time < __instance.m_NextAllowedFireTime
                 || weapon.ReloadInProgress()
-                || !playerAnimation.IsAllowedToFire(weapon.m_GunItem.m_AllowHipFire)
+                || !playerAnimation.IsAllowedToFire(weapon.m_GunItem.m_AllowHipFire, weapon.m_GunItem.m_GunType)
                 || playerAnimation.IsReloading()
                 || weapon.GetAmmoCount() < 1
                 || weapon.m_GunItem.m_IsJammed
@@ -105,7 +105,7 @@ internal static class vp_FPSShooterPatches
             }
 
             // Hip fire is when the gun allows it but the player isn't aiming.
-            var isHipFire = weapon.m_GunItem.m_AllowHipFire && !playerAnimation.IsAllowedToFire(false);
+            var isHipFire = weapon.m_GunItem.m_AllowHipFire && !playerAnimation.IsAllowedToFire(false, weapon.m_GunItem.m_GunType);
 
             var playerManager = GameManager.GetPlayerManagerComponent();
             var accuracy = ProjectileItem.CalculateAccuracy(weapon.m_GunItem, isHipFire, !playerManager.PlayerIsCrouched(), playerManager.PlayerIsWalking());

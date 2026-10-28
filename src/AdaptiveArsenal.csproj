@@ -33,6 +33,16 @@
         <PackageReference Include="STBlade.Modding.TLD.Il2CppAssemblies.Windows" Version="2.55.0" />
     </ItemGroup>
 
+    <!--
+    Or the ones MelonLoader generates from the installed game the first time each version starts, for building against
+    a game version newer than the package. Used when TheLongDarkPath is set, for example in AdaptiveArsenal.csproj.user,
+    and the game has made them. The package still brings MelonLoader, Harmony and Il2CppInterop, and CI uses it as is.
+    -->
+    <ItemGroup Condition="Exists('$(TheLongDarkPath)/MelonLoader/Il2CppAssemblies/Assembly-CSharp.dll')">
+        <PackageReference Update="STBlade.Modding.TLD.Il2CppAssemblies.Windows" ExcludeAssets="compile" />
+        <Reference Include="$(TheLongDarkPath)/MelonLoader/Il2CppAssemblies/*.dll" Private="false" />
+    </ItemGroup>
+
     <!-- ModSettings, for the mod's settings menu. Players install it themselves (Complex Logger needs it too), so it isn't copied to the output. -->
     <ItemGroup>
         <PackageReference Include="STBlade.Modding.TLD.ModSettings" Version="1.9.0" ExcludeAssets="runtime" />

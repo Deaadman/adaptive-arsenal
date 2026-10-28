@@ -41,6 +41,7 @@ See docs/development.md, "Releasing". CI checks this file's format.
 
 ### Fixed
 
+- The mod works with version 2.58 of the game.
 - Bullets still in the air when the game saves no longer turn into loose rounds of ammo when you load.
 - Bullet holes appear where the bullet hit, instead of somewhere else on the object or not at all.
 - Bullet impact sounds come from where the bullet hit, so they get quieter with distance.

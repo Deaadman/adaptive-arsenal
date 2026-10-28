@@ -1,4 +1,6 @@
-﻿namespace AdaptiveArsenal.Utilities;
+﻿using UnityEngine.AddressableAssets;
+
+namespace AdaptiveArsenal.Utilities;
 
 /// <summary>
 /// Borrows materials from the game's own prefabs, so the mod's effects match the game's look.
@@ -13,7 +15,12 @@ internal static class PrefabMaterials
     /// <returns>The material, or <see langword="null"/> if there's no such child or it has no <see cref="LineRenderer"/>.</returns>
     internal static Material? GetLineRendererMaterial(string gearItemName, string childName)
     {
-        var child = GearItem.LoadGearItemPrefab(gearItemName).transform.Find(childName);
+        // Reading the prefab doesn't run anything on it. The game's GearItem.LoadGearItemPrefab went in 2.58.
+        var prefab = Addressables.LoadAssetAsync<GameObject>(gearItemName).WaitForCompletion();
+        if (prefab == null)
+            return null;
+
+        var child = prefab.transform.Find(childName);
         if (child == null)
             return null;
 

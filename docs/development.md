@@ -43,6 +43,20 @@ Nightly builds add a suffix with the date and commit, like `1.1.0-nightly.202610
 
 The first two numbers of the `STBlade.Modding.TLD.Il2CppAssemblies.Windows` version are the game version its assemblies come from. So a new version of it usually means a game update: build against it, then check the mod in the game.
 
+When the game updates before the package does, build against the game itself. Start the updated game once with MelonLoader, which writes its assemblies to `MelonLoader/Il2CppAssemblies` in the game's folder, and set `TheLongDarkPath` (see [Building from source](#building-from-source)). The build then takes the game's assemblies from there instead of the package, which still brings MelonLoader, Harmony and Il2CppInterop. To keep the path to your machine, put it in a git-ignored `src/AdaptiveArsenal.csproj.user`:
+
+```xml
+<Project>
+    <PropertyGroup>
+        <TheLongDarkPath>C:\Program Files (x86)\Steam\steamapps\common\TheLongDark</TheLongDarkPath>
+    </PropertyGroup>
+</Project>
+```
+
+CI has no game, so it builds against the package, and fails if the code already uses something only the newer game has. Bump the package once a version for that game is out.
+
+`src/Properties/NullableAttribute.cs` is there because, from game version 2.58, `UnityEngine.CoreModule` has a public `NullableAttribute` the compiler would otherwise try to use and fail.
+
 ## Branches
 
 - `develop` is where work happens. Every push to it publishes a [nightly build](#nightly-builds).
