@@ -27,6 +27,7 @@ See docs/development.md, "Releasing". CI checks this file's format.
 - A settings page in Options, Mod Settings, to turn real bullets, bullet trails and walking while aiming a revolver on or off, and to tune accuracy, bullet speed, trail length and damage drop-off.
 - **Breaking:** The mod now needs [ModData](https://github.com/dommrogers/ModData/releases/latest), to keep what it remembers about each weapon in your save.
 - Rifles you carry freeze in the cold and thaw in the warm, and the more frozen a rifle is, the more likely it is to jam. The inventory shows how frozen each rifle is.
+- A Left-handed setting mirrors your first-person view, so you hold your weapons and tools in your left hand.
 - **Breaking:** The HUD no longer shows how many rounds are loaded in your rifle or revolver, or how many more you're carrying, so you have to keep count. Turn on **Show ammo count** in the mod's settings to bring it back.
 
 ### Changed

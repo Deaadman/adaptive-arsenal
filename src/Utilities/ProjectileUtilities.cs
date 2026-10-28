@@ -1,3 +1,5 @@
+using AdaptiveArsenal.Components;
+
 namespace AdaptiveArsenal.Utilities;
 
 /// <summary>
@@ -11,7 +13,8 @@ internal static class ProjectileUtilities
     /// <remarks>
     /// The first-person weapon is drawn by its own weapon camera, so its sights aren't where they appear to be in the
     /// world. This projects them onto the screen with the weapon camera, then back into the world with the main
-    /// camera, and aims along the line from the rear sight to the front sight. A weapon without sights aims along its
+    /// camera, and aims along the line from the rear sight to the front sight. When the player is left-handed, the
+    /// points are mirrored on the screen as <see cref="LeftHandedView"/> draws them. A weapon without sights aims along its
     /// bullet emission point instead. Along the way, it points the shooter's
     /// <see cref="vp_FPSShooter.BulletEmissionLocator"/> at the emission point of the weapon in the right hand, or
     /// failing that, the one on the shoulder.
@@ -49,8 +52,8 @@ internal static class ProjectileUtilities
 
         if (frontSight != null && rearSight != null)
         {
-            var frontSightOnScreen = weaponCamera.WorldToScreenPoint(frontSight.position);
-            var rearSightOnScreen = weaponCamera.WorldToScreenPoint(rearSight.position);
+            var frontSightOnScreen = LeftHandedView.MirrorScreenPoint(weaponCamera, weaponCamera.WorldToScreenPoint(frontSight.position));
+            var rearSightOnScreen = LeftHandedView.MirrorScreenPoint(weaponCamera, weaponCamera.WorldToScreenPoint(rearSight.position));
             var frontSightInWorld = mainCamera.ScreenToWorldPoint(frontSightOnScreen);
             var rearSightInWorld = mainCamera.ScreenToWorldPoint(rearSightOnScreen);
             var aimDirection = Vector3.Normalize(frontSightInWorld - rearSightInWorld);
@@ -62,8 +65,8 @@ internal static class ProjectileUtilities
         if (shooter.BulletEmissionLocator != null)
         {
             var emissionPoint = shooter.BulletEmissionLocator.transform;
-            var muzzleOnScreen = weaponCamera.WorldToScreenPoint(emissionPoint.position);
-            var aheadOfMuzzleOnScreen = weaponCamera.WorldToScreenPoint(emissionPoint.position + emissionPoint.forward);
+            var muzzleOnScreen = LeftHandedView.MirrorScreenPoint(weaponCamera, weaponCamera.WorldToScreenPoint(emissionPoint.position));
+            var aheadOfMuzzleOnScreen = LeftHandedView.MirrorScreenPoint(weaponCamera, weaponCamera.WorldToScreenPoint(emissionPoint.position + emissionPoint.forward));
             var muzzleInWorld = mainCamera.ScreenToWorldPoint(muzzleOnScreen);
             var aimDirection = Vector3.Normalize(mainCamera.ScreenToWorldPoint(aheadOfMuzzleOnScreen) - muzzleInWorld);
             position = PlayerManager.MaybeAdjustShotPositionForNearShot(emissionPoint.position, muzzleInWorld, aimDirection);

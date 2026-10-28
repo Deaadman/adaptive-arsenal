@@ -120,6 +120,11 @@ internal sealed class Settings : JsonModSettings
     [Description("Shows how many rounds are loaded in your rifle or revolver on the HUD, and how many more you're carrying. Off, you'll have to keep count yourself.")]
     public bool m_ShowAmmoCount = false;
 
+    /// <summary>Whether the first-person view is mirrored so the player holds things in their left hand: <see cref="Components.LeftHandedView"/>.</summary>
+    [Name("Left-handed")]
+    [Description("Mirrors your hands and what's in them, so you hold weapons and tools in your left hand. Writing on them reads backwards.")]
+    public bool m_LeftHanded = false;
+
     /// <summary>The settings only real bullets use, hidden while <see cref="m_ProjectilesEnabled"/> is off.</summary>
     private static readonly string[] ProjectileOnlyFields =
     [
