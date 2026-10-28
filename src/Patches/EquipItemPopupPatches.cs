@@ -26,8 +26,9 @@ internal static class EquipItemPopupPatches
     /// last time the panel updated.
     /// </summary>
     /// <remarks>
-    /// Switching weapons only resets the count, so equipping a gun with fewer rounds doesn't play the animation. The
-    /// flare gun is left out, and so is everything while the rounds are hidden, since the animation would count them.
+    /// Switching weapons only resets the count, so equipping a gun with fewer rounds doesn't play the animation. Only
+    /// the game's own rifle and revolver have a round sprite, so other guns, like the flare gun or ones other mods add,
+    /// are left out, and so is everything while the rounds are hidden, since the animation would count them.
     /// </remarks>
     [HarmonyPatch(typeof(EquipItemPopup), nameof(EquipItemPopup.UpdateAmmoStatus))]
     private static class EjectRoundOnShot
@@ -43,7 +44,7 @@ internal static class EquipItemPopupPatches
             var ammoSpriteAnimator = __instance.GetComponent<AmmoSpriteAnimator>();
 
             var itemInHands = GameManager.GetPlayerManagerComponent().m_ItemInHands;
-            if (itemInHands == null || itemInHands.m_GunItem == null || itemInHands.m_GunItem.m_GunType == GunType.FlareGun)
+            if (itemInHands == null || itemInHands.m_GunItem == null || itemInHands.m_GunItem.m_GunType is not (GunType.Rifle or GunType.Revolver))
             {
                 s_LastGunItem = null;
                 s_LastRoundsInClip = -1;
