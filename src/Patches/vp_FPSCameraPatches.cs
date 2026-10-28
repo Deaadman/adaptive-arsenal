@@ -19,12 +19,11 @@ internal static class vp_FPSCameraPatches
     }
 
     /// <summary>
-    /// Keeps the field of view unzoomed while aiming a rifle, when <see cref="Settings.m_RifleAimZoom"/> is off: both the
-    /// world's, and the weapon camera's, which otherwise zooms in on the rifle's sights.
+    /// Keeps the world's field of view unzoomed while aiming a rifle, when <see cref="Settings.m_RifleAimZoom"/> is off.
     /// </summary>
     /// <remarks>
     /// <c>UpdateZoom</c> blends the field of view towards the zoomed one as the player aims, in the camera's fixed
-    /// update, and <see cref="vp_FPSWeapon"/> does the same for the weapon camera. They and the methods that call it are compiled into each other, so patches on them never run. Instead the
+    /// update. It and the methods that call it are compiled into each other, so patches on them never run. Instead the
     /// field of view is put back in <c>LateUpdate</c>, which Unity calls every frame, after the fixed update and before
     /// the frame is drawn. The unzoomed field of view is read from its field, not <c>GetUnzoomedFieldOfView</c>, whose
     /// compiled body is shared with other getters, so which field it returns isn't certain.
@@ -45,10 +44,6 @@ internal static class vp_FPSCameraPatches
                     Mod.Logger.Log($"Keeping the field of view at {unzoomed} while aiming a rifle, instead of {__instance.m_Camera!.fieldOfView}.", FlaggedLoggingLevel.Debug);
 
                 Utils.SetCameraFOVSafe(__instance.m_Camera, unzoomed);
-
-                var weaponCamera = __instance.GetWeaponCamera();
-                if (weaponCamera != null && __instance.CurrentWeapon != null)
-                    Utils.SetCameraFOVSafe(weaponCamera, __instance.CurrentWeapon.RenderingFieldOfViewVertical);
             }
 
             s_Keeping = keep;
