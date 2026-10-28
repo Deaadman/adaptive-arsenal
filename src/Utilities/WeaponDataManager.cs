@@ -18,7 +18,9 @@ namespace AdaptiveArsenal.Utilities;
 /// </para>
 /// <para>
 /// Weapons are told apart by <see cref="GearItem.m_InstanceID"/>, which the game saves with each item, and their gear
-/// name. Any <see cref="GearItem"/> works, so bows and knives can have data too.
+/// name. Any <see cref="GearItem"/> works, so bows and knives can have data too, but only guns get IDs from
+/// <see cref="NewInstanceId"/> (in <see cref="Patches.GearItemPatches"/>), so other items can be handed the data of
+/// one saved in an earlier session with the same Unity ID.
 /// </para>
 /// </remarks>
 internal static class WeaponDataManager
@@ -43,6 +45,9 @@ internal static class WeaponDataManager
     /// <summary>Forgets a weapon's data, like when it's destroyed.</summary>
     /// <param name="gearItem">The weapon.</param>
     internal static void Remove(GearItem gearItem) => s_Store.Remove(gearItem.m_InstanceID);
+
+    /// <summary>An instance ID for a new weapon that no other weapon has had in the player's game.</summary>
+    internal static int NewInstanceId() => s_Store.NewInstanceId();
 
     /// <summary>Saves every weapon's data with the game being saved.</summary>
     internal static void Save()
