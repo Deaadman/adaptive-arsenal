@@ -28,9 +28,30 @@
         <RepositoryUrl>https://github.com/Deaadman/adaptive-arsenal</RepositoryUrl>
     </PropertyGroup>
 
-    <!-- The game's assemblies. The first two numbers of the version are the game version they were made from. -->
+    <!-- For the AdaptiveArsenal NuGet package, which other mods reference to fire its projectiles. The release workflow publishes it: see docs/development.md. -->
+    <PropertyGroup>
+        <PackageId>AdaptiveArsenal</PackageId>
+        <Title>$(Product)</Title>
+        <PackageReadmeFile>README.md</PackageReadmeFile>
+        <Description>Adaptive Arsenal replaces The Long Dark's rifle and revolver hitscan with projectiles. This package lets other mods fire them from guns of their own.</Description>
+        <PackageProjectUrl>$(RepositoryUrl)</PackageProjectUrl>
+        <PackageLicenseExpression>GPL-3.0-only</PackageLicenseExpression>
+        <PackageTags>thelongdark, tld, mods</PackageTags>
+        <PackageReleaseNotes>$(RepositoryUrl)/blob/main/CHANGELOG.md</PackageReleaseNotes>
+        <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
+    </PropertyGroup>
+
+    <!-- The NuGet package's page on nuget.org. -->
     <ItemGroup>
-        <PackageReference Include="MonsieurMeh.Modding.TLD.Il2CppAssemblies.Windows" Version="2.58.0" />
+        <None Include="..\docs\nuget.md" Pack="true" PackagePath="README.md" />
+    </ItemGroup>
+
+    <!--
+    The game's assemblies. The first two numbers of the version are the game version they were made from. Private, so
+    the NuGet package doesn't depend on it: mods using the package bring their own game assemblies.
+    -->
+    <ItemGroup>
+        <PackageReference Include="MonsieurMeh.Modding.TLD.Il2CppAssemblies.Windows" Version="2.58.0" PrivateAssets="all" />
     </ItemGroup>
 
     <!--

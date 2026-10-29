@@ -30,7 +30,7 @@ dotnet build
 - `src/Settings.cs`: the mod's page in the game's Mod Settings menu, from [ModSettings](https://github.com/DigitalzombieTLD/ModSettings), whose DLL is in `src/Dependencies`. Its numbers go into `src/Core` when the game starts and when the player confirms a change.
 - `src/Properties/AssemblyInfo.cs`: what MelonLoader reads about the mod, including the MelonLoader version it needs and the mods it won't load with.
 - `tests/AdaptiveArsenal.Tests`: unit tests for `src/Core`.
-- `docs`: the pages linked from the README.
+- `docs`: the pages linked from the README, and `docs/nuget.md`, the NuGet package's page on nuget.org.
 - `assets`: the banner and thumbnail. Edit the `.svg` files (their layers open in Inkscape), then export them as the `.webp` files in `assets/images`, at the SVG's own size: 2400×480 for the banner and 2560×1440 for the thumbnail.
 
 Every type and member has an XML comment. Keep it that way: the build checks them (see [CI](#ci)).
@@ -60,6 +60,14 @@ When the game updates before the package does, build against the game itself. St
 CI has no game, so it builds against the package, and fails if the code already uses something only the newer game has. Bump the package once a version for that game is out.
 
 `src/Properties/NullableAttribute.cs` is there because, from game version 2.58, `UnityEngine.CoreModule` has a public `NullableAttribute` the compiler would otherwise try to use and fail.
+
+### The NuGet package
+
+Other mods reference the [AdaptiveArsenal NuGet package](https://www.nuget.org/packages/AdaptiveArsenal) for the [API](api.md). The [release workflow](#releasing) publishes it with every release, at the release's version, to nuget.org and to the repository's [GitHub Packages](https://github.com/Deaadman?tab=packages&repo_name=adaptive-arsenal). It carries the XML comments, so other mods see them in their editor, and [`docs/nuget.md`](nuget.md) is its page on nuget.org. The game's assemblies are a private package, so the NuGet package doesn't depend on them: mods using it bring their own.
+
+To see what it will hold, run `dotnet pack src -c Release` and open `src/bin/Release/AdaptiveArsenal.<version>.nupkg` as a zip.
+
+nuget.org lets the workflow publish through [trusted publishing](https://learn.microsoft.com/nuget/nuget-org/trusted-publishing), so there's no API key to keep or renew. It needs a policy on nuget.org, set up once by the package's owner: in **Trusted Publishing** under the account menu, add a GitHub Actions policy with the repository owner `Deaadman`, the repository `adaptive-arsenal` and the workflow file `release.yml`. GitHub Packages needs nothing: the workflow uses its own token.
 
 ## Branches
 
@@ -120,7 +128,7 @@ The [release workflow](../.github/workflows/release.yml) runs when a version tag
 3. Tag the commit on `main` and push the tag: `git tag 1.1.0`, then `git push origin 1.1.0`. Tags don't start with `v`.
 4. Set `VersionPrefix` on `develop` to the next version, so nightlies after the release are numbered after it.
 
-The workflow then runs CI, checks the tag matches `VersionPrefix`, builds the mod and publishes the release with `AdaptiveArsenal.dll`. It stops if `CHANGELOG.md` has no section for that version.
+The workflow then runs CI, checks the tag matches `VersionPrefix`, builds the mod, publishes the [NuGet package](#the-nuget-package), then publishes the release with `AdaptiveArsenal.dll`. It stops if `CHANGELOG.md` has no section for that version.
 
 ### Writing the changelog
 

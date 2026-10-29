@@ -34,13 +34,10 @@ Call everything from the game's main thread. Exceptions your callbacks throw are
 
 ## Using it from your mod
 
-Until there's a NuGet package, reference `AdaptiveArsenal.dll` from a release, and don't copy it into your mod's output.
+Reference the [AdaptiveArsenal NuGet package](https://www.nuget.org/packages/AdaptiveArsenal), at the version of Adaptive Arsenal your mod needs. `ExcludeAssets="runtime"` keeps `AdaptiveArsenal.dll` out of your mod's output, since players install it themselves.
 
 ```xml
-<Reference Include="AdaptiveArsenal">
-    <HintPath>path\to\AdaptiveArsenal.dll</HintPath>
-    <Private>false</Private>
-</Reference>
+<PackageReference Include="AdaptiveArsenal" Version="1.1.0" ExcludeAssets="runtime" />
 ```
 
 If your mod should still work without Adaptive Arsenal, say it's optional, so MelonLoader loads it first when it's there:
