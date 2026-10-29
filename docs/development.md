@@ -30,7 +30,8 @@ dotnet build
 - `src/Settings.cs`: the mod's page in the game's Mod Settings menu, from the [ModSettings](https://github.com/DigitalzombieTLD/ModSettings) NuGet package. Its numbers go into `src/Core` when the game starts and when the player confirms a change.
 - `src/Properties/AssemblyInfo.cs`: what MelonLoader reads about the mod, including the MelonLoader version it needs and the mods it won't load with.
 - `tests/AdaptiveArsenal.Tests`: unit tests for `src/Core`.
-- `docs`: the pages linked from the README. `assets` has the Photoshop files for the banner and thumbnail.
+- `docs`: the pages linked from the README.
+- `assets`: the banner and thumbnail. Edit the `.svg` files (their layers open in Inkscape), then export them as the `.webp` files in `assets/images`, at the SVG's own size: 2400×480 for the banner and 2560×1440 for the thumbnail.
 
 Every type and member has an XML comment. Keep it that way: the build checks them (see [CI](#ci)).
 
