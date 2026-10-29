@@ -30,13 +30,7 @@
 
     <!-- The game's assemblies. The first two numbers of the version are the game version they were made from. -->
     <ItemGroup>
-        <PackageReference Include="REDcat.Modding.TLD.Il2CppAssemblies" Version="2.58.0" />
-        <!--
-        That package asks for MelonLoader 0.7.3, whose package depends on .NET Framework and .NET 8+ packages that fail
-        the build for net6.0. MelonLoader isn't copied to the output, so this keeps the one the mod built against before,
-        and NU1605 is the warning about going below what the package asks for.
-        -->
-        <PackageReference Include="LavaGang.MelonLoader" Version="0.7.1" NoWarn="NU1605" />
+        <PackageReference Include="MonsieurMeh.Modding.TLD.Il2CppAssemblies.Windows" Version="2.58.0" />
     </ItemGroup>
 
     <!--
@@ -45,7 +39,7 @@
     and the game has made them. The package still brings MelonLoader, Harmony and Il2CppInterop, and CI uses it as is.
     -->
     <ItemGroup Condition="Exists('$(TheLongDarkPath)/MelonLoader/Il2CppAssemblies/Assembly-CSharp.dll')">
-        <PackageReference Update="REDcat.Modding.TLD.Il2CppAssemblies" ExcludeAssets="compile" />
+        <PackageReference Update="MonsieurMeh.Modding.TLD.Il2CppAssemblies.Windows" ExcludeAssets="compile" />
         <Reference Include="$(TheLongDarkPath)/MelonLoader/Il2CppAssemblies/*.dll" Private="false" />
     </ItemGroup>
 
