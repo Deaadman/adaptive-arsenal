@@ -1,6 +1,6 @@
 namespace AdaptiveArsenal.Api;
 
-/// <summary>What a projectile fired with <see cref="Projectiles.Fire"/> hit, for its <see cref="ProjectileShot.OnHit"/>.</summary>
+/// <summary>What one projectile fired with <see cref="Projectiles.Fire"/> hit, in a <see cref="ProjectileShotResult"/>.</summary>
 /// <param name="Collider">The collider it hit. For an animal, it's usually a body part with a <see cref="LocalizedDamage"/>.</param>
 /// <param name="Point">Where it hit, in world space.</param>
 /// <param name="Normal">The surface's normal where it hit.</param>

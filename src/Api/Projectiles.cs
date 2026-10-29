@@ -45,14 +45,18 @@ public static class Projectiles
 
         var count = Math.Max(1, shot.Count);
         var spread = Math.Max(0f, shot.Spread);
-        ProjectileGroup group = new(count, shot.OnFinished);
+        var onShotFinished = shot.OnShotFinished;
+        var group = onShotFinished is null
+            ? null
+            : new ProjectileGroup<ProjectileHit>(count, Time.time, shot.ResultDelay, (fired, hits) =>
+                ProjectileItem.CallOtherMod(() => onShotFinished(new(fired, hits)), nameof(ProjectileShot.OnShotFinished)));
 
         for (var i = 0; i < count; i++)
         {
             // Random within a circle, so the projectiles cover the whole spread evenly instead of bunching in the middle.
             var offset = UnityEngine.Random.insideUnitCircle * spread;
             var rotation = shot.Rotation * Quaternion.Euler(-offset.y, offset.x, 0f);
-            ProjectileItem.SpawnAndFire(template, shot, rotation, group.ProjectileFinished);
+            ProjectileItem.SpawnAndFire(template, shot, rotation, group);
         }
 
         return true;

@@ -61,19 +61,16 @@ public class ProjectileItem : MonoBehaviour
     /// <summary>The weapon animals take the hit from.</summary>
     private WeaponSource m_WeaponSource;
 
-    /// <summary>The bullet's <see cref="ProjectileShot.OnHit"/>, for one another mod fired.</summary>
-    private Action<ProjectileHit>? m_OnHit;
-
     /// <summary>
-    /// Tells the bullet's group it's done, for one another mod fired, so the group can call
-    /// <see cref="ProjectileShot.OnFinished"/> once the last of them is.
+    /// The shot the bullet is part of, for one another mod fired with <see cref="ProjectileShot.OnShotFinished"/>: it
+    /// collects what the bullet hits instead of the bullet damaging it. <see langword="null"/> otherwise.
     /// </summary>
-    private Action<bool>? m_OnFinished;
+    private ProjectileGroup<ProjectileHit>? m_Group;
 
     /// <summary>Whether the bullet plays the game's impact effects where it hits.</summary>
     private bool m_PlayImpactEffects = true;
 
-    /// <summary>Whether <see cref="Finish"/> has run, so <see cref="m_OnFinished"/> is only called once.</summary>
+    /// <summary>Whether the bullet has told its <see cref="m_Group"/> it hit or missed, so it only does once.</summary>
     private bool m_Finished;
 
     /// <summary>
@@ -136,9 +133,10 @@ public class ProjectileItem : MonoBehaviour
     /// <param name="template">An inactive template from <see cref="ProjectileTemplates"/>.</param>
     /// <param name="shot">The shot to fire.</param>
     /// <param name="rotation">The direction to fire it in, in world space: the shot's, with this projectile's spread.</param>
-    /// <param name="onFinished">Called once, when it's done, with whether it hit something.</param>
-    internal static void SpawnAndFire(GameObject template, ProjectileShot shot, Quaternion rotation, Action<bool> onFinished) =>
-        Spawn(template, shot.Position, rotation).Fire(shot, onFinished);
+    /// <param name="group">The shot it's part of, to tell what it hits, or <see langword="null"/> to damage it itself.</param>
+    internal static void SpawnAndFire(GameObject template, ProjectileShot shot, Quaternion rotation,
+        ProjectileGroup<ProjectileHit>? group) =>
+        Spawn(template, shot.Position, rotation).Fire(shot, group);
 
     /// <summary>Makes an active copy of a bullet template, ready to fire.</summary>
     /// <param name="template">An inactive template from <see cref="ProjectileTemplates"/>.</param>
@@ -165,13 +163,16 @@ public class ProjectileItem : MonoBehaviour
 
     private void Update()
     {
+        // Lets the shot report at its time limit, even if this bullet is still flying.
+        m_Group?.Update(Time.time);
+
         if (m_HasHit)
         {
             Linger();
         }
         else if (Time.time - m_FireTime > MaxFlightTime)
         {
-            Finish(false);
+            Miss();
             Destroy(gameObject);
         }
         else
@@ -194,7 +195,7 @@ public class ProjectileItem : MonoBehaviour
         m_HasHit = true;
         var contact = collision.GetContact(0);
 
-        if (m_OnHit is null)
+        if (m_Group is null)
             TryInflictDamage(collision.gameObject, collision.gameObject.name);
         else
             ReportHit(collision.collider, contact);
@@ -204,12 +205,10 @@ public class ProjectileItem : MonoBehaviour
 
         if (m_PlayImpactEffects)
             SpawnImpactEffects(collision.collider, contact.point);
-
-        Finish(true);
     }
 
     // A bullet still in the air when its scene unloads is destroyed without hitting anything.
-    private void OnDestroy() => Finish(false);
+    private void OnDestroy() => Miss();
 
     /// <summary>
     /// Sets up the rigidbody for fast movement and, if <see cref="Settings.m_TrailsEnabled"/> is on, creates the trail
@@ -274,13 +273,12 @@ public class ProjectileItem : MonoBehaviour
 
     /// <summary>Launches the bullet as another mod asked, through <see cref="Projectiles.Fire"/>.</summary>
     /// <param name="shot">The shot to fire.</param>
-    /// <param name="onFinished">Called once, when it's done, with whether it hit something.</param>
-    private void Fire(ProjectileShot shot, Action<bool> onFinished)
+    /// <param name="group">The shot it's part of, to tell what it hits, or <see langword="null"/> to damage it itself.</param>
+    private void Fire(ProjectileShot shot, ProjectileGroup<ProjectileHit>? group)
     {
         m_MuzzleDamage = shot.Damage;
         m_WeaponSource = shot.WeaponSource;
-        m_OnHit = shot.OnHit;
-        m_OnFinished = onFinished;
+        m_Group = group;
         m_PlayImpactEffects = shot.PlayImpactEffects;
 
         Launch(shot.MuzzleVelocity * Ballistics.MuzzleVelocityMultiplier, shot.Drag);
@@ -518,37 +516,35 @@ public class ProjectileItem : MonoBehaviour
         m_Trail.endColor = new Color(0.7f, 0.7f, 0.7f, 0.7f * alpha);
     }
 
-    /// <summary>Tells another mod's <see cref="m_OnHit"/> what the bullet hit, instead of damaging it.</summary>
+    /// <summary>Tells the bullet's <see cref="m_Group"/> what it hit, instead of damaging it.</summary>
     /// <param name="surface">The collider the bullet hit.</param>
     /// <param name="contact">Where it hit.</param>
     private void ReportHit(Collider surface, ContactPoint contact)
     {
-        var distance = Vector3.Distance(m_FirePosition, contact.point);
-        ProjectileHit hit = new(surface, contact.point, contact.normal, m_Velocity.normalized, m_Velocity.magnitude, distance,
-            Ballistics.DamageAtDistance(distance, m_MuzzleDamage));
-
-        var onHit = m_OnHit;
-        if (onHit is not null)
-            CallOtherMod(() => onHit(hit), nameof(ProjectileShot.OnHit));
-    }
-
-    /// <summary>Calls <see cref="m_OnFinished"/>, for a bullet another mod fired, the first time the bullet is done.</summary>
-    /// <param name="hit">Whether it hit something.</param>
-    private void Finish(bool hit)
-    {
-        if (m_Finished)
+        if (m_Group is null || m_Finished)
             return;
 
         m_Finished = true;
-        var onFinished = m_OnFinished;
-        if (onFinished is not null)
-            CallOtherMod(() => onFinished(hit), nameof(ProjectileShot.OnFinished));
+        var distance = Vector3.Distance(m_FirePosition, contact.point);
+        ProjectileHit hit = new(surface, contact.point, contact.normal, m_Velocity.normalized, m_Velocity.magnitude, distance,
+            Ballistics.DamageAtDistance(distance, m_MuzzleDamage));
+        m_Group.ProjectileHit(hit, Time.time);
+    }
+
+    /// <summary>Tells the bullet's <see cref="m_Group"/> it missed, if it hasn't told it anything yet.</summary>
+    private void Miss()
+    {
+        if (m_Group is null || m_Finished)
+            return;
+
+        m_Finished = true;
+        m_Group.ProjectileMissed(Time.time);
     }
 
     /// <summary>Calls another mod's code, logging what it throws instead of letting it break the bullet.</summary>
     /// <param name="call">The call.</param>
     /// <param name="callbackName">The name of the callback, for the log.</param>
-    private static void CallOtherMod(Action call, string callbackName)
+    internal static void CallOtherMod(Action call, string callbackName)
     {
         try
         {

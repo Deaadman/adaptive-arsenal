@@ -6,9 +6,9 @@ namespace AdaptiveArsenal.Api;
 /// <see cref="Spread"/>.
 /// </summary>
 /// <remarks>
-/// The projectile flies as a physics object under gravity, like the mod's rifle and revolver bullets. With
-/// <see cref="OnHit"/> left empty, it damages animals itself, the way those bullets do; set it to do your own damage
-/// instead. The object is read when it's fired, so changing it afterwards changes nothing.
+/// Each projectile flies as a physics object under gravity, like the mod's rifle and revolver bullets. With
+/// <see cref="OnShotFinished"/> left empty, each damages the animal it hits itself, the way those bullets do; set it
+/// to do your own damage instead. The object is read when it's fired, so changing it afterwards changes nothing.
 /// </remarks>
 public sealed class ProjectileShot
 {
@@ -43,8 +43,9 @@ public sealed class ProjectileShot
     public float Drag { get; set; } = 0.1f;
 
     /// <summary>
-    /// The damage at the muzzle, for the mod to deal when <see cref="OnHit"/> is empty. It falls with distance as the
-    /// mod's own bullets' damage does. 0 or less uses the mod's default.
+    /// The damage at the muzzle, for the mod to deal when <see cref="OnShotFinished"/> is empty, and for
+    /// <see cref="ProjectileHit.DamageAtDistance"/>. It falls with distance as the mod's own bullets' damage does. 0 or
+    /// less uses the mod's default.
     /// </summary>
     public float Damage { get; set; }
 
@@ -68,16 +69,16 @@ public sealed class ProjectileShot
     public bool PlayImpactEffects { get; set; } = true;
 
     /// <summary>
-    /// Called for each projectile that hits something, instead of the mod damaging the animal it hit. Exceptions it
-    /// throws are logged and don't stop the projectile.
+    /// Called once for the whole shot, with how many projectiles it fired and everything they hit, instead of the mod
+    /// damaging the animals they hit. It comes when every projectile has hit something or been removed, or after
+    /// <see cref="ResultDelay"/>, whichever is first. Exceptions it throws are logged.
     /// </summary>
-    public Action<ProjectileHit>? OnHit { get; set; }
+    public Action<ProjectileShotResult>? OnShotFinished { get; set; }
 
     /// <summary>
-    /// Called once for the whole shot, when the last of its projectiles is done: right after it hits something, or when
-    /// it's removed without hitting anything, like a shot into the sky or one still in the air when the scene changes.
-    /// It's <see langword="true"/> if any of them hit something. Use it to apply the damage <see cref="OnHit"/> added up.
-    /// Exceptions it throws are logged.
+    /// The most seconds to wait for the projectiles before calling <see cref="OnShotFinished"/>. Any still flying then
+    /// count as misses, so one that flies off into the sky doesn't hold back the rest. 0 or less waits for every one,
+    /// which for a miss can be seconds.
     /// </summary>
-    public Action<bool>? OnFinished { get; set; }
+    public float ResultDelay { get; set; } = 0.5f;
 }

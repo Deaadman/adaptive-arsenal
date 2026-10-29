@@ -4,55 +4,97 @@ namespace AdaptiveArsenal.Tests;
 
 public class ProjectileGroupTests
 {
+    private int m_Reports;
+    private int m_Fired;
+    private List<string> m_Hits = [];
+
+    private ProjectileGroup<string> Group(int count, float timeLimit = 0f) =>
+        new(count, 0f, timeLimit, (fired, hits) =>
+        {
+            m_Reports++;
+            m_Fired = fired;
+            m_Hits = [.. hits];
+        });
+
     [Fact]
-    public void Calls_back_once_when_the_last_projectile_is_done()
+    public void Reports_once_when_the_last_projectile_is_done()
     {
-        var calls = 0;
-        ProjectileGroup group = new(3, _ => calls++);
+        var group = Group(3);
 
-        group.ProjectileFinished(false);
-        group.ProjectileFinished(true);
-        Assert.Equal(0, calls);
+        group.ProjectileHit("deer", 0.1f);
+        group.ProjectileMissed(0.1f);
+        Assert.Equal(0, m_Reports);
 
-        group.ProjectileFinished(false);
-        Assert.Equal(1, calls);
+        group.ProjectileHit("tree", 0.2f);
+        Assert.Equal(1, m_Reports);
+        Assert.Equal(3, m_Fired);
+        Assert.Equal(["deer", "tree"], m_Hits);
     }
 
     [Fact]
-    public void Says_it_hit_when_any_projectile_hit()
+    public void Reports_when_nothing_hit()
     {
-        bool? result = null;
-        ProjectileGroup group = new(3, hit => result = hit);
+        var group = Group(2);
 
-        group.ProjectileFinished(false);
-        group.ProjectileFinished(true);
-        group.ProjectileFinished(false);
+        group.ProjectileMissed(1f);
+        group.ProjectileMissed(2f);
 
-        Assert.True(result);
+        Assert.Equal(1, m_Reports);
+        Assert.Empty(m_Hits);
     }
 
     [Fact]
-    public void Says_it_missed_when_no_projectile_hit()
+    public void Reports_at_the_time_limit_with_what_has_hit_so_far()
     {
-        bool? result = null;
-        ProjectileGroup group = new(2, hit => result = hit);
+        var group = Group(3, timeLimit: 0.25f);
 
-        group.ProjectileFinished(false);
-        group.ProjectileFinished(false);
+        group.ProjectileHit("deer", 0.1f);
+        group.Update(0.2f);
+        Assert.Equal(0, m_Reports);
 
-        Assert.False(result);
+        group.Update(0.25f);
+        Assert.Equal(1, m_Reports);
+        Assert.Equal(3, m_Fired);
+        Assert.Equal(["deer"], m_Hits);
     }
 
     [Fact]
-    public void Ignores_projectiles_finishing_after_the_last()
+    public void A_hit_after_the_time_limit_counts_as_a_miss()
     {
-        var calls = 0;
-        ProjectileGroup group = new(1, _ => calls++);
+        var group = Group(2, timeLimit: 0.25f);
 
-        group.ProjectileFinished(true);
-        group.ProjectileFinished(true);
+        group.ProjectileHit("deer", 0.1f);
+        group.ProjectileHit("wolf", 0.3f);
 
-        Assert.Equal(1, calls);
+        Assert.Equal(1, m_Reports);
+        Assert.Equal(["deer"], m_Hits);
+        Assert.True(group.IsReported);
+    }
+
+    [Fact]
+    public void Reports_before_the_time_limit_when_every_projectile_is_done()
+    {
+        var group = Group(2, timeLimit: 0.25f);
+
+        group.ProjectileHit("deer", 0.05f);
+        group.ProjectileHit("deer", 0.06f);
+        Assert.Equal(1, m_Reports);
+
+        group.Update(1f);
+        Assert.Equal(1, m_Reports);
+    }
+
+    [Fact]
+    public void Without_a_time_limit_it_waits_for_every_projectile()
+    {
+        var group = Group(2);
+
+        group.ProjectileHit("deer", 0.1f);
+        group.Update(100f);
+        Assert.Equal(0, m_Reports);
+
+        group.ProjectileMissed(100f);
+        Assert.Equal(1, m_Reports);
     }
 
     [Theory]
@@ -60,20 +102,11 @@ public class ProjectileGroupTests
     [InlineData(-5)]
     public void Fewer_than_one_projectile_counts_as_one(int count)
     {
-        var calls = 0;
-        ProjectileGroup group = new(count, _ => calls++);
+        var group = Group(count);
 
-        group.ProjectileFinished(false);
+        group.ProjectileMissed(0f);
 
-        Assert.Equal(1, calls);
-    }
-
-    [Fact]
-    public void Works_without_a_callback()
-    {
-        ProjectileGroup group = new(2, null);
-
-        group.ProjectileFinished(true);
-        group.ProjectileFinished(false);
+        Assert.Equal(1, m_Reports);
+        Assert.Equal(1, m_Fired);
     }
 }
