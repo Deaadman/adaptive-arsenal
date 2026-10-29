@@ -64,7 +64,10 @@ public class ProjectileItem : MonoBehaviour
     /// <summary>The bullet's <see cref="ProjectileShot.OnHit"/>, for one another mod fired.</summary>
     private Action<ProjectileHit>? m_OnHit;
 
-    /// <summary>The bullet's <see cref="ProjectileShot.OnFinished"/>, for one another mod fired.</summary>
+    /// <summary>
+    /// Tells the bullet's group it's done, for one another mod fired, so the group can call
+    /// <see cref="ProjectileShot.OnFinished"/> once the last of them is.
+    /// </summary>
     private Action<bool>? m_OnFinished;
 
     /// <summary>Whether the bullet plays the game's impact effects where it hits.</summary>
@@ -132,8 +135,10 @@ public class ProjectileItem : MonoBehaviour
     /// <summary>Makes a copy of a bullet template and fires it as another mod asked, through <see cref="Projectiles.Fire"/>.</summary>
     /// <param name="template">An inactive template from <see cref="ProjectileTemplates"/>.</param>
     /// <param name="shot">The shot to fire.</param>
-    internal static void SpawnAndFire(GameObject template, ProjectileShot shot) =>
-        Spawn(template, shot.Position, shot.Rotation).Fire(shot);
+    /// <param name="rotation">The direction to fire it in, in world space: the shot's, with this projectile's spread.</param>
+    /// <param name="onFinished">Called once, when it's done, with whether it hit something.</param>
+    internal static void SpawnAndFire(GameObject template, ProjectileShot shot, Quaternion rotation, Action<bool> onFinished) =>
+        Spawn(template, shot.Position, rotation).Fire(shot, onFinished);
 
     /// <summary>Makes an active copy of a bullet template, ready to fire.</summary>
     /// <param name="template">An inactive template from <see cref="ProjectileTemplates"/>.</param>
@@ -269,12 +274,13 @@ public class ProjectileItem : MonoBehaviour
 
     /// <summary>Launches the bullet as another mod asked, through <see cref="Projectiles.Fire"/>.</summary>
     /// <param name="shot">The shot to fire.</param>
-    private void Fire(ProjectileShot shot)
+    /// <param name="onFinished">Called once, when it's done, with whether it hit something.</param>
+    private void Fire(ProjectileShot shot, Action<bool> onFinished)
     {
         m_MuzzleDamage = shot.Damage;
         m_WeaponSource = shot.WeaponSource;
         m_OnHit = shot.OnHit;
-        m_OnFinished = shot.OnFinished;
+        m_OnFinished = onFinished;
         m_PlayImpactEffects = shot.PlayImpactEffects;
 
         Launch(shot.MuzzleVelocity * Ballistics.MuzzleVelocityMultiplier, shot.Drag);
@@ -526,7 +532,7 @@ public class ProjectileItem : MonoBehaviour
             CallOtherMod(() => onHit(hit), nameof(ProjectileShot.OnHit));
     }
 
-    /// <summary>Calls another mod's <see cref="m_OnFinished"/> the first time the bullet is done.</summary>
+    /// <summary>Calls <see cref="m_OnFinished"/>, for a bullet another mod fired, the first time the bullet is done.</summary>
     /// <param name="hit">Whether it hit something.</param>
     private void Finish(bool hit)
     {

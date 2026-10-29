@@ -1,8 +1,9 @@
 namespace AdaptiveArsenal.Api;
 
 /// <summary>
-/// One projectile for <see cref="Projectiles.Fire"/> to fire: where from, how fast, how it looks and what happens when
-/// it hits. A gun that fires several pellets fires one of these for each.
+/// A shot for <see cref="Projectiles.Fire"/> to fire: where from, how many projectiles, how fast, how they look and
+/// what happens when they hit. A gun that fires pellets fires all of them in one shot, with <see cref="Count"/> and
+/// <see cref="Spread"/>.
 /// </summary>
 /// <remarks>
 /// The projectile flies as a physics object under gravity, like the mod's rifle and revolver bullets. With
@@ -15,9 +16,19 @@ public sealed class ProjectileShot
     public Vector3 Position { get; set; }
 
     /// <summary>
-    /// The direction to fire in, in world space, with any spread already applied. Its forward axis is the direction.
+    /// The direction to fire in, in world space: where the gun is aimed. Its forward axis is the direction.
+    /// <see cref="Spread"/> scatters each projectile around it.
     /// </summary>
     public Quaternion Rotation { get; set; } = Quaternion.identity;
+
+    /// <summary>How many projectiles to fire, like a shell's pellets. Fewer than one fires one.</summary>
+    public int Count { get; set; } = 1;
+
+    /// <summary>
+    /// The furthest each projectile can stray from <see cref="Rotation"/>, in degrees. Each one gets its own random
+    /// direction within that, spread evenly across the circle. 0 fires them all straight along it.
+    /// </summary>
+    public float Spread { get; set; }
 
     /// <summary>
     /// How fast the projectile leaves the muzzle, in metres per second, before the player's bullet speed setting
@@ -57,16 +68,16 @@ public sealed class ProjectileShot
     public bool PlayImpactEffects { get; set; } = true;
 
     /// <summary>
-    /// Called once, when the projectile hits something, instead of the mod damaging the animal it hit. Exceptions it
+    /// Called for each projectile that hits something, instead of the mod damaging the animal it hit. Exceptions it
     /// throws are logged and don't stop the projectile.
     /// </summary>
     public Action<ProjectileHit>? OnHit { get; set; }
 
     /// <summary>
-    /// Called once, when the projectile is done: <see langword="true"/> right after it hits something, or
-    /// <see langword="false"/> when it's removed without hitting anything, like a shot into the sky or one still in the
-    /// air when the scene changes. Use it to tell when every pellet of a shot has landed. Exceptions it throws are
-    /// logged.
+    /// Called once for the whole shot, when the last of its projectiles is done: right after it hits something, or when
+    /// it's removed without hitting anything, like a shot into the sky or one still in the air when the scene changes.
+    /// It's <see langword="true"/> if any of them hit something. Use it to apply the damage <see cref="OnHit"/> added up.
+    /// Exceptions it throws are logged.
     /// </summary>
     public Action<bool>? OnFinished { get; set; }
 }

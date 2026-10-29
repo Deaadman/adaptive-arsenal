@@ -1,4 +1,5 @@
 using AdaptiveArsenal.Components;
+using AdaptiveArsenal.Core;
 using AdaptiveArsenal.Utilities;
 
 namespace AdaptiveArsenal.Api;
@@ -27,10 +28,11 @@ public static class Projectiles
     public static bool Enabled => Settings.Instance.m_ProjectilesEnabled;
 
     /// <summary>
-    /// Fires a projectile. Returns <see langword="false"/>, firing nothing, when real bullets are off or the projectile
-    /// couldn't be made, so the caller can fire its own shot instead.
+    /// Fires a shot: all of its projectiles, each scattered within its spread. Returns <see langword="false"/>, firing
+    /// nothing, when real bullets are off or the projectiles couldn't be made, so the caller can fire its own shot
+    /// instead.
     /// </summary>
-    /// <param name="shot">The projectile to fire.</param>
+    /// <param name="shot">The shot to fire.</param>
     public static bool Fire(ProjectileShot shot)
     {
         ArgumentNullException.ThrowIfNull(shot);
@@ -41,7 +43,18 @@ public static class Projectiles
         if (template == null)
             return false;
 
-        ProjectileItem.SpawnAndFire(template, shot);
+        var count = Math.Max(1, shot.Count);
+        var spread = Math.Max(0f, shot.Spread);
+        ProjectileGroup group = new(count, shot.OnFinished);
+
+        for (var i = 0; i < count; i++)
+        {
+            // Random within a circle, so the projectiles cover the whole spread evenly instead of bunching in the middle.
+            var offset = UnityEngine.Random.insideUnitCircle * spread;
+            var rotation = shot.Rotation * Quaternion.Euler(-offset.y, offset.x, 0f);
+            ProjectileItem.SpawnAndFire(template, shot, rotation, group.ProjectileFinished);
+        }
+
         return true;
     }
 

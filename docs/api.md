@@ -6,27 +6,29 @@ Adaptive Arsenal replaces rifle and revolver shots with bullets that fly, drop a
 
 ## What's in it
 
-- `Projectiles.Fire(ProjectileShot)` fires one projectile. A gun that fires pellets fires one for each. It returns `false`, firing nothing, when the player has turned real bullets off or the projectile couldn't be made, so your mod can fire its own shot instead.
+- `Projectiles.Fire(ProjectileShot)` fires a shot: one projectile, or all of a shell's pellets at once. Call it once per shot. It returns `false`, firing nothing, when the player has turned real bullets off or the projectiles couldn't be made, so your mod can fire its own shot instead.
 - `Projectiles.Enabled` says whether real bullets are on.
 - `Projectiles.TryGetAim(vp_FPSShooter, out position, out rotation)` finds where a gun's shots start and where it's aimed, from its sights, the way Adaptive Arsenal does for rifles and revolvers. The first-person weapon is drawn by its own camera, so its sights aren't where they appear to be in the world.
 - `Projectiles.ApiVersion` is the version of the API.
 
-`ProjectileShot` describes the projectile:
+`ProjectileShot` describes the shot:
 
 | Property | What it does |
 | --- | --- |
-| `Position`, `Rotation` | Where it's fired from and the direction, with any spread already applied. |
+| `Position`, `Rotation` | Where it's fired from and where the gun is aimed. |
+| `Count` | How many projectiles to fire, like a shell's pellets. The default is 1. |
+| `Spread` | The furthest each projectile can stray from the aim, in degrees. Each gets its own random direction within it, spread evenly. The default is 0. |
 | `MuzzleVelocity` | Its speed at the muzzle in metres per second. The player's bullet speed setting scales it, as it does the mod's own bullets (150 to 550). |
 | `Drag` | How quickly the air slows it, as the Unity rigidbody's drag. Higher slows it sooner, so it drops more at range. The mod's own bullets use 0.1. |
 | `Damage`, `WeaponSource` | For the mod to damage animals when `OnHit` is empty: the damage at the muzzle, which falls with distance, and the weapon body parts scale it for. |
 | `AmmoGearName` | The ammo whose single round it looks like in flight, like `GEAR_RifleAmmoSingle`. Empty is invisible. |
 | `PlayImpactEffects` | Whether it plays the game's impact particles, decal and sound. Turn it off to play your own. |
-| `OnHit` | Called with a `ProjectileHit` when it hits something, instead of the mod damaging the animal. |
-| `OnFinished` | Called once when it's done: `true` right after a hit, `false` when it's removed without one. |
+| `OnHit` | Called with a `ProjectileHit` for each projectile that hits something, instead of the mod damaging the animal. |
+| `OnFinished` | Called once for the whole shot, when the last projectile has hit something or been removed: `true` if any of them hit. |
 
 `ProjectileHit` has the `Collider` hit, the `Point` and `Normal`, the `Direction` and `Speed` it was flying at, the `Distance` from where it was fired, and `DamageAtDistance`: `Damage` after the mod's falloff, for using it with your own damage.
 
-Without `OnHit`, the mod damages the animal hit the way it does for its own bullets, with body-part scaling, bleeding and critical hits for `WeaponSource`. Only the game's own rifle and revolver count towards their skills and statistics. Either way, the projectile stops where it hits and its trail fades out. It doesn't push loose gear for other mods' guns, since it doesn't know how hard they should; do it in `OnHit` if you want it.
+Projectiles fired through the API never count as shots, hits or skill, however many there are. Without `OnHit`, each one damages the animal it hits the way the mod's own bullets do, with body-part scaling, bleeding and critical hits for `WeaponSource`. Either way, each projectile stops where it hits and its trail fades out. It doesn't push loose gear for other mods' guns, since it doesn't know how hard they should; do it in `OnHit` if you want it.
 
 Call everything from the game's main thread. Exceptions your callbacks throw are logged, and don't stop the projectile.
 
@@ -61,35 +63,28 @@ internal static class AdaptiveArsenalPellets
 {
     internal static bool TryFire(vp_Bullet bullet, int pellets, float spread, float muzzleVelocity, float drag)
     {
-        if (AdaptiveArsenal.Api.Projectiles.ApiVersion != 1 || !AdaptiveArsenal.Api.Projectiles.Enabled)
+        if (AdaptiveArsenal.Api.Projectiles.ApiVersion != 1)
             return false;
 
-        var shot = new PelletShot(pellets);
-        for (var i = 0; i < pellets; i++)
+        // One call fires every pellet.
+        var shot = new PelletShot();
+        return AdaptiveArsenal.Api.Projectiles.Fire(new AdaptiveArsenal.Api.ProjectileShot
         {
-            var roll = Random.Range(0f, 360f);
-            var yaw = Random.Range(-spread, spread);
-            var rotation = bullet.transform.rotation * Quaternion.Euler(0f, 0f, roll) * Quaternion.Euler(0f, yaw, 0f);
-
-            AdaptiveArsenal.Api.Projectiles.Fire(new AdaptiveArsenal.Api.ProjectileShot
-            {
-                Position = bullet.transform.position,
-                Rotation = rotation,
-                MuzzleVelocity = muzzleVelocity,
-                Drag = drag,
-                Damage = bullet.Damage,
-                PlayImpactEffects = false,
-                OnHit = shot.AddHit,
-                OnFinished = shot.PelletFinished
-            });
-        }
-
-        return true;
+            Position = bullet.transform.position,
+            Rotation = bullet.transform.rotation,
+            Count = pellets,
+            Spread = spread,
+            MuzzleVelocity = muzzleVelocity,
+            Drag = drag,
+            Damage = bullet.Damage,
+            OnHit = shot.AddHit,
+            OnFinished = shot.Apply
+        });
     }
 }
 ```
 
-Here `PelletShot` is your own class: `AddHit` adds up each pellet's damage on the animal it hit, and `PelletFinished` applies it all once the last pellet is done, so thresholds like "this many pellets for a bleed" work across a whole shot.
+Here `PelletShot` is your own class: `AddHit` adds up each pellet's damage on the animal it hit, and `Apply` applies it all once, when the last pellet is done, so thresholds like "this many pellets for a bleed" work across a whole shot.
 
 A good place to call it is the prefix where your mod already handles the game's `vp_Bullet` for its gun. Return `false` from the prefix and destroy the game's bullet when `TryFire` succeeds, and carry on with your own hitscan when it doesn't.
 
