@@ -56,6 +56,7 @@ Have an idea? Use the [feature request form](https://github.com/Deaadman/adaptiv
 
 - [How it works](docs/features.md): accuracy, muzzle velocities and damage, in numbers
 - [Building from source](docs/development.md)
+- [API for other mods](docs/api.md): firing Adaptive Arsenal's bullets from your own guns
 - [Changelog](CHANGELOG.md)
 
 ## License

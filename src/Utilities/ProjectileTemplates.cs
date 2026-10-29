@@ -5,13 +5,14 @@ using UnityEngine.AddressableAssets;
 namespace AdaptiveArsenal.Utilities;
 
 /// <summary>
-/// Builds the bullet that <see cref="ProjectileItem.SpawnAndFire"/> copies for each shot: the mesh and materials of a
-/// single round of ammo, with a rigidbody, a collider and a <see cref="ProjectileItem"/>, and nothing else.
+/// Builds the bullet that <see cref="O:AdaptiveArsenal.Components.ProjectileItem.SpawnAndFire"/> copies for each
+/// shot: the mesh and materials of a single round of ammo, with a rigidbody, a collider and a
+/// <see cref="ProjectileItem"/>, and nothing else.
 /// </summary>
 /// <remarks>
 /// Copying the ammo's gear item instead would bring its <see cref="GearItem"/>, which registers with
-/// <see cref="GearManager"/> and is written into the save while the bullet is in flight. Each template is built once,
-/// kept across scenes, and left inactive so it never runs; only its copies do.
+/// <see cref="GearManager"/> and is written into the save while the bullet is in flight. Each template is built once
+/// for each kind of ammo, kept across scenes, and left inactive so it never runs; only its copies do.
 /// </remarks>
 internal static class ProjectileTemplates
 {
@@ -24,8 +25,8 @@ internal static class ProjectileTemplates
     /// <summary>The radius of the bullet's collider, in metres.</summary>
     private const float ColliderRadius = 0.01f;
 
-    /// <summary>The templates built so far, by the gun they're for.</summary>
-    private static readonly Dictionary<GunType, GameObject> s_Templates = [];
+    /// <summary>The templates built so far, by the gear name of the ammo they look like, or empty for an invisible one.</summary>
+    private static readonly Dictionary<string, GameObject> s_Templates = [];
 
     /// <summary>How hard each gun's shots push loose gear, from the game's own bullet for it.</summary>
     private static readonly Dictionary<GunType, GearImpactForce> s_GearImpactForces = [];
@@ -55,22 +56,6 @@ internal static class ProjectileTemplates
     /// <returns>The inactive template, or <see langword="null"/> if the gun has no ammo or it couldn't be loaded.</returns>
     internal static GameObject? Get(GunType gunType)
     {
-        // Unity objects need == null, not ?., to tell when they've been destroyed.
-        if (s_Templates.TryGetValue(gunType, out var template) && template != null)
-            return template;
-
-        template = Build(gunType);
-        if (template != null)
-            s_Templates[gunType] = template;
-
-        return template;
-    }
-
-    /// <summary>Builds the bullet template for a gun from its single round of ammo.</summary>
-    /// <param name="gunType">The gun the bullet is for.</param>
-    /// <returns>The inactive template, or <see langword="null"/> if the gun has no ammo or it couldn't be loaded.</returns>
-    private static GameObject? Build(GunType gunType)
-    {
         var ammoGearName = gunType switch
         {
             GunType.Rifle => "GEAR_RifleAmmoSingle",
@@ -78,22 +63,52 @@ internal static class ProjectileTemplates
             _ => null
         };
 
-        if (ammoGearName == null)
-            return null;
+        return ammoGearName == null ? null : GetForAmmo(ammoGearName);
+    }
 
-        // Reading the prefab doesn't run anything on it, so its GearItem never registers.
-        var ammoPrefab = Addressables.LoadAssetAsync<GameObject>(ammoGearName).WaitForCompletion();
-        if (ammoPrefab == null)
+    /// <summary>Gets the bullet template that looks like a single round of some ammo, building it the first time.</summary>
+    /// <param name="ammoGearName">
+    /// The ammo's gear name, like <c>GEAR_RifleAmmoSingle</c>, or <see langword="null"/> or empty for an invisible bullet.
+    /// </param>
+    /// <returns>The inactive template, or <see langword="null"/> if the ammo couldn't be loaded.</returns>
+    internal static GameObject? GetForAmmo(string? ammoGearName)
+    {
+        var key = ammoGearName ?? string.Empty;
+
+        // Unity objects need == null, not ?., to tell when they've been destroyed.
+        if (s_Templates.TryGetValue(key, out var template) && template != null)
+            return template;
+
+        template = Build(key);
+        if (template != null)
+            s_Templates[key] = template;
+
+        return template;
+    }
+
+    /// <summary>Builds the bullet template that looks like a single round of some ammo.</summary>
+    /// <param name="ammoGearName">The ammo's gear name, or empty for an invisible bullet.</param>
+    /// <returns>The inactive template, or <see langword="null"/> if the ammo couldn't be loaded.</returns>
+    private static GameObject? Build(string ammoGearName)
+    {
+        GameObject? ammoPrefab = null;
+        if (ammoGearName.Length > 0)
         {
-            Mod.Logger.Log($"Couldn't load {ammoGearName}, so {gunType} bullets can't be made.", FlaggedLoggingLevel.Warning);
-            return null;
+            // Reading the prefab doesn't run anything on it, so its GearItem never registers.
+            ammoPrefab = Addressables.LoadAssetAsync<GameObject>(ammoGearName).WaitForCompletion();
+            if (ammoPrefab == null)
+            {
+                Mod.Logger.Log($"Couldn't load {ammoGearName}, so bullets that look like it can't be made.", FlaggedLoggingLevel.Warning);
+                return null;
+            }
         }
 
-        GameObject template = new($"AdaptiveArsenal_{gunType}Bullet") { layer = GearLayer };
+        GameObject template = new($"AdaptiveArsenal_Bullet_{ammoGearName}") { layer = GearLayer };
         template.SetActive(false);
         UnityEngine.Object.DontDestroyOnLoad(template);
 
-        CopyMesh(ammoPrefab, template);
+        if (ammoPrefab != null)
+            CopyMesh(ammoPrefab, template);
 
         template.AddComponent<Rigidbody>();
         template.AddComponent<SphereCollider>().radius = ColliderRadius;

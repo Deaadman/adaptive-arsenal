@@ -29,6 +29,7 @@ See docs/development.md, "Releasing". CI checks this file's format.
 - Rifles you carry freeze in the cold and thaw in the warm, and the more frozen a rifle is, the more likely it is to jam. The inventory shows how frozen each rifle is.
 - A Left-handed setting mirrors your first-person view, so you hold your weapons and tools in your left hand.
 - A Zoom when aiming rifle setting can be turned off to keep your field of view when you aim a rifle.
+- Other mods can fire Adaptive Arsenal's bullets from guns of their own, so their shots fly and drop like the rifle's and revolver's. See [API for other mods](https://github.com/Deaadman/adaptive-arsenal/blob/develop/docs/api.md).
 - **Breaking:** The HUD no longer shows how many rounds are loaded in your rifle or revolver, or how many more you're carrying, so you have to keep count. Turn on **Show ammo count** in the mod's settings to bring it back.
 
 ### Changed

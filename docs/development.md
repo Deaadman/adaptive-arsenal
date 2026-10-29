@@ -20,6 +20,7 @@ dotnet build
 
 - `src/Core`: the numbers behind each shot (accuracy, spread, muzzle velocity, damage) and the trail and animation curves. It's plain C#, with nothing from Unity, the game or MelonLoader, so it can be [tested](#testing) without the game.
 - `src/Components/ProjectileItem.cs`: the bullet: its flight, trail and hits, using `src/Core` for the numbers.
+- `src/Api`: the public API other mods fire projectiles through, described in [API for other mods](api.md). Everything else is `internal`. Change it with care, and raise `Projectiles.ApiVersion` for any change that could break a mod using it.
 - `src/Patches`: the [Harmony](https://harmony.pardeike.net) patches on the game: firing bullets instead of instant hits, revolver movement, and the HUD.
 - `src/Animators`: the round animation on the HUD.
 - `src/Utilities`: helpers for the game's objects: building the bullet each gun fires, where a shot starts, and borrowing materials.
