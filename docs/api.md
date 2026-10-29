@@ -59,24 +59,57 @@ internal static class AdaptiveArsenalSupport
     internal static bool IsLoaded { get; } =
         MelonBase.RegisteredMelons.Any(melon => melon.Info.Name == "Adaptive Arsenal");
 }
+```
 
+A good place to fire is the prefix where your mod already handles the game's `vp_Bullet` for its gun. When firing succeeds, destroy the game's bullet and return `false` from the prefix. When it doesn't, carry on with your own shot.
+
+### One bullet, like a rifle
+
+Leave `OnShotFinished` empty and the mod deals the damage itself, as it does for its own rifle: it falls with distance, and body parts scale it, bleed and roll critical hits for `WeaponSource`.
+
+```csharp
 // Only called when AdaptiveArsenalSupport.IsLoaded is true.
-internal static class AdaptiveArsenalPellets
+internal static class AdaptiveArsenalRifle
 {
-    internal static bool TryFire(vp_Bullet bullet, int pellets, float spread, float muzzleVelocity, float drag)
+    internal static bool TryFire(vp_Bullet bullet)
     {
         if (AdaptiveArsenal.Api.Projectiles.ApiVersion != 1)
             return false;
 
-        // One call fires every pellet.
+        return AdaptiveArsenal.Api.Projectiles.Fire(new AdaptiveArsenal.Api.ProjectileShot
+        {
+            Position = bullet.transform.position,
+            Rotation = bullet.transform.rotation,
+            MuzzleVelocity = 450f,
+            Damage = bullet.Damage,
+            WeaponSource = WeaponSource.Rifle,
+            AmmoGearName = "GEAR_RifleAmmoSingle"
+        });
+    }
+}
+```
+
+### Several, like a shotgun
+
+Set `Count` and `Spread`, and one call fires every pellet. Set `OnShotFinished` to do the damage yourself: it gets every pellet's hit at once, so it can add up the damage on each animal, work out how many of the pellets hit it, and apply the damage, bleeding and critical hits once for the whole shot.
+
+```csharp
+// Only called when AdaptiveArsenalSupport.IsLoaded is true.
+internal static class AdaptiveArsenalShotgun
+{
+    internal static bool TryFire(vp_Bullet bullet, int pellets, float spread)
+    {
+        if (AdaptiveArsenal.Api.Projectiles.ApiVersion != 1)
+            return false;
+
         return AdaptiveArsenal.Api.Projectiles.Fire(new AdaptiveArsenal.Api.ProjectileShot
         {
             Position = bullet.transform.position,
             Rotation = bullet.transform.rotation,
             Count = pellets,
             Spread = spread,
-            MuzzleVelocity = muzzleVelocity,
-            Drag = drag,
+            MuzzleVelocity = 380f,
+            Drag = 0.6f,
             Damage = bullet.Damage,
             ResultDelay = 0.25f,
             OnShotFinished = ApplyShot
@@ -97,10 +130,6 @@ internal static class AdaptiveArsenalPellets
     }
 }
 ```
-
-`ApplyShot` gets every pellet's hit at once, so it can add up the damage on each animal, work out how many of the pellets hit it, and apply the damage, bleeding and critical hits once for the whole shot.
-
-A good place to call it is the prefix where your mod already handles the game's `vp_Bullet` for its gun. Return `false` from the prefix and destroy the game's bullet when `TryFire` succeeds, and carry on with your own hitscan when it doesn't.
 
 ## Changes
 
