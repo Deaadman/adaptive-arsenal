@@ -2,21 +2,6 @@
   "version": 1,
   "dependencies": {
     "net6.0": {
-      "ds5678.Modding.TLD.Il2CppAssemblies.Windows": {
-        "type": "Direct",
-        "requested": "[2.6.0, )",
-        "resolved": "2.6.0",
-        "contentHash": "ZThxOETfKE5Nlewxfgz1BaHIMoZ5TyEEwHFylzGVZYsvCioKL5y56zQ5m+4zfJ7skwTpE7u8Zhh1DPES8LpwyA==",
-        "dependencies": {
-          "AsmResolver.DotNet": "5.0.0",
-          "AssetRipper.VersionUtilities": "1.2.1",
-          "AssetsTools.NET": "3.0.0-preview1",
-          "HarmonyX": "2.10.1",
-          "Il2CppInterop.Common": "1.4.3",
-          "Il2CppInterop.Runtime": "1.4.3",
-          "LavaGang.MelonLoader": "0.6.0"
-        }
-      },
       "MonsieurMeh.Modding.TLD.Il2CppAssemblies.Windows": {
         "type": "Direct",
         "requested": "[2.58.0, )",
@@ -30,15 +15,6 @@
           "Il2CppInterop.Runtime": "1.5.1",
           "LavaGang.MelonLoader": "0.7.2",
           "Newtonsoft.Json": "13.0.4"
-        }
-      },
-      "stblade.Modding.TLD.ModData": {
-        "type": "Direct",
-        "requested": "[1.5.1, )",
-        "resolved": "1.5.1",
-        "contentHash": "YbgcnbHpUB3/hcRrczFs6WMGw2/goG8NS6wD5fl91ruC8anAdR0CADnXG3qVsR41hM92A79iycUcvoLzfkXt5g==",
-        "dependencies": {
-          "ds5678.Modding.TLD.Il2CppAssemblies.Windows": "2.6.0"
         }
       },
       "AsmResolver": {
@@ -74,11 +50,6 @@
         "type": "Transitive",
         "resolved": "3.2.0",
         "contentHash": "UtDpl72yG5/KUj3BsNP7k2sF13nqqeaJ4sTANZZd/gb+t9YULYYzcyNfxuvdptenlsQIUBmMwTVHUn6TZ61Jqg=="
-      },
-      "AssetRipper.VersionUtilities": {
-        "type": "Transitive",
-        "resolved": "1.2.1",
-        "contentHash": "knQ/W1YwTZS2AbdaZh+nhyyBEZQPQDcahhSOnh88i+cdg4/FEoFJiCwaavgFvCMNuUeHTbcZc4qttF8WQ8xLIA=="
       },
       "AssetsTools.NET": {
         "type": "Transitive",
