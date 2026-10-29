@@ -1,7 +1,5 @@
 # API for other mods
 
-> **Draft.** This API is new and hasn't been tried by another mod yet, so it may still change before a release. `Projectiles.ApiVersion` goes up with any change that could break a mod using it.
-
 Adaptive Arsenal replaces rifle and revolver shots with bullets that fly, drop and slow down. Other mods can fire the same kind of projectile for guns of their own through `AdaptiveArsenal.Api`, and decide what happens when it hits.
 
 ## What's in it
@@ -9,7 +7,7 @@ Adaptive Arsenal replaces rifle and revolver shots with bullets that fly, drop a
 - `Projectiles.Fire(ProjectileShot)` fires a shot: one projectile, or all of a shell's pellets at once. Call it once per shot. It returns `false`, firing nothing, when the player has turned real bullets off or the projectiles couldn't be made, so your mod can fire its own shot instead.
 - `Projectiles.Enabled` says whether real bullets are on.
 - `Projectiles.TryGetAim(vp_FPSShooter, out position, out rotation)` finds where a gun's shots start and where it's aimed, from its sights, the way Adaptive Arsenal does for rifles and revolvers. The first-person weapon is drawn by its own camera, so its sights aren't where they appear to be in the world.
-- `Projectiles.ApiVersion` is the version of the API.
+- `Projectiles.ApiVersion` is the version of the API. It goes up with any change that could break a mod using it.
 
 `ProjectileShot` describes the shot:
 
