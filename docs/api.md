@@ -89,6 +89,54 @@ internal static class AdaptiveArsenalRifle
 }
 ```
 
+### One bullet with your own rules, like a lever action
+
+To use your own damage, falloff, bleeding and critical hits instead of the rifle's, set `OnShotFinished` and do the damage yourself. The mod still flies the bullet; it just tells you what it hit. With one bullet, `Hits` has at most one hit in it.
+
+```csharp
+// Only called when AdaptiveArsenalSupport.IsLoaded is true.
+internal static class AdaptiveArsenalLeverAction
+{
+    internal static bool TryFire(vp_Bullet bullet)
+    {
+        if (AdaptiveArsenal.Api.Projectiles.ApiVersion != 1)
+            return false;
+
+        return AdaptiveArsenal.Api.Projectiles.Fire(new AdaptiveArsenal.Api.ProjectileShot
+        {
+            Position = bullet.transform.position,
+            Rotation = bullet.transform.rotation,
+            MuzzleVelocity = 400f,
+            Drag = 0.15f,
+            AmmoGearName = "GEAR_RifleAmmoSingle",
+            OnShotFinished = ApplyHit
+        });
+    }
+
+    private static void ApplyHit(AdaptiveArsenal.Api.ProjectileShotResult result)
+    {
+        if (result.Hits.Count == 0)
+            return;
+
+        var hit = result.Hits[0];
+        var ai = AiUtils.GetBaseAiFromObject(hit.Collider.gameObject);
+        var part = hit.Collider.GetComponent<LocalizedDamage>();
+        if (ai == null || part == null || ai.GetAiMode() == AiMode.Dead)
+            return;
+
+        // Your own rules: damage that falls off from 50 m, bleeding only at close range, and your own crit chance.
+        var damage = Mathf.Max(90f - Mathf.Max(0f, hit.Distance - 50f) * 0.8f, 30f);
+        var bleedMinutes = hit.Distance < 40f ? part.GetBleedOutMinutes(WeaponSource.Rifle) : 0f;
+        if (Utils.RollChance(10f))
+            damage = float.MaxValue;
+
+        ai.SetupDamageForAnim(hit.Point, GameManager.GetPlayerTransform().position, part);
+        ai.ApplyDamage(damage, bleedMinutes, DamageSource.Player, hit.Collider.name);
+        ai.MaybeFleeOrAttackFromProjectileHit(WeaponSource.Rifle);
+    }
+}
+```
+
 ### Several, like a shotgun
 
 Set `Count` and `Spread`, and one call fires every pellet. Set `OnShotFinished` to do the damage yourself: it gets every pellet's hit at once, so it can add up the damage on each animal, work out how many of the pellets hit it, and apply the damage, bleeding and critical hits once for the whole shot.
