@@ -32,6 +32,7 @@ dotnet build
 - `tests/AdaptiveArsenal.Tests`: unit tests for `src/Core`.
 - `docs`: the pages linked from the README, and `docs/nuget.md`, the NuGet package's page on nuget.org.
 - `assets`: the banner and thumbnail. Edit the `.svg` files (their layers open in Inkscape), then export them as the `.webp` files in `assets/images`, at the SVG's own size: 2400×480 for the banner and 2560×1440 for the thumbnail.
+  The README shows `assets/images/banner-animated.webp` instead: the banner with `assets/logo-animated.svg` drawing itself in the strip and the title fading in, played once. `scripts/banner` makes it, with Node and Python: `npm i --no-save playwright` and `pip install pillow` there, then `node render.mjs ../../assets/banner.svg ../../assets/logo-animated.svg <framesDir>` and `python encode.py <framesDir> ../../assets/images/banner-animated.webp`. To play a clip behind the title instead of the still background, add `--video <clip.mp4> --start <seconds> --focus <y%>` to `render.mjs`: the clip plays from `--start`, cropped to the banner around `--focus`, and over the last `--ease` seconds (2.4 by default) slows smoothly to a stop. It plays 3.2 seconds of clip, so pick a stretch that ends on a frame that works as the still banner. With a video the title waits until the clip is settling, 1.4 seconds before the end; `--title-at <seconds>` moves it.
 
 Every type and member has an XML comment. Keep it that way: the build checks them (see [CI](#ci)).
 
