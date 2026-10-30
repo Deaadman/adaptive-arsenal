@@ -44,16 +44,20 @@ fs.mkdirSync(outDir, { recursive: true });
 let banner = fs.readFileSync(bannerPath, 'utf8');
 const logo = fs.readFileSync(logoPath, 'utf8');
 
-// The logo's <style> and drawing group, nested into the stone strip in place of its raster logo.
+// The logo's <style> and drawing group, nested into the visible strip in place of its raster logo.
 const logoStyle = logo.match(/<style>([\s\S]*?)<\/style>/)[1]
   .replace(/@media \(prefers-reduced-motion[\s\S]*$/, '')
   // At 64px wide the original 3-unit stroke is under half a pixel; thicken it so the draw shows.
   .replace('stroke-width:3', 'stroke-width:9');
 const logoBody = logo.slice(logo.indexOf('<g class="all">'), logo.lastIndexOf('</svg>'));
-const nested = `<svg x="2293" y="44" width="64" height="85" viewBox="-6 -6 412.3 550" overflow="visible" color="#1A1A1A">${logoBody}</svg>`;
 
-const stone = banner.indexOf('id="strip-stone"');
-const imgStart = banner.indexOf('<image', stone);
+// The strip that shows is the last strip layer that isn't hidden. Its logo is drawn in its text colour.
+const strips = [...banner.matchAll(/<g id="strip-[^"]*"[^>]*>/g)].filter((m) => !m[0].includes('display:none'));
+const strip = strips[strips.length - 1].index;
+const stripColour = banner.slice(strip).match(/<text[^>]* fill="([^"]+)"/)[1];
+const nested = `<svg x="2293" y="44" width="64" height="85" viewBox="-6 -6 412.3 550" overflow="visible" color="${stripColour}">${logoBody}</svg>`;
+
+const imgStart = banner.indexOf('<image', strip);
 const imgEnd = banner.indexOf('/>', imgStart) + 2;
 banner = banner.slice(0, imgStart) + nested + banner.slice(imgEnd);
 
