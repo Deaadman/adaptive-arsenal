@@ -1,4 +1,5 @@
-"""Encodes the rendered frames into an animated WebP that plays once and stops on its last frame.
+"""Encodes rendered frames into a WebP: animated, playing once and stopping on its last frame, or a
+still image when there's only one frame.
 
 Usage: python encode.py <framesDir> <out.webp> [frameMs] [quality]
 """
@@ -13,15 +14,18 @@ quality = int(sys.argv[4]) if len(sys.argv) > 4 else 85
 
 frames = [Image.open(p).convert("RGB") for p in sorted(glob.glob(f"{frames_dir}/f*.png"))]
 
-frames[0].save(
-    out,
-    save_all=True,
-    append_images=frames[1:],
-    duration=frame_ms,
-    loop=1,  # WebP counts plays: 0 repeats forever, 1 plays once.
-    quality=quality,
-    method=6,
-    allow_mixed=True,
-    minimize_size=True,
-)
+if len(frames) == 1:
+    frames[0].save(out, quality=90, method=6)
+else:
+    frames[0].save(
+        out,
+        save_all=True,
+        append_images=frames[1:],
+        duration=frame_ms,
+        loop=1,  # WebP counts plays: 0 repeats forever, 1 plays once.
+        quality=quality,
+        method=6,
+        allow_mixed=True,
+        minimize_size=True,
+    )
 print(out, len(frames), "frames")
