@@ -22,6 +22,11 @@ To update, replace `AdaptiveArsenal.dll` with the new one. To uninstall, delete 
 
 Each release says which version of The Long Dark it was made for. After a game update, the mod may not work until it's updated too.
 
+### Recommended mods
+
+- [Personality](https://github.com/HAHAYOUDEAD/Personality), to adjust your hands' field of view and play left-handed.
+- [FreeLook](https://github.com/JesseWV/TLD-FreeLook), to look around freely.
+
 ### Doesn't work with
 
 - [Target Practice & Master Hunter](https://github.com/RomainDeschampsFR/TargetPracticeAndMasterHunter). Both change how bullets work, so the mod won't load alongside it.
