@@ -24,6 +24,20 @@ public class ProjectileItem : MonoBehaviour
     /// <summary>The layer of a collider on part of an animal's body, whose parent has the <see cref="BaseAi"/>.</summary>
     private const int AiBodyPartLayer = 27;
 
+    /// <summary>
+    /// The layers the bullet looks for ahead of it each physics step, besides animals: the ground, buildings, props
+    /// and gear the game's own shots hit (<see cref="Utils.m_WeaponProjectileCollisionLayerMask"/>), and the colliders
+    /// on animals' body parts.
+    /// </summary>
+    private static readonly int s_HitLayerMask = Utils.m_WeaponProjectileCollisionLayerMask | 1 << AiBodyPartLayer;
+
+    /// <summary>
+    /// The layer of animals' own objects, which the bullet only looks for when <see cref="s_HitLayerMask"/> finds
+    /// nothing. Their colliders are thought to surround the body parts, so looking for both at once would hit these
+    /// first and miss the body part's damage scaling.
+    /// </summary>
+    private const int AiLayerMask = 1 << AiLayer;
+
     /// <summary>How often, in seconds, the bullet's position is added to the trail.</summary>
     private const float TrailUpdateInterval = 0.05f;
 
@@ -121,23 +135,71 @@ public class ProjectileItem : MonoBehaviour
         if (m_HasHit)
             Linger();
         else if (Time.time - m_FireTime > MaxFlightTime)
+        {
+            Mod.Logger.Log($"{name} flew for {MaxFlightTime} s without hitting anything, so it's removed at {transform.position}.", FlaggedLoggingLevel.Debug);
             Destroy(gameObject);
+        }
         else
             ExtendTrail();
     }
 
+    /// <summary>
+    /// Looks along the path the bullet will travel this physics step and hits the first thing on it, before the
+    /// physics moves it there.
+    /// </summary>
+    /// <remarks>
+    /// The bullet is on the gear layer, which doesn't collide with animals, so <see cref="OnCollisionEnter"/> never
+    /// sees them. The game's arrows find what they hit with a raycast each physics step too.
+    /// </remarks>
+    private void FixedUpdate()
+    {
+        if (m_HasHit || m_Rigidbody is null)
+            return;
+
+        var velocity = m_Rigidbody.velocity;
+        var stepDistance = velocity.magnitude * Time.fixedDeltaTime;
+        if (stepDistance <= 0f)
+            return;
+
+        var origin = m_Rigidbody.position;
+        var direction = velocity.normalized;
+
+        if (Physics.Raycast(origin, direction, out var hit, stepDistance, s_HitLayerMask, QueryTriggerInteraction.Ignore)
+            || Physics.Raycast(origin, direction, out hit, stepDistance, AiLayerMask, QueryTriggerInteraction.Ignore))
+            Hit(hit.collider, hit.point);
+    }
+
+    /// <summary>
+    /// Hits whatever the bullet collides with, for anything <see cref="FixedUpdate"/>'s raycast didn't see first.
+    /// </summary>
+    /// <param name="collision">The collision.</param>
     private void OnCollisionEnter(Collision collision)
     {
         if (m_HasHit)
             return;
 
-        m_HasHit = true;
-        var contact = collision.GetContact(0);
+        Hit(collision.collider, collision.GetContact(0).point);
+    }
 
-        TryInflictDamage(collision.gameObject, collision.gameObject.name);
-        TryPushGear(collision.collider);
-        StopAt(contact.point);
-        SpawnImpactEffects(collision.collider, contact.point);
+    /// <summary>
+    /// Damages the animal or pushes the gear the bullet hit, stops it there and plays the impact effects.
+    /// </summary>
+    /// <param name="surface">The collider the bullet hit.</param>
+    /// <param name="point">Where the bullet hit, in world space.</param>
+    private void Hit(Collider surface, Vector3 point)
+    {
+        m_HasHit = true;
+
+        var hitObject = surface.gameObject;
+        Mod.Logger.Log(
+            $"{name} hit {hitObject.name} (collider {surface.name}, layer {hitObject.layer}) at {point}, " +
+            $"{Vector3.Distance(m_FirePosition, point):F1} m from where it was fired.",
+            FlaggedLoggingLevel.Debug);
+
+        StopAt(point);
+        TryInflictDamage(hitObject, hitObject.name);
+        TryPushGear(surface);
+        SpawnImpactEffects(surface, point);
     }
 
     /// <summary>
@@ -257,13 +319,20 @@ public class ProjectileItem : MonoBehaviour
         };
 
         if (baseAi == null)
+        {
+            // An animal on another layer would be missed here, so say if the object belongs to one.
+            if (victim.transform.GetComponentInParent<BaseAi>() != null)
+                Mod.Logger.Log($"{victim.name} belongs to an animal but is on layer {victim.layer}, so the hit does no damage.", FlaggedLoggingLevel.Debug);
+
             return;
+        }
 
         var weaponSource = m_GunType.ToWeaponSource();
         baseAi.MaybeFleeOrAttackFromProjectileHit(weaponSource);
 
         var distance = Vector3.Distance(m_FirePosition, transform.position);
         var damage = Ballistics.DamageAtDistance(distance, m_MuzzleDamage);
+        var healthBefore = baseAi.m_CurrentHP;
 
         if (baseAi.GetAiMode() != AiMode.Dead)
         {
@@ -278,6 +347,7 @@ public class ProjectileItem : MonoBehaviour
         {
             Mod.Logger.Log($"{colliderName} has no LocalizedDamage, so the hit does unscaled damage.", FlaggedLoggingLevel.Debug);
             baseAi.ApplyDamage(damage, DamageSource.Player, colliderName);
+            LogDamage(baseAi, colliderName, damage, healthBefore);
             return;
         }
 
@@ -290,7 +360,20 @@ public class ProjectileItem : MonoBehaviour
 
         baseAi.SetupDamageForAnim(transform.position, GameManager.GetPlayerTransform().position, localizedDamage);
         baseAi.ApplyDamage(damage, bleedOutMinutes, DamageSource.Player, colliderName);
+        LogDamage(baseAi, colliderName, damage, healthBefore);
     }
+
+    /// <summary>Logs the damage a hit did to an animal, and its health before and after.</summary>
+    /// <param name="baseAi">The animal hit.</param>
+    /// <param name="colliderName">The name of the collider that was hit.</param>
+    /// <param name="damage">The damage passed to the game.</param>
+    /// <param name="healthBefore">The animal's health before the hit.</param>
+    private void LogDamage(BaseAi baseAi, string colliderName, float damage, float healthBefore) =>
+        Mod.Logger.Log(
+            $"{name} did {damage:F1} damage to {baseAi.gameObject.name} at {colliderName} " +
+            $"({Vector3.Distance(m_FirePosition, transform.position):F1} m, {m_MuzzleDamage:F1} at the muzzle): " +
+            $"health {healthBefore:F1} -> {baseAi.m_CurrentHP:F1} of {baseAi.m_MaxHP:F1}, now {baseAi.GetAiMode()}.",
+            FlaggedLoggingLevel.Debug);
 
     /// <summary>
     /// Pushes the loose gear the bullet hit, if it hit some, as hard as the game's own bullet for the gun would: along
