@@ -13,21 +13,22 @@ namespace AdaptiveArsenal.Patches;
 internal static class vp_FPSShooterPatches
 {
     /// <summary>
-    /// Each rifle and revolver shooter's bullets, by its Il2Cpp pointer: the game's own and the mod's, to switch
-    /// between when <see cref="Settings.m_ProjectilesEnabled"/> changes.
+    /// Each rifle and revolver shooter's bullets, by its Il2Cpp pointer: the game's own and the mod's, which
+    /// <see cref="FireProjectile"/> swaps in for each shot.
     /// </summary>
     private static readonly Dictionary<IntPtr, ShooterBullets> s_ShooterBullets = [];
 
     /// <summary>
-    /// Gives each rifle and revolver shooter its bullet template from <see cref="ProjectileTemplates"/>, remembering the
-    /// game's own bullet so <see cref="FireProjectile"/> can switch back to it.
+    /// Finds each rifle and revolver shooter's bullet template from <see cref="ProjectileTemplates"/>, and remembers it
+    /// with the game's own bullet for <see cref="FireProjectile"/>.
     /// </summary>
     /// <remarks>
     /// The shooter's object name says which weapon it's for. Other weapons, like the flare gun and bow, are left as
-    /// they are.
+    /// they are. The shooter keeps the game's bullet: other mods copy it from the game's rifle shooter for guns of
+    /// their own, like Shotgun's double barrel, and those must get the game's bullet, not the mod's.
     /// </remarks>
     [HarmonyPatch(typeof(vp_FPSShooter), nameof(vp_FPSShooter.Awake))]
-    private static class UseProjectilePrefab
+    private static class RememberProjectilePrefab
     {
         private static void Prefix(vp_FPSShooter __instance)
         {
@@ -52,9 +53,7 @@ internal static class vp_FPSShooterPatches
                 return;
             }
 
-            ShooterBullets bullets = new(__instance.ProjectilePrefab, __instance.ProjectileCustomPrefab, template);
-            s_ShooterBullets[__instance.Pointer] = bullets;
-            bullets.Use(__instance, Settings.Instance.m_ProjectilesEnabled);
+            s_ShooterBullets[__instance.Pointer] = new(__instance.ProjectilePrefab, __instance.ProjectileCustomPrefab, template);
         }
     }
 
@@ -65,21 +64,22 @@ internal static class vp_FPSShooterPatches
     /// <remarks>
     /// It only fires when the game is about to: not between shots, while reloading, when the gun is empty or jammed,
     /// or when the player isn't allowed to fire. Hip-fire shots go along the camera's view rather than the sights. The
-    /// game's own <see cref="vp_FPSShooter.Fire"/> still runs afterwards. With
-    /// <see cref="Settings.m_ProjectilesEnabled"/> off, it puts the game's own bullet back and fires nothing itself.
+    /// game's own <see cref="vp_FPSShooter.Fire"/> still runs afterwards, with the mod's bullet swapped into the
+    /// shooter so it fires none of its own, and the game's bullet is put back once it's done. With
+    /// <see cref="Settings.m_ProjectilesEnabled"/> off, the shooter keeps the game's bullet and this fires nothing.
     /// </remarks>
     [HarmonyPatch(typeof(vp_FPSShooter), nameof(vp_FPSShooter.Fire))]
     private static class FireProjectile
     {
-        private static void Prefix(vp_FPSShooter __instance)
+        // __state is the shooter's bullets to put back, or null when the mod's weren't swapped in.
+        private static void Prefix(vp_FPSShooter __instance, out ShooterBullets? __state)
         {
-            if (!s_ShooterBullets.TryGetValue(__instance.Pointer, out var bullets))
+            __state = null;
+            if (!Settings.Instance.m_ProjectilesEnabled || !s_ShooterBullets.TryGetValue(__instance.Pointer, out var bullets))
                 return;
 
-            var projectilesEnabled = Settings.Instance.m_ProjectilesEnabled;
-            bullets.Use(__instance, projectilesEnabled);
-            if (!projectilesEnabled)
-                return;
+            bullets.Use(__instance, true);
+            __state = bullets;
 
             var weapon = __instance.m_Weapon;
             var playerAnimation = GameManager.GetPlayerAnimationComponent();
@@ -118,6 +118,9 @@ internal static class vp_FPSShooterPatches
             var direction = isHipFire ? Quaternion.LookRotation(GameManager.GetVpFPSCamera().transform.forward) : aimRotation;
             ProjectileItem.SpawnAndFire(__instance.ProjectilePrefab, weapon.m_GunItem, position, direction * spread);
         }
+
+        private static void Finalizer(vp_FPSShooter __instance, ShooterBullets? __state) =>
+            __state?.Use(__instance, false);
     }
 
     /// <summary>

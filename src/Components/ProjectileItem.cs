@@ -1,4 +1,5 @@
-﻿using AdaptiveArsenal.Core;
+﻿using AdaptiveArsenal.Api;
+using AdaptiveArsenal.Core;
 using AdaptiveArsenal.Utilities;
 
 using Il2CppTLD.Stats;
@@ -6,14 +7,14 @@ using Il2CppTLD.Stats;
 namespace AdaptiveArsenal.Components;
 
 /// <summary>
-/// A bullet fired from a rifle or revolver. It flies through the world as a physics object, instead of hitting
-/// instantly like the game's own shots, and draws a trail behind it.
+/// A bullet fired from a rifle or revolver, or by another mod through <see cref="Projectiles.Fire"/>. It flies through
+/// the world as a physics object, instead of hitting instantly like the game's own shots, and draws a trail behind it.
 /// </summary>
 /// <remarks>
-/// <see cref="ProjectileTemplates"/> builds an inactive template with this component for each gun, and
-/// <see cref="Patches.vp_FPSShooterPatches"/> fires a copy of it with <see cref="SpawnAndFire"/> for each shot. When it
-/// hits something, it stops and hides, and lingers for <see cref="ImpactLingerDuration"/> while its trail fades and
-/// its impact sound plays.
+/// <see cref="ProjectileTemplates"/> builds an inactive template with this component for each kind of ammo, and
+/// <see cref="Patches.vp_FPSShooterPatches"/> fires a copy of it with
+/// <see cref="SpawnAndFire(GameObject, GunItem, Vector3, Quaternion)"/> for each shot. When it hits something, it stops
+/// and hides, and lingers for <see cref="ImpactLingerDuration"/> while its trail fades and its impact sound plays.
 /// </remarks>
 [RegisterTypeInIl2Cpp(false)]
 public class ProjectileItem : MonoBehaviour
@@ -53,16 +54,44 @@ public class ProjectileItem : MonoBehaviour
     /// </summary>
     private const float MaxFlightTime = 10f;
 
+    /// <summary>The rigidbody drag of the mod's own bullets.</summary>
+    private const float DefaultDrag = 0.1f;
+
     /// <summary>How many trail points to make room for up front.</summary>
     private const int InitialTrailCapacity = 100;
 
     /// <summary>The arrow's trail material, which every bullet's trail uses, looked up the first time it's needed.</summary>
     private static Material? s_TrailMaterial;
 
-    private GunType m_GunType;
+    /// <summary>The rifle or revolver that fired the bullet, or <see langword="null"/> for one another mod fired.</summary>
+    private GunType? m_GunType;
 
-    /// <summary>The damage the gun that fired the bullet does at the muzzle: its <see cref="GunItem.m_DamageHP"/>.</summary>
+    /// <summary>
+    /// The damage the bullet does at the muzzle: the gun's <see cref="GunItem.m_DamageHP"/>, or
+    /// <see cref="ProjectileShot.Damage"/>.
+    /// </summary>
     private float m_MuzzleDamage;
+
+    /// <summary>The weapon animals take the hit from.</summary>
+    private WeaponSource m_WeaponSource;
+
+    /// <summary>
+    /// The shot the bullet is part of, for one another mod fired with <see cref="ProjectileShot.OnShotFinished"/>: it
+    /// collects what the bullet hits instead of the bullet damaging it. <see langword="null"/> otherwise.
+    /// </summary>
+    private ProjectileGroup<ProjectileHit>? m_Group;
+
+    /// <summary>Whether the bullet plays the game's impact effects where it hits.</summary>
+    private bool m_PlayImpactEffects = true;
+
+    /// <summary>Whether the bullet has told its <see cref="m_Group"/> it hit or missed, so it only does once.</summary>
+    private bool m_Finished;
+
+    /// <summary>
+    /// The bullet's velocity at the last physics step, so a hit knows which way it was going before the collision
+    /// changed it.
+    /// </summary>
+    private Vector3 m_Velocity;
 
     private Rigidbody? m_Rigidbody;
 
@@ -106,19 +135,35 @@ public class ProjectileItem : MonoBehaviour
         return baseAccuracy * Ballistics.AccuracyMultiplier(isHipFire, isStanding, isMoving);
     }
 
-    /// <summary>Makes a copy of a bullet template and fires it.</summary>
+    /// <summary>Makes a copy of a bullet template and fires it from a rifle or revolver.</summary>
     /// <param name="template">An inactive template from <see cref="ProjectileTemplates"/>.</param>
     /// <param name="gunItem">The gun firing it. Il2Cpp doesn't copy this component's fields, so it's passed here.</param>
     /// <param name="position">Where to fire it from, in world space.</param>
     /// <param name="rotation">The direction to fire it in, in world space.</param>
-    internal static void SpawnAndFire(GameObject template, GunItem gunItem, Vector3 position, Quaternion rotation)
+    internal static void SpawnAndFire(GameObject template, GunItem gunItem, Vector3 position, Quaternion rotation) =>
+        Spawn(template, position, rotation).Fire(gunItem);
+
+    /// <summary>Makes a copy of a bullet template and fires it as another mod asked, through <see cref="Projectiles.Fire"/>.</summary>
+    /// <param name="template">An inactive template from <see cref="ProjectileTemplates"/>.</param>
+    /// <param name="shot">The shot to fire.</param>
+    /// <param name="rotation">The direction to fire it in, in world space: the shot's, with this projectile's spread.</param>
+    /// <param name="group">The shot it's part of, to tell what it hits, or <see langword="null"/> to damage it itself.</param>
+    internal static void SpawnAndFire(GameObject template, ProjectileShot shot, Quaternion rotation,
+        ProjectileGroup<ProjectileHit>? group) =>
+        Spawn(template, shot.Position, rotation).Fire(shot, group);
+
+    /// <summary>Makes an active copy of a bullet template, ready to fire.</summary>
+    /// <param name="template">An inactive template from <see cref="ProjectileTemplates"/>.</param>
+    /// <param name="position">Where to put it, in world space.</param>
+    /// <param name="rotation">The direction to face it, in world space.</param>
+    private static ProjectileItem Spawn(GameObject template, Vector3 position, Quaternion rotation)
     {
         var bullet = Instantiate(template, position, rotation);
         bullet.name = template.name;
 
         // The template is inactive, so the copy only wakes up here.
         bullet.SetActive(true);
-        bullet.GetComponent<ProjectileItem>().Fire(gunItem);
+        return bullet.GetComponent<ProjectileItem>();
     }
 
     private void Awake()
@@ -132,20 +177,28 @@ public class ProjectileItem : MonoBehaviour
 
     private void Update()
     {
+        // Lets the shot report at its time limit, even if this bullet is still flying.
+        m_Group?.Update(Time.time);
+
         if (m_HasHit)
+        {
             Linger();
+        }
         else if (Time.time - m_FireTime > MaxFlightTime)
         {
             Mod.Logger.Log($"{name} flew for {MaxFlightTime} s without hitting anything, so it's removed at {transform.position}.", FlaggedLoggingLevel.Debug);
+            Miss();
             Destroy(gameObject);
         }
         else
+        {
             ExtendTrail();
+        }
     }
 
     /// <summary>
-    /// Looks along the path the bullet will travel this physics step and hits the first thing on it, before the
-    /// physics moves it there.
+    /// Remembers the bullet's velocity, then looks along the path it will travel this physics step and hits the first
+    /// thing on it, before the physics moves it there.
     /// </summary>
     /// <remarks>
     /// The bullet is on the gear layer, which doesn't collide with animals, so <see cref="OnCollisionEnter"/> never
@@ -156,17 +209,17 @@ public class ProjectileItem : MonoBehaviour
         if (m_HasHit || m_Rigidbody is null)
             return;
 
-        var velocity = m_Rigidbody.velocity;
-        var stepDistance = velocity.magnitude * Time.fixedDeltaTime;
+        m_Velocity = m_Rigidbody.velocity;
+        var stepDistance = m_Velocity.magnitude * Time.fixedDeltaTime;
         if (stepDistance <= 0f)
             return;
 
         var origin = m_Rigidbody.position;
-        var direction = velocity.normalized;
+        var direction = m_Velocity.normalized;
 
         if (Physics.Raycast(origin, direction, out var hit, stepDistance, s_HitLayerMask, QueryTriggerInteraction.Ignore)
             || Physics.Raycast(origin, direction, out hit, stepDistance, AiLayerMask, QueryTriggerInteraction.Ignore))
-            Hit(hit.collider, hit.point);
+            Hit(hit.collider, hit.point, hit.normal);
     }
 
     /// <summary>
@@ -178,15 +231,22 @@ public class ProjectileItem : MonoBehaviour
         if (m_HasHit)
             return;
 
-        Hit(collision.collider, collision.GetContact(0).point);
+        var contact = collision.GetContact(0);
+        Hit(collision.collider, contact.point, contact.normal);
     }
 
     /// <summary>
-    /// Damages the animal or pushes the gear the bullet hit, stops it there and plays the impact effects.
+    /// Stops the bullet where it hit, then damages the animal it hit, or tells its <see cref="m_Group"/> what it hit
+    /// instead, pushes the gear it hit and plays the impact effects.
     /// </summary>
+    /// <remarks>
+    /// It stops first because a raycast finds the hit before the bullet gets there, and the damage is worked out from
+    /// where the bullet is.
+    /// </remarks>
     /// <param name="surface">The collider the bullet hit.</param>
     /// <param name="point">Where the bullet hit, in world space.</param>
-    private void Hit(Collider surface, Vector3 point)
+    /// <param name="normal">The surface's normal where the bullet hit.</param>
+    private void Hit(Collider surface, Vector3 point, Vector3 normal)
     {
         m_HasHit = true;
 
@@ -197,10 +257,20 @@ public class ProjectileItem : MonoBehaviour
             FlaggedLoggingLevel.Debug);
 
         StopAt(point);
-        TryInflictDamage(hitObject, hitObject.name);
+
+        if (m_Group is null)
+            TryInflictDamage(hitObject, hitObject.name);
+        else
+            ReportHit(surface, point, normal);
+
         TryPushGear(surface);
-        SpawnImpactEffects(surface, point);
+
+        if (m_PlayImpactEffects)
+            SpawnImpactEffects(surface, point);
     }
+
+    // A bullet still in the air when its scene unloads is destroyed without hitting anything.
+    private void OnDestroy() => Miss();
 
     /// <summary>
     /// Sets up the rigidbody for fast movement and, if <see cref="Settings.m_TrailsEnabled"/> is on, creates the trail
@@ -243,18 +313,46 @@ public class ProjectileItem : MonoBehaviour
     }
 
     /// <summary>
-    /// Counts the shot in the player's statistics, releases the bullet and launches it at the muzzle velocity of the
-    /// weapon in the player's hands, then starts its trail.
+    /// Counts the shot in the player's statistics, then launches the bullet at the muzzle velocity of the weapon in
+    /// the player's hands.
     /// </summary>
     /// <param name="gunItem">The gun firing it.</param>
     private void Fire(GunItem gunItem)
     {
         m_GunType = gunItem.m_GunType;
         m_MuzzleDamage = gunItem.m_DamageHP;
-        m_FireTime = Time.time;
-        enabled = true;
+        m_WeaponSource = gunItem.m_GunType.ToWeaponSource();
 
         StatsManager.IncrementValue(m_GunType == GunType.Rifle ? StatID.RifleShot : StatID.RevolverShot);
+
+        var weaponName = GameManager.GetPlayerManagerComponent().m_ItemInHands.name;
+        var muzzleVelocity = Ballistics.GetMuzzleVelocity(weaponName);
+        if (muzzleVelocity == 0)
+            Mod.Logger.Log($"{weaponName} has no muzzle velocity, so its bullet drops at the muzzle.", FlaggedLoggingLevel.Warning);
+
+        Launch(muzzleVelocity, DefaultDrag);
+    }
+
+    /// <summary>Launches the bullet as another mod asked, through <see cref="Projectiles.Fire"/>.</summary>
+    /// <param name="shot">The shot to fire.</param>
+    /// <param name="group">The shot it's part of, to tell what it hits, or <see langword="null"/> to damage it itself.</param>
+    private void Fire(ProjectileShot shot, ProjectileGroup<ProjectileHit>? group)
+    {
+        m_MuzzleDamage = shot.Damage;
+        m_WeaponSource = shot.WeaponSource;
+        m_Group = group;
+        m_PlayImpactEffects = shot.PlayImpactEffects;
+
+        Launch(shot.MuzzleVelocity * Ballistics.MuzzleVelocityMultiplier, shot.Drag);
+    }
+
+    /// <summary>Releases the bullet and launches it forwards, then starts its trail.</summary>
+    /// <param name="muzzleVelocity">How fast it leaves the muzzle, in metres per second.</param>
+    /// <param name="drag">The rigidbody's drag.</param>
+    private void Launch(float muzzleVelocity, float drag)
+    {
+        m_FireTime = Time.time;
+        enabled = true;
 
         Utils.SetIsKinematic(m_Rigidbody, false);
         transform.parent = null;
@@ -264,16 +362,12 @@ public class ProjectileItem : MonoBehaviour
 
         m_Rigidbody.velocity = Vector3.zero;
         m_Rigidbody.mass = 0.02f;
-        m_Rigidbody.drag = 0.1f;
+        m_Rigidbody.drag = drag;
         m_Rigidbody.angularDrag = 0.1f;
-
-        var weaponName = GameManager.GetPlayerManagerComponent().m_ItemInHands.name;
-        var muzzleVelocity = Ballistics.GetMuzzleVelocity(weaponName);
-        if (muzzleVelocity == 0)
-            Mod.Logger.Log($"{weaponName} has no muzzle velocity, so its bullet drops at the muzzle.", FlaggedLoggingLevel.Warning);
 
         var velocity = transform.forward * muzzleVelocity;
         m_Rigidbody.AddForce(velocity, ForceMode.VelocityChange);
+        m_Velocity = velocity;
 
         m_FirePosition = transform.position;
 
@@ -327,14 +421,15 @@ public class ProjectileItem : MonoBehaviour
             return;
         }
 
-        var weaponSource = m_GunType.ToWeaponSource();
+        var weaponSource = m_WeaponSource;
         baseAi.MaybeFleeOrAttackFromProjectileHit(weaponSource);
 
         var distance = Vector3.Distance(m_FirePosition, transform.position);
         var damage = Ballistics.DamageAtDistance(distance, m_MuzzleDamage);
         var healthBefore = baseAi.m_CurrentHP;
 
-        if (baseAi.GetAiMode() != AiMode.Dead)
+        // Only the game's own rifle and revolver have a skill and statistics for hits.
+        if (m_GunType is GunType.Rifle or GunType.Revolver && baseAi.GetAiMode() != AiMode.Dead)
         {
             var hitStat = m_GunType == GunType.Rifle ? StatID.SuccessfulHits_Rifle : StatID.SuccessfulHits_Revolver;
             var skill = m_GunType == GunType.Rifle ? SkillType.Rifle : SkillType.Revolver;
@@ -386,7 +481,7 @@ public class ProjectileItem : MonoBehaviour
     /// <param name="surface">The collider the bullet hit.</param>
     private void TryPushGear(Collider surface)
     {
-        if (surface == null || !ProjectileTemplates.TryGetGearImpactForce(m_GunType, out var impact))
+        if (surface == null || m_GunType is not { } gunType || !ProjectileTemplates.TryGetGearImpactForce(gunType, out var impact))
             return;
 
         var gearItem = surface.GetComponentInParent<GearItem>();
@@ -502,6 +597,49 @@ public class ProjectileItem : MonoBehaviour
         var alpha = 1f - m_TimeSinceHit / ImpactLingerDuration;
         m_Trail.startColor = new Color(1f, 1f, 1f, 0f);
         m_Trail.endColor = new Color(0.7f, 0.7f, 0.7f, 0.7f * alpha);
+    }
+
+    /// <summary>Tells the bullet's <see cref="m_Group"/> what it hit, instead of damaging it.</summary>
+    /// <param name="surface">The collider the bullet hit.</param>
+    /// <param name="point">Where it hit, in world space.</param>
+    /// <param name="normal">The surface's normal where it hit.</param>
+    private void ReportHit(Collider surface, Vector3 point, Vector3 normal)
+    {
+        if (m_Group is null || m_Finished)
+            return;
+
+        m_Finished = true;
+        var distance = Vector3.Distance(m_FirePosition, point);
+        ProjectileHit hit = new(surface, point, normal, m_Velocity.normalized, m_Velocity.magnitude, distance,
+            Ballistics.DamageAtDistance(distance, m_MuzzleDamage));
+        m_Group.ProjectileHit(hit, Time.time);
+    }
+
+    /// <summary>Tells the bullet's <see cref="m_Group"/> it missed, if it hasn't told it anything yet.</summary>
+    private void Miss()
+    {
+        if (m_Group is null || m_Finished)
+            return;
+
+        m_Finished = true;
+        m_Group.ProjectileMissed(Time.time);
+    }
+
+    /// <summary>Calls another mod's code, logging what it throws instead of letting it break the bullet.</summary>
+    /// <param name="call">The call.</param>
+    /// <param name="callbackName">The name of the callback, for the log.</param>
+    internal static void CallOtherMod(Action call, string callbackName)
+    {
+        try
+        {
+            call();
+        }
+        catch (Exception exception)
+        {
+            // Complex Logger formats the message with string.Format, so it can't hold braces.
+            var message = exception.ToString().Replace('{', '(').Replace('}', ')');
+            Mod.Logger.Log($"Another mod's {callbackName} threw: {message}", FlaggedLoggingLevel.Error);
+        }
     }
 
     /// <summary>The player's current Revolver skill tier.</summary>

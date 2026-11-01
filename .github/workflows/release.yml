@@ -4,6 +4,11 @@
 # MelonInfo point at. The version's section of CHANGELOG.md is the release's
 # description; the release stops if it has none.
 #
+# It also publishes the AdaptiveArsenal NuGet package, which other mods use to
+# fire its projectiles, to nuget.org and to the repository's GitHub Packages.
+# nuget.org trusts this workflow through a trusted publishing policy, so
+# there's no API key to keep: see docs/development.md, "The NuGet package".
+#
 # A manual run checks but never publishes: the job below only publishes from
 # a tag.
 
@@ -34,6 +39,10 @@ jobs:
     runs-on: windows-latest
     permissions:
       contents: write
+      # For GitHub Packages.
+      packages: write
+      # For nuget.org's trusted publishing, which logs in with the workflow's OIDC token.
+      id-token: write
     steps:
       - uses: actions/checkout@v7
         with:
@@ -59,7 +68,24 @@ jobs:
         shell: pwsh
         run: ./scripts/release-notes.ps1 -Version $env:GITHUB_REF_NAME -OutDir notes
 
-      - name: Publish
+      - name: Pack
+        run: dotnet pack src -c Release --no-build -o packages
+
+      # The packages go first, so a run that fails after them can be rerun: --skip-duplicate passes over a version
+      # that's already there, while the GitHub release can only be created once.
+      - name: Log in to nuget.org
+        id: nuget
+        uses: NuGet/login@v1
+        with:
+          user: Deadman
+
+      - name: Publish to nuget.org
+        run: dotnet nuget push "packages/*.nupkg" --source https://api.nuget.org/v3/index.json --api-key "${{ steps.nuget.outputs.NUGET_API_KEY }}" --skip-duplicate
+
+      - name: Publish to GitHub Packages
+        run: dotnet nuget push "packages/*.nupkg" --source "https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json" --api-key "${{ github.token }}" --skip-duplicate
+
+      - name: Publish the release
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
