@@ -1,22 +1,39 @@
-name: Feature Request
-description: Suggest a new feature or enhancement for this mod.
-
+name: Feature request
+description: An idea for something Adaptive Arsenal could do, or do better.
+labels: ["feature"]
 body:
   - type: markdown
     attributes:
       value: |
-        When requesting for features, follow the guidelines in this template.
-        - Write a descriptive issue title above.
-        - Search [open](https://github.com/Deaadman/AdaptiveArsenal/issues) and [closed](https://github.com/Deaadman/AdaptiveArsenal/issues?q=is%3Aissue%20state%3Aclosed) issues to ensure the feature has not already been requested.
+        Check the [open issues](https://github.com/Deaadman/adaptive-arsenal/issues) first, in case someone has already suggested it.
 
   - type: textarea
+    id: problem
     attributes:
-      label: Describe the problem or limitation that you are having in your game.
+      label: What you're trying to do
+      description: The moment in the game where the weapons fall short. Start from your game, not the feature.
+      placeholder: When I fire the rifle at a wolf in a blizzard, nothing about the cold changes how the shot goes.
     validations:
       required: true
 
   - type: textarea
+    id: idea
     attributes:
-      label: Describe the feature / enhancement and how it helps to overcome the problem or limitation.
+      label: Your idea
+      description: What the mod could do about it.
+      placeholder: A rifle that's been out in the cold for hours could jam more often until it's warmed up by a fire.
     validations:
       required: true
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Which part of the mod
+      multiple: true
+      options:
+        - Shooting, accuracy or damage
+        - Bullets and trails
+        - The HUD
+        - Movement and aiming
+        - A weapon or tool the mod doesn't touch yet
+        - Something new

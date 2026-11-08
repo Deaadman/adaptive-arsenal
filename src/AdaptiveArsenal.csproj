@@ -1,0 +1,133 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>net6.0</TargetFramework>
+        <LangVersion>default</LangVersion>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+        <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+        <DebugType>embedded</DebugType>
+        <!-- Checks the XML comments: every public member needs one, and every cref must resolve. -->
+        <GenerateDocumentationFile>true</GenerateDocumentationFile>
+        <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
+        <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
+        <!-- packages.lock.json pins every package, including the ones these depend on. CI restores with locked mode. -->
+        <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
+        <!-- Restore checks every package, including the ones these depend on, for security advisories. With warnings as errors, one fails the build. -->
+        <NuGetAuditMode>all</NuGetAuditMode>
+        <!-- A source that can't be reached for advisories is still only a warning; an advisory is an error. -->
+        <WarningsNotAsErrors>NU1900</WarningsNotAsErrors>
+    </PropertyGroup>
+
+    <PropertyGroup>
+        <Authors>Deadman</Authors>
+        <Copyright>Copyright (c) 2026 $(Authors)</Copyright>
+        <Product>Adaptive Arsenal</Product>
+        <!-- The release version. Nightly builds add a suffix: 1.1.0-nightly.20261022+g1a2b3c4. -->
+        <VersionPrefix>1.1.0</VersionPrefix>
+        <RepositoryUrl>https://github.com/Deaadman/adaptive-arsenal</RepositoryUrl>
+    </PropertyGroup>
+
+    <!-- For the AdaptiveArsenal NuGet package, which other mods reference to fire its projectiles. The release workflow publishes it: see docs/development.md. -->
+    <PropertyGroup>
+        <PackageId>AdaptiveArsenal</PackageId>
+        <Title>$(Product)</Title>
+        <PackageReadmeFile>README.md</PackageReadmeFile>
+        <Description>Adaptive Arsenal replaces The Long Dark's rifle and revolver hitscan with projectiles. This package lets other mods fire them from guns of their own.</Description>
+        <PackageProjectUrl>$(RepositoryUrl)</PackageProjectUrl>
+        <PackageLicenseExpression>GPL-3.0-only</PackageLicenseExpression>
+        <PackageTags>thelongdark, tld, mods</PackageTags>
+        <PackageReleaseNotes>$(RepositoryUrl)/blob/main/CHANGELOG.md</PackageReleaseNotes>
+        <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
+    </PropertyGroup>
+
+    <!-- The NuGet package's page on nuget.org. -->
+    <ItemGroup>
+        <None Include="..\docs\nuget.md" Pack="true" PackagePath="README.md" />
+    </ItemGroup>
+
+    <!--
+    The game's assemblies. The first two numbers of the version are the game version they were made from. Private, so
+    the NuGet package doesn't depend on it: mods using the package bring their own game assemblies.
+    -->
+    <ItemGroup>
+        <PackageReference Include="MonsieurMeh.Modding.TLD.Il2CppAssemblies.Windows" Version="2.58.0" PrivateAssets="all" />
+    </ItemGroup>
+
+    <!--
+    Or the ones MelonLoader generates from the installed game the first time each version starts, for building against
+    a game version newer than the package. Used when TheLongDarkPath is set, for example in AdaptiveArsenal.csproj.user,
+    and the game has made them. The package still brings MelonLoader, Harmony and Il2CppInterop, and CI uses it as is.
+    -->
+    <ItemGroup Condition="Exists('$(TheLongDarkPath)/MelonLoader/Il2CppAssemblies/Assembly-CSharp.dll')">
+        <PackageReference Update="MonsieurMeh.Modding.TLD.Il2CppAssemblies.Windows" ExcludeAssets="compile" />
+        <Reference Include="$(TheLongDarkPath)/MelonLoader/Il2CppAssemblies/*.dll" Private="false" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <Using Include="HarmonyLib" />
+        <Using Include="Il2Cpp" />
+        <Using Include="MelonLoader" />
+        <Using Include="UnityEngine" />
+        <Using Include="System.Reflection" />
+        <Using Include="System.Diagnostics.CodeAnalysis" />
+        <Using Include="ComplexLogger.FlaggedLoggingLevel" Alias="FlaggedLoggingLevel" />
+    </ItemGroup>
+
+    <!--
+    The other mods this one needs, committed as DLLs because they aren't on NuGet, or not in the version it needs.
+    Players install them themselves, so they aren't copied to the output.
+    - Complex Logger 1.0.8, from https://github.com/Arkhorse/Complex-Logger/releases, which the mod logs through.
+    - ModSettings 2.2.5, from https://github.com/DigitalzombieTLD/ModSettings/releases, for the mod's settings menu.
+    -->
+    <ItemGroup>
+        <Reference Include="ComplexLogger">
+            <HintPath>Dependencies\ComplexLogger.dll</HintPath>
+            <Private>false</Private>
+        </Reference>
+        <Reference Include="ModSettings">
+            <HintPath>Dependencies\ModSettings.dll</HintPath>
+            <Private>false</Private>
+        </Reference>
+    </ItemGroup>
+
+    <!-- Copies the mod into the game after a Debug build, when TheLongDarkPath is set (for example in an environment variable). -->
+    <Target Name="CopyToModsFolder" AfterTargets="Build" Condition="'$(Configuration)' == 'Debug' And '$(TheLongDarkPath)' != ''">
+        <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(TheLongDarkPath)/Mods" />
+    </Target>
+
+    <!-- The full version, for the workflows to name the release with. -->
+    <Target Name="WriteVersion" AfterTargets="Build" Condition="'$(Configuration)' == 'Release'">
+        <WriteLinesToFile File="$(BaseIntermediateOutputPath)Version.txt" Lines="$(InformationalVersion)" Overwrite="true" />
+    </Target>
+
+    <!-- BuildInfo for AssemblyInfo.cs, written to obj. Set inside the target, where IntermediateOutputPath is known. -->
+    <Target Name="GenerateBuildInfo" BeforeTargets="CoreCompile">
+        <PropertyGroup>
+            <BuildInfoFile>$(IntermediateOutputPath)BuildInfo.g.cs</BuildInfoFile>
+        </PropertyGroup>
+
+        <WriteLinesToFile
+                File="$(BuildInfoFile)"
+                Overwrite="true"
+                WriteOnlyWhenDifferent="true"
+                Lines="
+namespace AdaptiveArsenal.Properties%3B
+
+internal static class BuildInfo
+{
+	public const string Name = &quot;$(Product)&quot;%3B
+	public const string Version = &quot;$(InformationalVersion)&quot;%3B
+	public const string Author = &quot;$(Authors)&quot;%3B
+	public const string DownloadLink = &quot;$(RepositoryUrl)/releases/latest/download/AdaptiveArsenal.dll&quot;%3B
+	public const int Priority = 0%3B
+	public const string MelonLoaderVersion = &quot;0.7.2&quot;%3B
+}
+" />
+
+        <ItemGroup>
+            <Compile Include="$(BuildInfoFile)" />
+            <FileWrites Include="$(BuildInfoFile)" />
+        </ItemGroup>
+    </Target>
+</Project>
