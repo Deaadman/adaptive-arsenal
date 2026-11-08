@@ -19,13 +19,17 @@ See docs/development.md, "Releasing". CI checks this file's format.
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-11-08
+
+Adaptive Arsenal now works with The Long Dark 2.58. Bullets hit animals reliably, each gun does its own damage, and a new settings page lets you tune accuracy, bullet speed and damage drop-off. Other mods can now fire its bullets too.
+
 ### Added
 
 - **Breaking:** The mod logs through [Complex Logger](https://github.com/Arkhorse/Complex-Logger), which it now needs, along with [ModSettings](https://github.com/DigitalzombieTLD/ModSettings). Turn on its debug levels when reporting a bug.
 - The log warns when a weapon has no bullet trail or muzzle velocity, or fires the game's own shots instead of the mod's.
 - Bullets knock loose items around when they hit them, as the game's own bullets do.
 - A settings page in Options, Mod Settings, to turn real bullets, bullet trails and walking while aiming a revolver on or off, and to tune accuracy, bullet speed, trail length and damage drop-off.
-- Other mods can fire Adaptive Arsenal's bullets from guns of their own, so their shots fly and drop like the rifle's and revolver's. See [API for other mods](https://github.com/Deaadman/adaptive-arsenal/blob/develop/docs/api.md).
+- Other mods can fire Adaptive Arsenal's bullets from guns of their own, so their shots fly and drop like the rifle's and revolver's. See [API for other mods](https://github.com/Deaadman/adaptive-arsenal/blob/1.1.0/docs/api.md).
 - Turning off **Show ammo count** in the mod's settings hides how many rounds are loaded in your rifle or revolver, and how many more you're carrying, so you have to keep count.
 
 ### Changed
@@ -34,7 +38,7 @@ See docs/development.md, "Releasing". CI checks this file's format.
 - Revolver hits have the game's own chance of a critical hit for revolvers, instead of the rifle's.
 - Shots spread evenly in a circle around where you aim, instead of in a square that reached further out at the corners.
 - The limited-movement icon still shows while aiming a rifle, and is only hidden for the revolver, which you can walk with.
-- [How it works](https://github.com/Deaadman/adaptive-arsenal/blob/develop/docs/features.md) lists muzzle velocities in metres per second. Bullets fly at the same speeds as before.
+- [How it works](https://github.com/Deaadman/adaptive-arsenal/blob/1.1.0/docs/features.md) lists muzzle velocities in metres per second. Bullets fly at the same speeds as before.
 
 ### Removed
 
@@ -156,7 +160,8 @@ See docs/development.md, "Releasing". CI checks this file's format.
 
 - The first release.
 
-[Unreleased]: https://github.com/Deaadman/adaptive-arsenal/compare/1.0.9...HEAD
+[Unreleased]: https://github.com/Deaadman/adaptive-arsenal/compare/1.1.0...HEAD
+[1.1.0]: https://github.com/Deaadman/adaptive-arsenal/compare/1.0.9...1.1.0
 [1.0.9]: https://github.com/Deaadman/adaptive-arsenal/compare/1.0.8...1.0.9
 [1.0.8]: https://github.com/Deaadman/adaptive-arsenal/compare/1.0.7...1.0.8
 [1.0.7]: https://github.com/Deaadman/adaptive-arsenal/compare/1.0.6...1.0.7
