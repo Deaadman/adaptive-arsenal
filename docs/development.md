@@ -24,9 +24,7 @@ dotnet build
 - `src/Patches`: the [Harmony](https://harmony.pardeike.net) patches on the game: firing bullets instead of instant hits, revolver movement, and the HUD.
 - `src/Animators`: the round animation on the HUD.
 - `src/Utilities`: helpers for the game's objects: building the bullet each gun fires, where a shot starts, and borrowing materials.
-- `src/Utilities/WeaponDataManager.cs`: what the mod remembers about each weapon (`src/Core/WeaponData.cs`), saved with the player's game through [ModData](https://github.com/dommrogers/ModData). A feature that needs to remember something per weapon, like its skin or how cold it is, adds a field to `WeaponData` and reads it with `WeaponDataManager.Get`. The save and load patches are in `src/Patches/SaveGameSystemPatches.cs` and `GameManagerPatches.cs`. Weapons are found by their instance ID, and Unity's start again each session, so `GiveGunsUniqueIds` in `GearItemPatches.cs` gives new guns IDs of the mod's own.
-- `src/Utilities/FrozenRifles.cs`: freezes and thaws the rifles the player carries, with the maths in `src/Core/RifleFreezing.cs`. The jam patch is `JamFrozenRifles` in `src/Patches/vp_FPSShooterPatches.cs`, and the inventory text is in `src/Patches/GearItemPatches.cs`.
-- `src/Dependencies`: DLLs the mod builds against that aren't on NuGet, or not in the version it needs: [Complex Logger](https://github.com/Arkhorse/Complex-Logger) 1.0.8, which the mod logs through with `Mod.Logger`, [ModSettings](https://github.com/DigitalzombieTLD/ModSettings) 2.2.5 and [ModData](https://github.com/dommrogers/ModData) 1.5.5.
+- `src/Dependencies`: DLLs the mod builds against that aren't on NuGet, or not in the version it needs: [Complex Logger](https://github.com/Arkhorse/Complex-Logger) 1.0.8, which the mod logs through with `Mod.Logger` and [ModSettings](https://github.com/DigitalzombieTLD/ModSettings) 2.2.5.
 - `src/Settings.cs`: the mod's page in the game's Mod Settings menu, from [ModSettings](https://github.com/DigitalzombieTLD/ModSettings), whose DLL is in `src/Dependencies`. Its numbers go into `src/Core` when the game starts and when the player confirms a change.
 - `src/Properties/AssemblyInfo.cs`: what MelonLoader reads about the mod, including the MelonLoader version it needs and the mods it won't load with.
 - `tests/AdaptiveArsenal.Tests`: unit tests for `src/Core`.
@@ -105,13 +103,11 @@ Before a release, and after a game update, load a save with a rifle, a revolver 
 - Rifle and revolver shots leave a trail and hit where you aim, with more spread from the hip, standing and moving.
 - Shooting an animal hurts it, counts towards your Rifle or Revolver skill, and a close shot does more than a far one.
 - Bullets hitting the ground, rock and wood show the right impact effect, a bullet hole where they hit, and a sound that gets quieter with distance. Their trails fade out after the hit.
-- Carrying a rifle outside below freezing, its name in the inventory shows it freezing over the hours, and it jams more often the more frozen it is. Indoors or by a fire it thaws. Frozen amounts survive saving and loading, don't jump after loading another save, and stop changing with **Frozen rifles** off.
 - Saving with a bullet in the air, then loading, leaves no loose rounds of ammo where it was.
 - The HUD shows the loaded and carried rounds for the rifle and revolver, and plays the round animation after each shot, but not when you switch weapons. With **Show ammo count** off, it doesn't show them for the rifle and revolver, but still does for the flare gun and bow.
 - You can walk while aiming the revolver, and the limited-movement icon only shows for the rifle.
 - In Mod Settings, turning off **Real bullets** hides the bullet settings and makes the next shot the game's own instant one, without restarting. Changed numbers take effect from the next shot.
 - The flare gun, bow and camera work as they do without the mod.
-- With ModData installed, saving and loading shows `Loaded data for N weapons.` in the log at debug level, with no errors, and quitting to the menu then starting a new game doesn't load the last game's weapons.
 - The console shows the mod's version when the game starts, with no errors in `MelonLoader\Latest.log`.
 
 Once a week, [Dependabot](../.github/dependabot.yml) opens a pull request against `develop` for NuGet packages and actions with a newer version, with the minor and patch updates together. Merge it when CI passes.

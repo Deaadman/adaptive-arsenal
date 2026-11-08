@@ -79,7 +79,6 @@
     Players install them themselves, so they aren't copied to the output.
     - Complex Logger 1.0.8, from https://github.com/Arkhorse/Complex-Logger/releases, which the mod logs through.
     - ModSettings 2.2.5, from https://github.com/DigitalzombieTLD/ModSettings/releases, for the mod's settings menu.
-    - ModData 1.5.5, from https://github.com/dommrogers/ModData/releases, to keep each weapon's data in the save.
     -->
     <ItemGroup>
         <Reference Include="ComplexLogger">
@@ -88,10 +87,6 @@
         </Reference>
         <Reference Include="ModSettings">
             <HintPath>Dependencies\ModSettings.dll</HintPath>
-            <Private>false</Private>
-        </Reference>
-        <Reference Include="ModData">
-            <HintPath>Dependencies\ModData.dll</HintPath>
             <Private>false</Private>
         </Reference>
     </ItemGroup>

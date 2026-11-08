@@ -25,8 +25,6 @@ See docs/development.md, "Releasing". CI checks this file's format.
 - The log warns when a weapon has no bullet trail or muzzle velocity, or fires the game's own shots instead of the mod's.
 - Bullets knock loose items around when they hit them, as the game's own bullets do.
 - A settings page in Options, Mod Settings, to turn real bullets, bullet trails and walking while aiming a revolver on or off, and to tune accuracy, bullet speed, trail length and damage drop-off.
-- **Breaking:** The mod now needs [ModData](https://github.com/dommrogers/ModData/releases/latest), to keep what it remembers about each weapon in your save.
-- Rifles you carry freeze in the cold and thaw in the warm, and the more frozen a rifle is, the more likely it is to jam. The inventory shows how frozen each rifle is.
 - Other mods can fire Adaptive Arsenal's bullets from guns of their own, so their shots fly and drop like the rifle's and revolver's. See [API for other mods](https://github.com/Deaadman/adaptive-arsenal/blob/develop/docs/api.md).
 - Turning off **Show ammo count** in the mod's settings hides how many rounds are loaded in your rifle or revolver, and how many more you're carrying, so you have to keep count.
 
