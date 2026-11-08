@@ -107,7 +107,7 @@ Before a release, and after a game update, load a save with a rifle, a revolver 
 - Bullets hitting the ground, rock and wood show the right impact effect, a bullet hole where they hit, and a sound that gets quieter with distance. Their trails fade out after the hit.
 - Carrying a rifle outside below freezing, its name in the inventory shows it freezing over the hours, and it jams more often the more frozen it is. Indoors or by a fire it thaws. Frozen amounts survive saving and loading, don't jump after loading another save, and stop changing with **Frozen rifles** off.
 - Saving with a bullet in the air, then loading, leaves no loose rounds of ammo where it was.
-- The HUD doesn't show the loaded or carried rounds for the rifle and revolver, but does for the flare gun and bow. With **Show ammo count** on, it does, and plays the round animation after each shot, but not when you switch weapons.
+- The HUD shows the loaded and carried rounds for the rifle and revolver, and plays the round animation after each shot, but not when you switch weapons. With **Show ammo count** off, it doesn't show them for the rifle and revolver, but still does for the flare gun and bow.
 - You can walk while aiming the revolver, and the limited-movement icon only shows for the rifle.
 - In Mod Settings, turning off **Real bullets** hides the bullet settings and makes the next shot the game's own instant one, without restarting. Changed numbers take effect from the next shot.
 - The flare gun, bow and camera work as they do without the mod.

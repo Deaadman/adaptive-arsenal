@@ -59,7 +59,7 @@ The inventory shows how frozen a rifle is after its name, like frozen clothing. 
 
 ## Ammo count
 
-The HUD doesn't show how many rounds are loaded in your rifle or revolver, or how many more you're carrying, so you have to keep count. It still shows the icon for the type of ammo the weapon takes.
+The HUD shows how many rounds are loaded in your rifle or revolver, and how many more you're carrying, as the game does, and each shot plays an animation of the spent round. With **Show ammo count** off, it hides them, so you have to keep count. It still shows the icon for the type of ammo the weapon takes.
 
 ## Settings
 
@@ -81,4 +81,4 @@ Everything above is how the mod plays by default. To change it, open **Options**
 | Hours to thaw | 2 | In-game hours for a frozen-solid rifle to thaw at 10°C. |
 | Frozen jam chance | 25% | The extra chance that a frozen-solid rifle jams on each shot. |
 | Walk while aiming revolver | On | Lets you walk while aiming a revolver. |
-| Show ammo count | Off | Shows the loaded and carried rounds on the HUD, with the spent round animation. |
+| Show ammo count | On | Shows the loaded and carried rounds on the HUD, with the spent round animation. Off, you keep count yourself. |

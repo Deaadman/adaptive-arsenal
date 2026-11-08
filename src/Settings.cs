@@ -118,7 +118,7 @@ internal sealed class Settings : JsonModSettings
     /// <summary>Whether the HUD shows the rounds loaded in a rifle or revolver, and how many more the player is carrying.</summary>
     [Name("Show ammo count")]
     [Description("Shows how many rounds are loaded in your rifle or revolver on the HUD, and how many more you're carrying. Off, you'll have to keep count yourself.")]
-    public bool m_ShowAmmoCount = false;
+    public bool m_ShowAmmoCount = true;
 
     /// <summary>The settings only real bullets use, hidden while <see cref="m_ProjectilesEnabled"/> is off.</summary>
     private static readonly string[] ProjectileOnlyFields =
