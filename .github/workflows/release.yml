@@ -79,11 +79,22 @@ jobs:
         with:
           user: Deadman
 
+      # Each package by its full path: on Windows, dotnet nuget push didn't find "packages/*.nupkg" that pack had made.
       - name: Publish to nuget.org
-        run: dotnet nuget push "packages/*.nupkg" --source https://api.nuget.org/v3/index.json --api-key "${{ steps.nuget.outputs.NUGET_API_KEY }}" --skip-duplicate
+        shell: pwsh
+        run: |
+          foreach ($package in Get-ChildItem packages -Filter *.nupkg) {
+            dotnet nuget push $package.FullName --source https://api.nuget.org/v3/index.json --api-key "${{ steps.nuget.outputs.NUGET_API_KEY }}" --skip-duplicate
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          }
 
       - name: Publish to GitHub Packages
-        run: dotnet nuget push "packages/*.nupkg" --source "https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json" --api-key "${{ github.token }}" --skip-duplicate
+        shell: pwsh
+        run: |
+          foreach ($package in Get-ChildItem packages -Filter *.nupkg) {
+            dotnet nuget push $package.FullName --source "https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json" --api-key "${{ github.token }}" --skip-duplicate
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          }
 
       - name: Publish the release
         shell: pwsh
