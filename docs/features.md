@@ -58,7 +58,19 @@ The bullet leaves the barrel aimed a little above the sights, rises to meet the 
 
 ## Damage drop-off
 
-A bullet does its weapon's full damage close up, the same as the game gives that weapon. Its damage falls steadily with distance, to a tenth at 500 metres. Where it hits still matters, as it does without the mod, and a hit can still kill outright, with the game's own chance for that weapon.
+A bullet does its weapon's full damage close up, the same as the game gives that weapon. As the air slows it, its damage falls with the energy it has left, as a real bullet's does. That's the square of its speed compared with its speed at the muzzle:
+
+| Distance | Hunting rifle | Revolver |
+| --- | --- | --- |
+| 25 m | 94% | 94% |
+| 50 m | 89% | 89% |
+| 100 m | 80% | 80% |
+| 200 m | 66% | 66% |
+| 500 m | 34% | 39% |
+
+A revolver bullet is slower and blunter, so it loses about as big a share as a rifle bullet over the same distance, but revolver shots are usually much closer.
+
+Where it hits still matters, as it does without the mod, and a hit can still kill outright, with the game's own chance for that weapon.
 
 Hits count towards your Rifle or Revolver skill and the wildlife hits statistic, as they do without the mod. Bullets also knock loose items around, as the game's own bullets do.
 
@@ -83,7 +95,6 @@ Everything above is how the mod plays by default. To change it, open **Options**
 | Base accuracy | × 1.2 | Multiplies the accuracy of every shot. |
 | Hip fire, Standing, Moving | × 0.7, × 0.8, × 0.9 | Multiply accuracy in those situations. 1 means no penalty. |
 | Worst spread | 10° | How far the least accurate shot can land from where you aimed. |
-| Drop-off distance | 500 m | How far a bullet flies before its damage has fallen as far as it will. |
-| Long-range damage | 0.1 | How much of its damage a bullet still does at that distance. 1 means no drop-off. |
+| Damage from speed | 1 | How much a bullet's damage falls as it slows. At 1 it follows the energy left, as in the table above. 0 means no drop-off, and values between blend the two. |
 | Walk while aiming revolver | On | Lets you walk while aiming a revolver. |
 | Show ammo count | On | Shows the loaded and carried rounds on the HUD, with the spent round animation. Off, you keep count yourself. |

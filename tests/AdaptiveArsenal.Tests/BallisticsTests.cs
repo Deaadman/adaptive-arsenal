@@ -7,28 +7,97 @@ public class BallisticsTests
     private const int Precision = 4;
 
     [Theory]
-    [InlineData(0f, 80f)]
-    [InlineData(250f, 44f)]
-    [InlineData(500f, 8f)]
-    [InlineData(1000f, 8f)]
-    public void Damage_falls_steadily_to_a_tenth_of_the_weapons_at_500_metres(float distance, float expected) =>
-        Assert.Equal(expected, Ballistics.DamageAtDistance(distance, muzzleDamage: 80f), Precision);
+    [InlineData(400f, 80f)]
+    [InlineData(300f, 45f)]
+    [InlineData(200f, 20f)]
+    [InlineData(0f, 0f)]
+    public void Damage_is_the_share_of_the_muzzle_energy_left(float impactSpeed, float expected) =>
+        Assert.Equal(expected, Ballistics.DamageAtSpeed(impactSpeed, muzzleSpeed: 400f, muzzleDamage: 80f), Precision);
 
     [Theory]
     [InlineData(0f)]
     [InlineData(-5f)]
     public void A_weapon_without_damage_uses_the_default(float muzzleDamage) =>
-        Assert.Equal(Ballistics.DefaultMuzzleDamage, Ballistics.DamageAtDistance(0f, muzzleDamage), Precision);
+        Assert.Equal(Ballistics.DefaultMuzzleDamage, Ballistics.DamageAtSpeed(400f, 400f, muzzleDamage), Precision);
+
+    [Theory]
+    [InlineData(0f)]
+    [InlineData(-10f)]
+    public void A_bullet_with_no_muzzle_speed_does_full_damage(float muzzleSpeed) =>
+        Assert.Equal(80f, Ballistics.DamageAtSpeed(100f, muzzleSpeed, muzzleDamage: 80f), Precision);
 
     [Fact]
-    public void Damage_never_rises_with_distance()
+    public void A_bullet_that_sped_up_does_no_more_than_full_damage() =>
+        Assert.Equal(80f, Ballistics.DamageAtSpeed(500f, muzzleSpeed: 400f, muzzleDamage: 80f), Precision);
+
+    [Fact]
+    public void Damage_never_rises_as_the_bullet_slows()
     {
         var previous = float.MaxValue;
-        for (var distance = 0f; distance <= 600f; distance += 10f)
+        for (var speed = 800f; speed >= 0f; speed -= 20f)
         {
-            var damage = Ballistics.DamageAtDistance(distance, muzzleDamage: 100f);
-            Assert.True(damage <= previous, $"damage rose at {distance} m");
+            var damage = Ballistics.DamageAtSpeed(speed, muzzleSpeed: 800f, muzzleDamage: 100f);
+            Assert.True(damage <= previous, $"damage rose at {speed} m/s");
             previous = damage;
+        }
+    }
+
+    [Theory]
+    [InlineData(1f, 20f)]
+    [InlineData(0.5f, 50f)]
+    [InlineData(0f, 80f)]
+    public void Damage_from_speed_blends_towards_full_damage(float damageFromSpeed, float expected) =>
+        WithDamageFromSpeed(damageFromSpeed, () =>
+            Assert.Equal(expected, Ballistics.DamageAtSpeed(200f, muzzleSpeed: 400f, muzzleDamage: 80f), Precision));
+
+    [Theory]
+    [InlineData(0f, 80f)]
+    [InlineData(250f, 44f)]
+    [InlineData(500f, 8f)]
+    [InlineData(1000f, 8f)]
+    public void Linear_drag_damage_falls_with_distance_as_in_1_1_0(float distance, float expected) =>
+        Assert.Equal(expected, Ballistics.DamageAtDistance(distance, muzzleDamage: 80f), Precision);
+
+    [Fact]
+    public void Damage_from_speed_of_0_turns_off_the_linear_drag_drop_off_too() =>
+        WithDamageFromSpeed(0f, () => Assert.Equal(80f, Ballistics.DamageAtDistance(500f, muzzleDamage: 80f), Precision));
+
+    [Fact]
+    public void G1_damage_goes_by_speed()
+    {
+        var damage = Ballistics.DamageOnHit(DragModel.G1(0.4f), lowestSpeed: 200f, muzzleSpeed: 400f, distance: 0f, muzzleDamage: 80f);
+
+        Assert.Equal(20f, damage, Precision);
+    }
+
+    [Fact]
+    public void Linear_drag_damage_goes_by_distance()
+    {
+        var damage = Ballistics.DamageOnHit(DragModel.Linear(0.1f), lowestSpeed: 400f, muzzleSpeed: 400f, distance: 500f, muzzleDamage: 80f);
+
+        Assert.Equal(8f, damage, Precision);
+    }
+
+    [Theory]
+    [InlineData(0.1f, 1f)]
+    [InlineData(1f, 0f)]
+    [InlineData(0.55f, 0.5f)]
+    [InlineData(0f, 1f)]
+    public void Old_long_range_damage_carries_over_to_damage_from_speed(float longRangeDamage, float expected) =>
+        Assert.Equal(expected, Ballistics.DamageFromSpeedForLongRangeDamage(longRangeDamage), Precision);
+
+    /// <summary>Runs a check with <see cref="Ballistics.DamageFromSpeed"/> set, and puts it back afterwards.</summary>
+    private static void WithDamageFromSpeed(float damageFromSpeed, Action check)
+    {
+        var before = Ballistics.DamageFromSpeed;
+        try
+        {
+            Ballistics.DamageFromSpeed = damageFromSpeed;
+            check();
+        }
+        finally
+        {
+            Ballistics.DamageFromSpeed = before;
         }
     }
 

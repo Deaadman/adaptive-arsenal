@@ -140,6 +140,15 @@ public class FlightTests
     public void Nothing_to_zero_gives_no_angle(float muzzleVelocity, float gravity, float zeroDistance, float deltaTime) =>
         Assert.Equal(0f, Flight.ZeroAngle(muzzleVelocity, Rifle, gravity, zeroDistance, deltaTime));
 
+    [Theory]
+    [InlineData(0f, 400f)]
+    [InlineData(0.25f, 375f)]
+    [InlineData(1f, 300f)]
+    [InlineData(-1f, 400f)]
+    [InlineData(2f, 300f)]
+    public void The_velocity_part_way_through_a_step_is_between_its_ends(float fraction, float expected) =>
+        Assert.Equal(new Vector3(expected, 0f, 0f), Flight.VelocityPartWay(new Vector3(400f, 0f, 0f), new Vector3(300f, 0f, 0f), fraction));
+
     [Fact]
     public void A_shot_whose_furthest_reach_is_below_45_degrees_still_gets_zeroed()
     {

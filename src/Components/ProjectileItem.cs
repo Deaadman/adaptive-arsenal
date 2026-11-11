@@ -89,7 +89,10 @@ public class ProjectileItem : MonoBehaviour
     /// <summary>Whether the bullet has told its <see cref="m_Group"/> it hit or missed, so it only does once.</summary>
     private bool m_Finished;
 
-    /// <summary>The bullet's velocity, in metres per second, which <see cref="FixedUpdate"/> moves it by.</summary>
+    /// <summary>
+    /// The bullet's velocity, in metres per second, which <see cref="FixedUpdate"/> moves it by. After a hit, it's the
+    /// velocity where the bullet hit.
+    /// </summary>
     private Vector3 m_Velocity;
 
     /// <summary>How the air slows the bullet.</summary>
@@ -97,6 +100,15 @@ public class ProjectileItem : MonoBehaviour
 
     /// <summary>Where the bullet was fired from, to work out how far it has travelled when it hits.</summary>
     private Vector3 m_FirePosition;
+
+    /// <summary>How fast the bullet left the muzzle, in metres per second, to compare its speed against when it hits.</summary>
+    private float m_MuzzleSpeed;
+
+    /// <summary>
+    /// The slowest the bullet has gone, in metres per second, which sets its damage, so speed gravity adds late in a long,
+    /// high arc doesn't raise it again.
+    /// </summary>
+    private float m_LowestSpeed;
 
     /// <summary>When the bullet was fired, to remove it after <see cref="MaxFlightTime"/>.</summary>
     private float m_FireTime;
@@ -249,12 +261,16 @@ public class ProjectileItem : MonoBehaviour
             if (Physics.Raycast(origin, direction, out var hit, stepDistance, HitLayerMask, QueryTriggerInteraction.Ignore)
                 || Physics.Raycast(origin, direction, out hit, stepDistance, AiLayerMask, QueryTriggerInteraction.Ignore))
             {
+                // Its speed where it hit, part way through the step, for the damage.
+                m_Velocity = Flight.VelocityPartWay(m_Velocity.ToNumerics(), next.Velocity, hit.distance / stepDistance).ToUnity();
+                m_LowestSpeed = Mathf.Min(m_LowestSpeed, m_Velocity.magnitude);
                 Hit(hit.collider, hit.point, hit.normal);
                 return;
             }
         }
 
         m_Velocity = next.Velocity.ToUnity();
+        m_LowestSpeed = Mathf.Min(m_LowestSpeed, m_Velocity.magnitude);
         var rotation = m_Velocity.sqrMagnitude > 0f ? Quaternion.LookRotation(m_Velocity) : transform.rotation;
         transform.SetPositionAndRotation(destination, rotation);
     }
@@ -400,6 +416,8 @@ public class ProjectileItem : MonoBehaviour
 
         var velocity = transform.forward * muzzleVelocity;
         m_Velocity = velocity;
+        m_MuzzleSpeed = muzzleVelocity;
+        m_LowestSpeed = muzzleVelocity;
 
         m_FirePosition = transform.position;
 
@@ -425,8 +443,8 @@ public class ProjectileItem : MonoBehaviour
 
     /// <summary>
     /// Damages the animal the bullet hit, if it hit one, the way the game's own shots do. The damage falls with the
-    /// distance travelled, see <see cref="Ballistics.DamageAtDistance"/>, and the hit counts towards the player's skill
-    /// and statistics.
+    /// speed the bullet has lost, see <see cref="Ballistics.DamageOnHit"/>, and the hit counts towards the player's
+    /// skill and statistics.
     /// </summary>
     /// <remarks>
     /// The collider hit usually has a <see cref="LocalizedDamage"/> saying how much that body part scales the damage,
@@ -456,8 +474,7 @@ public class ProjectileItem : MonoBehaviour
         var weaponSource = m_WeaponSource;
         baseAi.MaybeFleeOrAttackFromProjectileHit(weaponSource);
 
-        var distance = Vector3.Distance(m_FirePosition, transform.position);
-        var damage = Ballistics.DamageAtDistance(distance, m_MuzzleDamage);
+        var damage = DamageOnHit(transform.position);
         var healthBefore = baseAi.m_CurrentHP;
 
         // Only the game's own rifle and revolver have a skill and statistics for hits.
@@ -490,6 +507,11 @@ public class ProjectileItem : MonoBehaviour
         LogDamage(baseAi, colliderName, damage, healthBefore);
     }
 
+    /// <summary>The damage the bullet does where it hit, before any body part scales it: see <see cref="Ballistics.DamageOnHit"/>.</summary>
+    /// <param name="point">Where it hit, in world space, to work out how far it travelled.</param>
+    private float DamageOnHit(Vector3 point) =>
+        Ballistics.DamageOnHit(m_Drag, m_LowestSpeed, m_MuzzleSpeed, Vector3.Distance(m_FirePosition, point), m_MuzzleDamage);
+
     /// <summary>Logs the damage a hit did to an animal, and its health before and after.</summary>
     /// <param name="baseAi">The animal hit.</param>
     /// <param name="colliderName">The name of the collider that was hit.</param>
@@ -498,7 +520,8 @@ public class ProjectileItem : MonoBehaviour
     private void LogDamage(BaseAi baseAi, string colliderName, float damage, float healthBefore) =>
         Mod.Logger.Log(
             $"{name} did {damage:F1} damage to {baseAi.gameObject.name} at {colliderName} " +
-            $"({Vector3.Distance(m_FirePosition, transform.position):F1} m, {m_MuzzleDamage:F1} at the muzzle): " +
+            $"({Vector3.Distance(m_FirePosition, transform.position):F1} m, {m_Velocity.magnitude:F0} of {m_MuzzleSpeed:F0} m/s, " +
+            $"{m_MuzzleDamage:F1} at the muzzle): " +
             $"health {healthBefore:F1} -> {baseAi.m_CurrentHP:F1} of {baseAi.m_MaxHP:F1}, now {baseAi.GetAiMode()}.",
             FlaggedLoggingLevel.Debug);
 
@@ -633,7 +656,7 @@ public class ProjectileItem : MonoBehaviour
         m_Finished = true;
         var distance = Vector3.Distance(m_FirePosition, point);
         ProjectileHit hit = new(surface, point, normal, m_Velocity.normalized, m_Velocity.magnitude, distance,
-            Ballistics.DamageAtDistance(distance, m_MuzzleDamage));
+            DamageOnHit(point));
         m_Group.ProjectileHit(hit, Time.time);
     }
 

@@ -16,11 +16,23 @@ internal static class Ballistics
     /// <summary>The damage a bullet does at the muzzle when its weapon doesn't say, before the hit location is taken into account.</summary>
     internal const float DefaultMuzzleDamage = 100f;
 
-    /// <summary>The share of its muzzle damage a bullet still does at <see cref="DamageFalloffRange"/> and beyond.</summary>
-    internal static float MinDamageFraction { get; set; } = 0.1f;
+    /// <summary>
+    /// How much a bullet's speed when it hits sets its damage, from 0 to 1: at 1 the damage is its share of the
+    /// muzzle energy, at 0 it's the full muzzle damage however slow the bullet is, and between them it's a blend.
+    /// </summary>
+    internal static float DamageFromSpeed { get; set; } = 1f;
 
-    /// <summary>The distance, in metres, over which damage falls to <see cref="MinDamageFraction"/> of the muzzle damage.</summary>
-    internal static float DamageFalloffRange { get; set; } = 500f;
+    /// <summary>
+    /// The share of its muzzle damage a projectile with linear drag still does at <see cref="LinearDragFalloffRange"/>
+    /// and beyond: 1.1.0's default, which shots fired through the API with linear drag keep.
+    /// </summary>
+    private const float LinearDragMinDamageFraction = 0.1f;
+
+    /// <summary>
+    /// The distance, in metres, over which a projectile with linear drag falls to
+    /// <see cref="LinearDragMinDamageFraction"/> of its muzzle damage: 1.1.0's default.
+    /// </summary>
+    private const float LinearDragFalloffRange = 500f;
 
     /// <summary>Every shot's accuracy is multiplied by this.</summary>
     internal static float BaseAccuracyMultiplier { get; set; } = 1.2f;
@@ -139,20 +151,76 @@ internal static class Ballistics
     }
 
     /// <summary>
-    /// The damage a bullet does after travelling <paramref name="distance"/> metres: <paramref name="muzzleDamage"/> at
-    /// the muzzle, falling steadily to <see cref="MinDamageFraction"/> of it at <see cref="DamageFalloffRange"/> and
-    /// beyond.
+    /// The damage a projectile does when it hits: by its speed for G1 drag, see <see cref="DamageAtSpeed"/>, and by the
+    /// distance it travelled for linear drag, see <see cref="DamageAtDistance"/>.
     /// </summary>
-    /// <param name="distance">How far the bullet travelled, in metres.</param>
-    /// <param name="muzzleDamage">
-    /// The weapon's damage. <see cref="DefaultMuzzleDamage"/> is used if it's 0 or less, for a weapon that doesn't say.
-    /// </param>
+    /// <remarks>
+    /// Linear drag barely slows a projectile, so damage by speed would hardly fall with range. Shots fired through the
+    /// API with linear drag keep the falloff by distance they had in 1.1.0 instead.
+    /// </remarks>
+    /// <param name="drag">How the air slowed the projectile.</param>
+    /// <param name="lowestSpeed">The slowest it went before it hit, in metres per second.</param>
+    /// <param name="muzzleSpeed">How fast it left the muzzle, in metres per second.</param>
+    /// <param name="distance">How far it travelled, in metres.</param>
+    /// <param name="muzzleDamage">The weapon's damage, or 0 or less for <see cref="DefaultMuzzleDamage"/>.</param>
+    internal static float DamageOnHit(DragModel drag, float lowestSpeed, float muzzleSpeed, float distance, float muzzleDamage) =>
+        drag.IsG1 ? DamageAtSpeed(lowestSpeed, muzzleSpeed, muzzleDamage) : DamageAtDistance(distance, muzzleDamage);
+
+    /// <summary>
+    /// The damage a projectile with linear drag does after travelling <paramref name="distance"/> metres: its muzzle
+    /// damage, falling steadily to <see cref="LinearDragMinDamageFraction"/> of it at
+    /// <see cref="LinearDragFalloffRange"/> and beyond, as in 1.1.0. <see cref="DamageFromSpeed"/> blends it towards the
+    /// full damage, as it does damage by speed, so 0 turns every drop-off off.
+    /// </summary>
+    /// <param name="distance">How far the projectile travelled, in metres.</param>
+    /// <param name="muzzleDamage">The weapon's damage, or 0 or less for <see cref="DefaultMuzzleDamage"/>.</param>
     internal static float DamageAtDistance(float distance, float muzzleDamage)
     {
         if (muzzleDamage <= 0f)
             muzzleDamage = DefaultMuzzleDamage;
 
-        return muzzleDamage * Lerp(1f, MinDamageFraction, distance / DamageFalloffRange);
+        var share = Lerp(1f, LinearDragMinDamageFraction, distance / LinearDragFalloffRange);
+        return muzzleDamage * Lerp(1f, share, DamageFromSpeed);
+    }
+
+    /// <summary>
+    /// The <see cref="DamageFromSpeed"/> that best matches 1.1.0's Long-range damage setting, for carrying a player's
+    /// choice over: its default of 0.1 becomes 1, full drop-off, and 1, no drop-off, becomes 0.
+    /// </summary>
+    /// <param name="longRangeDamage">The share of its damage a bullet kept at long range, from 0 to 1.</param>
+    internal static float DamageFromSpeedForLongRangeDamage(float longRangeDamage) =>
+        Clamp01((1f - longRangeDamage) / (1f - LinearDragMinDamageFraction));
+
+    /// <summary>
+    /// The damage a bullet does when it hits after slowing to <paramref name="impactSpeed"/>:
+    /// <paramref name="muzzleDamage"/> times the share of its muzzle energy it still has,
+    /// <c>(impact speed ÷ muzzle speed)²</c>, blended towards the full damage by <see cref="DamageFromSpeed"/>.
+    /// </summary>
+    /// <remarks>
+    /// A real bullet's effect depends on its energy when it hits, which goes with the square of its speed. A bullet that
+    /// speeds up, like one fired steeply downhill, does no more than the full damage.
+    /// </remarks>
+    /// <param name="impactSpeed">
+    /// How fast the bullet was going, in metres per second. Pass the slowest it went before it hit, so speed gravity
+    /// adds late in a long, high arc doesn't raise the damage again.
+    /// </param>
+    /// <param name="muzzleSpeed">
+    /// How fast it left the muzzle, in metres per second. 0 or less does the full damage, for a bullet with no speed to
+    /// compare against.
+    /// </param>
+    /// <param name="muzzleDamage">
+    /// The weapon's damage. <see cref="DefaultMuzzleDamage"/> is used if it's 0 or less, for a weapon that doesn't say.
+    /// </param>
+    internal static float DamageAtSpeed(float impactSpeed, float muzzleSpeed, float muzzleDamage)
+    {
+        if (muzzleDamage <= 0f)
+            muzzleDamage = DefaultMuzzleDamage;
+
+        if (muzzleSpeed <= 0f)
+            return muzzleDamage;
+
+        var speedShare = Clamp01(impactSpeed / muzzleSpeed);
+        return muzzleDamage * Lerp(1f, speedShare * speedShare, DamageFromSpeed);
     }
 
     /// <summary>

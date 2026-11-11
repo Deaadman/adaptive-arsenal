@@ -41,7 +41,7 @@ Every change is built straight away and published as the [nightly release](https
 | Real bullets | Bullets are projectiles that take time to reach their target, instead of hitting the instant you fire |
 | Accuracy | Your skill, crouching or standing, moving, and firing from the hip all change how close a shot lands to where you aimed |
 | Muzzle velocity | Each rifle and revolver fires its bullets at its own speed |
-| Damage drop-off | The further a bullet travels, the less damage it does |
+| Damage drop-off | The more a bullet has slowed when it hits, the less damage it does |
 | Bullet trails | A trail follows each bullet, so you can see where it landed |
 | HUD animation | Firing plays an animation of the spent round on the ammo display |
 | Hidden ammo count | You can hide how many rounds are loaded or carried on the HUD, so you keep count yourself |

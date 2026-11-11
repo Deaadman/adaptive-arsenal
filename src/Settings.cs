@@ -72,18 +72,12 @@ internal sealed class Settings : JsonModSettings
     [Slider(0f, 20f, 41)]
     public float m_MaxInaccuracyDegrees = 10f;
 
-    /// <summary>The distance over which damage falls to its lowest: <see cref="Ballistics.DamageFalloffRange"/>.</summary>
+    /// <summary>How much a bullet's speed when it hits sets its damage: <see cref="Ballistics.DamageFromSpeed"/>.</summary>
     [Section("Damage")]
-    [Name("Drop-off distance")]
-    [Description("How far, in metres, a bullet flies before its damage has fallen as far as it will.")]
-    [Slider(100f, 1000f, 19)]
-    public float m_DamageFalloffRange = 500f;
-
-    /// <summary>The share of its damage a bullet keeps at long range: <see cref="Ballistics.MinDamageFraction"/>.</summary>
-    [Name("Long-range damage")]
-    [Description("How much of its damage a bullet still does at the drop-off distance and beyond. 1 means no drop-off.")]
+    [Name("Damage from speed")]
+    [Description("How much a bullet's damage falls as it slows down. At 1 it does damage for the energy it has left when it hits, as a real bullet does. 0 means no drop-off.")]
     [Slider(0f, 1f, 21)]
-    public float m_MinDamageFraction = 0.1f;
+    public float m_DamageFromSpeed = 1f;
 
     /// <summary>Whether the player can walk while aiming a revolver.</summary>
     [Section("Other")]
@@ -96,6 +90,12 @@ internal sealed class Settings : JsonModSettings
     [Description("Shows how many rounds are loaded in your rifle or revolver on the HUD, and how many more you're carrying. Off, you'll have to keep count yourself.")]
     public bool m_ShowAmmoCount = true;
 
+    /// <summary>The settings file's name, in the Mods folder, which ModSettings names after the mod's assembly.</summary>
+    private const string SettingsFileName = "AdaptiveArsenal.json";
+
+    /// <summary>The field 1.1.0 saved its Long-range damage setting in, which <see cref="CarryOverLongRangeDamage"/> reads.</summary>
+    private const string OldLongRangeDamageField = "m_MinDamageFraction";
+
     /// <summary>The settings only real bullets use, hidden while <see cref="m_ProjectilesEnabled"/> is off.</summary>
     private static readonly string[] ProjectileOnlyFields =
     [
@@ -107,16 +107,54 @@ internal sealed class Settings : JsonModSettings
         nameof(m_StandingAccuracyMultiplier),
         nameof(m_MovingAccuracyMultiplier),
         nameof(m_MaxInaccuracyDegrees),
-        nameof(m_DamageFalloffRange),
-        nameof(m_MinDamageFraction)
+        nameof(m_DamageFromSpeed)
     ];
 
     /// <summary>Adds the settings to the Mod Settings menu and puts the saved values into effect.</summary>
     internal static void Initialize()
     {
+        Instance.CarryOverLongRangeDamage();
         Instance.AddToModSettings(Properties.BuildInfo.Name);
         Instance.RefreshFields();
         Instance.Apply();
+    }
+
+    /// <summary>
+    /// Carries a player's Long-range damage setting from 1.1.0 over to <see cref="m_DamageFromSpeed"/>, once, so a
+    /// player who had turned drop-off down keeps it down.
+    /// </summary>
+    /// <remarks>
+    /// ModSettings fills only the fields the class still has, and ignores the rest of the file, so the old value is
+    /// read from the file itself. It's carried over only when the file has the old setting but not the new one, which
+    /// is a file last saved by 1.1.0, then saved so it's never carried over again. 1.1.0's Drop-off distance has no
+    /// equivalent, so it's dropped.
+    /// </remarks>
+    private void CarryOverLongRangeDamage()
+    {
+        var path = Path.Combine(MelonLoader.Utils.MelonEnvironment.ModsDirectory, SettingsFileName);
+        try
+        {
+            if (!File.Exists(path))
+                return;
+
+            using var json = System.Text.Json.JsonDocument.Parse(File.ReadAllText(path));
+            var root = json.RootElement;
+            if (root.ValueKind != System.Text.Json.JsonValueKind.Object
+                || root.TryGetProperty(nameof(m_DamageFromSpeed), out _)
+                || !root.TryGetProperty(OldLongRangeDamageField, out var longRangeDamage)
+                || !longRangeDamage.TryGetSingle(out var value))
+            {
+                return;
+            }
+
+            m_DamageFromSpeed = Ballistics.DamageFromSpeedForLongRangeDamage(value);
+            Save();
+            Mod.Logger.Log($"Carried Long-range damage {value} over from 1.1.0 as Damage from speed {m_DamageFromSpeed:F2}.", FlaggedLoggingLevel.Debug);
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or System.Text.Json.JsonException)
+        {
+            Mod.Logger.Log($"Couldn't read the old settings in {path}, so Damage from speed stays at {m_DamageFromSpeed}: {exception.Message}", FlaggedLoggingLevel.Warning);
+        }
     }
 
     /// <inheritdoc />
@@ -142,8 +180,7 @@ internal sealed class Settings : JsonModSettings
         Ballistics.StandingAccuracyMultiplier = m_StandingAccuracyMultiplier;
         Ballistics.MovingAccuracyMultiplier = m_MovingAccuracyMultiplier;
         Ballistics.MaxInaccuracyDegrees = m_MaxInaccuracyDegrees;
-        Ballistics.DamageFalloffRange = m_DamageFalloffRange;
-        Ballistics.MinDamageFraction = m_MinDamageFraction;
+        Ballistics.DamageFromSpeed = m_DamageFromSpeed;
     }
 
     /// <summary>Shows the settings only real bullets use when they're on, and hides them when they're off.</summary>

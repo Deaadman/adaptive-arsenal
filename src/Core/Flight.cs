@@ -64,6 +64,16 @@ internal static class Flight
     }
 
     /// <summary>
+    /// The velocity part way through a step, such as where the projectile hit something, interpolated between the
+    /// velocities at its start and end.
+    /// </summary>
+    /// <param name="start">The velocity at the start of the step.</param>
+    /// <param name="end">The velocity at the end of the step.</param>
+    /// <param name="fraction">How far through the step, from 0 at the start to 1 at the end. It's clamped to that.</param>
+    internal static Vec3 VelocityPartWay(Vec3 start, Vec3 end, float fraction) =>
+        Vec3.Lerp(start, end, Math.Clamp(fraction, 0f, 1f));
+
+    /// <summary>
     /// The change in velocity G1 drag makes over <paramref name="deltaTime"/>, limited so it can at most stop the
     /// projectile, rather than turn it around.
     /// </summary>

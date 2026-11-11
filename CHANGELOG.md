@@ -29,6 +29,15 @@ See docs/development.md, "Releasing". CI checks this file's format.
 - Bullets fly at about the speed of real ones, so they drop much less and reach their target sooner.
 - The air slows bullets as it does real ones, much more at high speed.
 - Bullets turn to follow their arc as they fly.
+- A bullet's damage falls with the energy it has left when it hits, so rifle shots past 200 metres hit harder than before.
+
+### Deprecated
+
+- For other mods, `ProjectileHit.DamageAtDistance` is now `ProjectileHit.Damage`, and the old name will be removed in a later version.
+
+### Removed
+
+- The Drop-off distance and Long-range damage settings are replaced by one Damage from speed setting, which keeps drop-off turned down if you had turned it down.
 
 ## [1.1.0] - 2026-11-08
 

@@ -148,16 +148,16 @@ Today the rifles range from 350 to 550 m/s. The proposal narrows that gap, becau
 
 **Change.** Replace the straight-line drop-off by distance with the bullet's energy when it hits, as a share of its energy at the muzzle: `(impact speed ÷ muzzle speed)²`.
 
-Roughly, for the hunting rifle *(estimate)*:
+For the hunting rifle, from the simulation:
 
 | Distance | Now | Proposed |
 | --- | --- | --- |
-| 100 m | 82% | 82% |
+| 100 m | 82% | 80% |
 | 200 m | 64% | 66% |
-| 300 m | 46% | 52% |
-| 500 m | 10% | 33% |
+| 300 m | 46% | 53% |
+| 500 m | 10% | 34% |
 
-A revolver bullet keeps about 92% at 50 m *(estimate)*.
+A revolver bullet keeps about 89% at 50 m.
 
 **Gameplay.** Rifle damage stays about the same as now out to 200 m, and is higher beyond it. Speed now matters to damage, so the **Bullet speed** setting changes it too: slower bullets do less at range.
 

@@ -20,7 +20,7 @@ Adaptive Arsenal replaces rifle and revolver shots with bullets that fly, drop a
 | `BallisticCoefficient` | Its G1 ballistic coefficient in lb/in², as published for real bullets. Above 0, the air slows it as it does a real bullet, much more at high speed. The mod's own bullets use 0.40 for rifles and 0.15 for revolvers. The default is 0, which uses `Drag`. Since 1.2.0. |
 | `Drag` | How quickly the air slows it while `BallisticCoefficient` is 0: the share of its speed it loses each second, like a Unity rigidbody's drag. Higher slows it sooner, so it drops more at range. The default is 0.1. |
 | `ZeroDistance` | Where it crosses the line of sight, in metres, as with zeroed sights: it's fired a little above `Rotation` to rise to meet it there. The mod zeroes rifles at 100 and revolvers at 25. The default is 0, which fires straight along `Rotation`. Since 1.2.0. |
-| `Damage`, `WeaponSource` | For the mod to damage animals when `OnShotFinished` is empty: the damage at the muzzle, which falls with distance, and the weapon body parts scale it for. |
+| `Damage`, `WeaponSource` | For the mod to damage animals when `OnShotFinished` is empty: the damage at the muzzle, which falls as the projectile slows with a `BallisticCoefficient`, or with distance with only `Drag`, and the weapon body parts scale it for. |
 | `AmmoGearName` | The ammo whose single round it looks like in flight, like `GEAR_RifleAmmoSingle`. Empty is invisible. |
 | `PlayImpactEffects` | Whether it plays the game's impact particles, decal and sound. Turn it off to play your own. |
 | `OnShotFinished` | Called once for the whole shot with a `ProjectileShotResult`, instead of the mod damaging the animals hit. |
@@ -28,7 +28,7 @@ Adaptive Arsenal replaces rifle and revolver shots with bullets that fly, drop a
 
 `ProjectileShotResult` has how many projectiles were `Fired`, and the `Hits`: one `ProjectileHit` for each projectile that hit something in time. Dividing the hits on an animal by `Fired` gives how much of the shot it took, for scaling bleeding and critical hits.
 
-`ProjectileHit` has the `Collider` hit, the `Point` and `Normal`, the `Direction` and `Speed` it was flying at, the `Distance` from where it was fired, and `DamageAtDistance`: `Damage` after the mod's falloff, for using it with your own damage.
+`ProjectileHit` has the `Collider` hit, the `Point` and `Normal`, the `Direction` and `Speed` it was flying at, the `Distance` from where it was fired, and `Damage`: the shot's `Damage` after the mod's falloff, for using it with your own damage. With a `BallisticCoefficient` it falls with the share of its muzzle energy the projectile has left, and with only `Drag` it falls with distance, as before 1.2.0. Since 1.2.0; before that it was `DamageAtDistance`, which still works but is obsolete.
 
 Projectiles fired through the API never count as shots, hits or skill, however many there are. Without `OnShotFinished`, each one damages the animal it hits the way the mod's own bullets do, with body-part scaling, bleeding and critical hits for `WeaponSource`. Either way, each projectile stops where it hits and its trail fades out. It doesn't push loose gear for other mods' guns, since it doesn't know how hard they should; do it in `OnShotFinished` if you want it.
 
@@ -62,7 +62,7 @@ A good place to fire is the prefix where your mod already handles the game's `vp
 
 ### One bullet, like a rifle
 
-Leave `OnShotFinished` empty and the mod deals the damage itself, as it does for its own rifle: it falls with distance, and body parts scale it, bleed and roll critical hits for `WeaponSource`.
+Leave `OnShotFinished` empty and the mod deals the damage itself, as it does for its own rifle: it falls as the bullet slows, and body parts scale it, bleed and roll critical hits for `WeaponSource`.
 
 ```csharp
 // Only called when AdaptiveArsenalSupport.IsLoaded is true.
@@ -171,7 +171,7 @@ internal static class AdaptiveArsenalShotgun
                 continue;
 
             var coverage = animal.Count() / (float)result.Fired;
-            var damage = animal.Sum(hit => hit.DamageAtDistance);
+            var damage = animal.Sum(hit => hit.Damage);
             // Scale bleeding and the chance of a critical hit by coverage, then apply it all once.
         }
     }

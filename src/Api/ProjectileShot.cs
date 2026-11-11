@@ -58,8 +58,9 @@ public sealed class ProjectileShot
 
     /// <summary>
     /// The damage at the muzzle, for the mod to deal when <see cref="OnShotFinished"/> is empty, and for
-    /// <see cref="ProjectileHit.DamageAtDistance"/>. It falls with distance as the mod's own bullets' damage does. 0 or
-    /// less uses the mod's default.
+    /// <see cref="ProjectileHit.Damage"/>. With a <see cref="BallisticCoefficient"/>, it falls as the projectile slows,
+    /// as the mod's own bullets' damage does. With only <see cref="Drag"/>, it falls with distance, as before 1.2.0. 0
+    /// or less uses the mod's default.
     /// </summary>
     public float Damage { get; set; }
 
