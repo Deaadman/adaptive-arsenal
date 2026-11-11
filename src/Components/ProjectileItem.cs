@@ -59,6 +59,9 @@ public class ProjectileItem : MonoBehaviour
     /// <summary>The linear drag of a bullet from a gun whose ammo has no ballistic coefficient, as the mod's bullets had before.</summary>
     private const float DefaultDrag = 0.1f;
 
+    /// <summary>How far off a surface, in metres, a bullet that glanced off it starts its next step.</summary>
+    private const float RicochetClearance = 0.01f;
+
     /// <summary>How many trail points to make room for up front.</summary>
     private const int InitialTrailCapacity = 100;
 
@@ -118,6 +121,9 @@ public class ProjectileItem : MonoBehaviour
 
     /// <summary>Whether the bullet has hit something, so it only hits once.</summary>
     private bool m_HasHit;
+
+    /// <summary>How many times the bullet has glanced off something, up to <see cref="Ricochet.MaxRicochets"/>.</summary>
+    private int m_Ricochets;
 
     /// <summary>How long, in seconds, since the bullet hit something.</summary>
     private float m_TimeSinceHit;
@@ -266,8 +272,12 @@ public class ProjectileItem : MonoBehaviour
             if (Physics.Raycast(origin, direction, out var hit, stepDistance, HitLayerMask, QueryTriggerInteraction.Ignore)
                 || Physics.Raycast(origin, direction, out hit, stepDistance, AiLayerMask, QueryTriggerInteraction.Ignore))
             {
-                // Its speed where it hit, part way through the step, for the damage.
-                m_Velocity = Flight.VelocityPartWay(m_Velocity.ToNumerics(), next.Velocity, hit.distance / stepDistance).ToUnity();
+                // Its velocity where it hit, part way through the step, for the damage or the ricochet.
+                var hitVelocity = Flight.VelocityPartWay(m_Velocity.ToNumerics(), next.Velocity, hit.distance / stepDistance).ToUnity();
+                if (TryRicochet(hit, hitVelocity))
+                    return;
+
+                m_Velocity = hitVelocity;
                 m_LowestSpeed = Mathf.Min(m_LowestSpeed, m_Velocity.magnitude);
                 Hit(hit.collider, hit.point, hit.normal);
                 return;
@@ -592,16 +602,32 @@ public class ProjectileItem : MonoBehaviour
     /// <summary>
     /// Plays the game's bullet impact particles, decal and sound for the surface the bullet hit, at the point it hit.
     /// </summary>
-    /// <remarks>The sound plays from the bullet, which <see cref="StopAt"/> has moved to that point.</remarks>
+    /// <remarks>
+    /// After a hit, the sound plays from the bullet, which <see cref="StopAt"/> has moved to that point. After a
+    /// ricochet the bullet flies on, so the sound plays from an empty object left at the point for
+    /// <see cref="ImpactLingerDuration"/>. Whether the game's audio plays from an object it didn't set up hasn't been
+    /// checked in game.
+    /// </remarks>
     /// <param name="surface">The collider the bullet hit.</param>
     /// <param name="point">Where the bullet hit, in world space.</param>
-    private void SpawnImpactEffects(Collider surface, Vector3 point)
+    /// <param name="known">
+    /// The surface's impact type and material tag, if they've already been looked up, as a ricochet does, or
+    /// <see langword="null"/> to look them up.
+    /// </param>
+    /// <param name="flyingOn">Whether the bullet glanced off and flies on, so the sound can't play from it.</param>
+    private void SpawnImpactEffects(Collider surface, Vector3 point, (BulletImpactEffectType Type, string MaterialTag)? known = null,
+        bool flyingOn = false)
     {
         if (surface == null)
             return;
 
-        var materialTag = Utils.GetMaterialTagForObjectAtPosition(surface.gameObject, point);
-        var impactEffectType = vp_Bullet.GetImpactEffectTypeBasedOnMaterial(materialTag);
+        string materialTag;
+        BulletImpactEffectType impactEffectType;
+        if (known is { } surfaceType)
+            (impactEffectType, materialTag) = surfaceType;
+        else
+            impactEffectType = GetImpactEffectType(surface, point, out materialTag);
+
         var impactEffectPool = GameManager.GetEffectPoolManager().GetBulletImpactEffectPool();
 
         // Surfaces without a material tag get the stone effect.
@@ -615,9 +641,90 @@ public class ProjectileItem : MonoBehaviour
         var materialEffectType = ImpactDecals.MapBulletImpactEffectTypeToMaterialEffectType(impactEffectType);
         GameManager.GetDynamicDecalsManager().AddImpactDecal(ProjectileType.Bullet, materialEffectType, point, transform.forward);
 
-        GameAudioManager.SetMaterialSwitch(materialTag, gameObject);
-        GameAudioManager.Play3DSound("Play_BulletImpacts", gameObject);
+        var soundSource = gameObject;
+        if (flyingOn)
+        {
+            soundSource = new GameObject("AdaptiveArsenal_RicochetSound");
+            soundSource.transform.position = point;
+            Destroy(soundSource, ImpactLingerDuration);
+        }
+
+        GameAudioManager.SetMaterialSwitch(materialTag, soundSource);
+        GameAudioManager.Play3DSound("Play_BulletImpacts", soundSource);
     }
+
+    /// <summary>The game's kind of bullet impact for a surface, which sets its effects and whether bullets glance off it.</summary>
+    /// <param name="surface">The collider the bullet hit.</param>
+    /// <param name="point">Where it hit, in world space.</param>
+    /// <param name="materialTag">The surface's material tag, which the impact sound switches on.</param>
+    private static BulletImpactEffectType GetImpactEffectType(Collider surface, Vector3 point, out string materialTag)
+    {
+        materialTag = Utils.GetMaterialTagForObjectAtPosition(surface.gameObject, point);
+        return vp_Bullet.GetImpactEffectTypeBasedOnMaterial(materialTag);
+    }
+
+    /// <summary>
+    /// Glances the bullet off what it hit, if it's hard and the bullet hit it at a shallow angle: see
+    /// <see cref="Ricochet"/>. It plays the impact effects there, then flies on from the point, slower and in a new
+    /// direction, and can still hit something.
+    /// </summary>
+    /// <remarks>
+    /// <see cref="Ricochet.Glances"/> decides it: rock, metal and ice glance, at a shallow enough angle. Animals never
+    /// do, whatever their tag. The angle is checked first, since it's cheap and most hits are too steep, and the surface
+    /// is looked up only then, once, for both the decision and the effects. Loose gear it glances off is pushed, as a
+    /// hit would. The rest of the step after the ricochet is lost, which at a few hundredths of a second doesn't show.
+    /// </remarks>
+    /// <param name="hit">What the step's raycast hit.</param>
+    /// <param name="velocity">The bullet's velocity where it hit.</param>
+    /// <returns>Whether it glanced off, so it didn't hit.</returns>
+    private bool TryRicochet(RaycastHit hit, Vector3 velocity)
+    {
+        var surface = hit.collider;
+        var incoming = velocity.ToNumerics();
+        var normal = hit.normal.ToNumerics();
+        if (surface.gameObject.layer is AiLayer or AiBodyPartLayer || !Ricochet.IsShallow(incoming, normal, m_Ricochets))
+            return false;
+
+        var impactEffectType = GetImpactEffectType(surface, hit.point, out var materialTag);
+        if (!Ricochet.Glances(incoming, normal, ToSurfaceKind(impactEffectType), m_Ricochets))
+            return false;
+
+        m_Ricochets++;
+        Mod.Logger.Log(
+            $"{name} glanced off {surface.gameObject.name} ({impactEffectType}) at {Ricochet.AngleToSurface(incoming, normal):F1}° " +
+            $"and {velocity.magnitude:F0} m/s, ricochet {m_Ricochets}.",
+            FlaggedLoggingLevel.Debug);
+
+        // The effects and the push face the way the bullet came in, so they come before it turns.
+        transform.position = hit.point;
+        TryPushGear(surface);
+        if (m_PlayImpactEffects)
+            SpawnImpactEffects(surface, hit.point, (impactEffectType, materialTag), flyingOn: true);
+
+        m_Velocity = Ricochet.Deflect(incoming, normal, UnityEngine.Random.value, UnityEngine.Random.value).ToUnity();
+        m_LowestSpeed = Mathf.Min(m_LowestSpeed, m_Velocity.magnitude);
+
+        // Just off the surface, so the next step's raycast doesn't start inside it, and facing into the air as every
+        // step does.
+        transform.SetPositionAndRotation(hit.point + hit.normal * RicochetClearance, Quaternion.LookRotation(m_Velocity - m_Atmosphere.Wind.ToUnity()));
+        m_TrailPoints?.Add(hit.point);
+        return true;
+    }
+
+    /// <summary>The <see cref="SurfaceKind"/> the game's impact type is, one to one.</summary>
+    /// <param name="impactEffectType">The game's impact type for the surface.</param>
+    private static SurfaceKind ToSurfaceKind(BulletImpactEffectType impactEffectType) => impactEffectType switch
+    {
+        BulletImpactEffectType.BulletImpactEffect_Snow => SurfaceKind.Snow,
+        BulletImpactEffectType.BulletImpactEffect_Wood => SurfaceKind.Wood,
+        BulletImpactEffectType.BulletImpactEffect_Fabric => SurfaceKind.Fabric,
+        BulletImpactEffectType.BulletImpactEffect_Ice => SurfaceKind.Ice,
+        BulletImpactEffectType.BulletImpactEffect_Stone => SurfaceKind.Stone,
+        BulletImpactEffectType.BulletImpactEffect_Metal => SurfaceKind.Metal,
+        BulletImpactEffectType.BulletImpactEffect_Flesh => SurfaceKind.Flesh,
+        BulletImpactEffectType.BulletImpactEffect_Glass => SurfaceKind.Glass,
+        _ => SurfaceKind.Untagged
+    };
 
     /// <summary>
     /// Every <see cref="TrailUpdateInterval"/>, adds the bullet's position to the trail, then drops the oldest points

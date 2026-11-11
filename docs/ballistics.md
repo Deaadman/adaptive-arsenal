@@ -250,7 +250,7 @@ Each step adds tests to `tests/AdaptiveArsenal.Tests`, updates [How it works](fe
 
 ### Progress
 
-Steps 1 to 5 are in the code, with tests, on the `1.2.0/projectiles-overhaul` branch. None of them has been checked in game yet. Step 6, ricochets, is still to do.
+All six steps are in the code, with tests, on the `1.2.0/projectiles-overhaul` branch. None of them has been checked in game yet.
 
 Where the code differs from the plan above, after review:
 
@@ -260,6 +260,7 @@ Where the code differs from the plan above, after review:
 - **Damage uses the slowest speed** the bullet reached before it hit, so speed gravity adds late in a high arc doesn't raise it again.
 - **Settings from 1.1.0 are updated once**, by `SettingsMigration` in `src/Core`: Long-range damage carries over to Damage from speed, and Worst spread moves from 10° to 3° only if every accuracy setting was left at its default.
 - **The API's spread stays even**, through `Ballistics.EvenSpreadOffset`, since pellets should cover the whole spread. Only the mod's own guns get the centre-weighted spread.
+- **Ricochets leave water out**, since the game has no water impact type to tell it apart. Bullets glance off rock, metal and ice, and surfaces without a material tag stop them, since what they are isn't known. A bullet glances off at most twice, and a ricochet's lost speed lowers its damage through damage by speed.
 
 To check in game:
 
@@ -268,3 +269,4 @@ To check in game:
 - Bullets drift downwind, not upwind. If they drift upwind, turn the direction round in `ShotWeather.WindVelocity`.
 - `Weather.GetCurrentTemperatureWithoutHeatSources` gives the air's temperature in °C, without fires or wind chill.
 - A settings file saved by 1.1.0 is updated as described above.
+- Bullets glance off rock at a shallow angle, and the ricochet's impact sound plays where it glanced off, from an object the game's audio didn't set up.

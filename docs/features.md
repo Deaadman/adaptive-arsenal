@@ -4,7 +4,7 @@ Adaptive Arsenal changes the rifles and revolvers. The flare gun, bow and other 
 
 ## Real bullets
 
-Without the mod, a shot hits the instant you fire. With it, each shot is a bullet that flies through the world. It takes time to reach a far-off target, and it stops at the first thing it hits.
+Without the mod, a shot hits the instant you fire. With it, each shot is a bullet that flies through the world. It takes time to reach a far-off target, and it stops at the first thing it hits, unless it glances off (see [Ricochets](#ricochets)).
 
 A trail follows each bullet, up to 200 metres behind it, so you can see where it went.
 
@@ -64,6 +64,12 @@ Each gun's sights are set so its bullets cross the line of sight at a set distan
 The bullet leaves the barrel aimed a little above the sights, rises to meet the line of sight at the zero distance, then falls below it. A rifle lands within about 10 cm of where you aimed out to 150 metres. Further out, aim high.
 
 The sights are zeroed for still air at 15 °C, so the wind and the cold move bullets off where you aimed.
+
+## Ricochets
+
+A bullet that hits rock, metal or ice at a shallow angle, under 10° from the surface, glances off instead of stopping, as a real one does. It plays its impact there, keeps 60% of its speed, and flies on a few degrees off the mirror angle, so it can still hit something. Having lost speed, it does less damage. A bullet glances off at most twice.
+
+Snow, wood, animals and anything else stop it, as does a steeper hit.
 
 ## Weather
 

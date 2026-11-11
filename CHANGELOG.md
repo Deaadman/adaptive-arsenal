@@ -24,6 +24,7 @@ See docs/development.md, "Releasing". CI checks this file's format.
 - Rifles are zeroed at 100 metres and revolvers at 25, so bullets land where you aim at that distance instead of always a little low.
 - Other mods can give their projectiles a ballistic coefficient and a zero distance through the API, and choose whether the weather affects them.
 - The wind pushes bullets sideways and cold air and cold powder slow them, which the new Weather affects bullets setting turns off.
+- Bullets that hit rock, metal or ice at a shallow angle glance off and fly on, slower, instead of stopping.
 
 ### Changed
 
