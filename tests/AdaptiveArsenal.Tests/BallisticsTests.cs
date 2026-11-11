@@ -124,12 +124,63 @@ public class BallisticsTests
     }
 
     [Fact]
-    public void Spread_reaches_half_the_radius_at_a_quarter_of_the_second_number()
+    public void About_45_percent_of_shots_land_within_half_the_radius()
+    {
+        // Half the radius is one standard deviation out, which holds (1 − e^−½) ÷ (1 − e^−2) of the cut-off spread.
+        var shareWithinHalf = (1f - MathF.Exp(-0.5f)) / (1f - MathF.Exp(-2f));
+        var (pitch, yaw) = Ballistics.SpreadOffset(maxSpread: 10f, random1: 0.3f, random2: shareWithinHalf);
+
+        Assert.Equal(0.455f, shareWithinHalf, 3);
+        Assert.Equal(5f, MathF.Sqrt(pitch * pitch + yaw * yaw), Precision);
+    }
+
+    [Fact]
+    public void Even_spread_reaches_half_the_radius_at_a_quarter_of_the_second_number()
     {
         // Half the radius encloses a quarter of the circle's area, so a quarter of shots land within it.
-        var (pitch, yaw) = Ballistics.SpreadOffset(maxSpread: 10f, random1: 0.3f, random2: 0.25f);
+        var (pitch, yaw) = Ballistics.EvenSpreadOffset(maxSpread: 10f, random1: 0.3f, random2: 0.25f);
 
         Assert.Equal(5f, MathF.Sqrt(pitch * pitch + yaw * yaw), Precision);
+    }
+
+    [Fact]
+    public void Even_spread_at_the_edge_is_the_full_radius() =>
+        Assert.Equal(10f, Distance(Ballistics.EvenSpreadOffset(maxSpread: 10f, random1: 0.8f, random2: 1f)), Precision);
+
+    [Fact]
+    public void No_even_spread_lands_exactly_on_aim() =>
+        Assert.Equal((0f, 0f), Ballistics.EvenSpreadOffset(maxSpread: 0f, random1: 0.7f, random2: 0.9f));
+
+    [Fact]
+    public void Negative_spread_lands_exactly_on_aim()
+    {
+        Assert.Equal((0f, 0f), Ballistics.SpreadOffset(maxSpread: -2f, random1: 0.7f, random2: 0.9f));
+        Assert.Equal(0f, Distance(Ballistics.EvenSpreadOffset(maxSpread: -2f, random1: 0.7f, random2: 0.9f)));
+    }
+
+    private static float Distance((float Pitch, float Yaw) offset) =>
+        MathF.Sqrt(offset.Pitch * offset.Pitch + offset.Yaw * offset.Yaw);
+
+    [Fact]
+    public void Spread_bunches_towards_the_middle()
+    {
+        // Half of shots land within about 53% of the radius, where an even spread would put them within 71%.
+        var (pitch, yaw) = Ballistics.SpreadOffset(maxSpread: 10f, random1: 0.6f, random2: 0.5f);
+
+        Assert.InRange(MathF.Sqrt(pitch * pitch + yaw * yaw), 5.2f, 5.4f);
+    }
+
+    [Fact]
+    public void Spread_never_falls_as_the_second_number_rises()
+    {
+        var previous = -1f;
+        for (var random2 = 0f; random2 <= 1f; random2 += 0.01f)
+        {
+            var (pitch, yaw) = Ballistics.SpreadOffset(maxSpread: 10f, random1: 0.2f, random2);
+            var distance = MathF.Sqrt(pitch * pitch + yaw * yaw);
+            Assert.True(distance >= previous, $"fell at {random2}");
+            previous = distance;
+        }
     }
 
     [Fact]
@@ -161,13 +212,31 @@ public class BallisticsTests
         Assert.Equal(expected, Ballistics.RevolverSkillAccuracy(tier));
 
     [Theory]
-    [InlineData(-50f, 10f)]
-    [InlineData(0f, 10f)]
-    [InlineData(50f, 5f)]
+    [InlineData(-50f, 3f)]
+    [InlineData(0f, 3f)]
+    [InlineData(50f, 1.5f)]
     [InlineData(100f, 0f)]
     [InlineData(150f, 0f)]
-    public void Spread_shrinks_from_10_degrees_to_none_at_full_accuracy(float accuracy, float expected) =>
-        Assert.Equal(expected, Ballistics.MaxSpreadDegrees(accuracy), Precision);
+    public void Spread_shrinks_from_3_degrees_to_none_at_full_accuracy(float accuracy, float expected) =>
+        Assert.Equal(expected, Ballistics.MaxSpreadDegrees(accuracy, floorDegrees: 0f), Precision);
+
+    [Theory]
+    [InlineData(100f, 0.05f)]
+    [InlineData(50f, 1.55f)]
+    [InlineData(0f, 3.05f)]
+    public void A_guns_own_spread_is_added_at_every_accuracy(float accuracy, float expected) =>
+        Assert.Equal(expected, Ballistics.MaxSpreadDegrees(accuracy, floorDegrees: 0.05f), Precision);
+
+    [Fact]
+    public void A_negative_floor_counts_as_none() =>
+        Assert.Equal(0f, Ballistics.MaxSpreadDegrees(100f, floorDegrees: -1f), Precision);
+
+    [Fact]
+    public void Even_at_full_accuracy_rifles_and_revolvers_spread_a_little()
+    {
+        Assert.Equal(2f / 60f, Ballistics.MaxSpreadDegrees(100f, Ballistics.RifleSpreadFloorDegrees), Precision);
+        Assert.Equal(5f / 60f, Ballistics.MaxSpreadDegrees(100f, Ballistics.RevolverSpreadFloorDegrees), Precision);
+    }
 
     [Theory]
     [InlineData("GEAR_Rifle", 740f)]

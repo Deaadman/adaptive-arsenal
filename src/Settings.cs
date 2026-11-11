@@ -15,6 +15,17 @@ namespace AdaptiveArsenal;
 /// </remarks>
 internal sealed class Settings : JsonModSettings
 {
+    /// <summary>
+    /// The numbers in the settings file as it was before ModSettings loaded it, by field name, or
+    /// <see langword="null"/> if there was no file, and why it couldn't be read if it couldn't.
+    /// </summary>
+    /// <remarks>
+    /// It's declared before <see cref="Instance"/> so it's read first, as static fields are set in order, in case
+    /// loading the file also writes it back without fields the settings no longer have.
+    /// <see cref="UpdateOldSettings"/> uses it.
+    /// </remarks>
+    private static readonly (IReadOnlyDictionary<string, float>? Numbers, string? Error) s_SavedFile = ReadSavedFile();
+
     /// <summary>The settings, loaded from the file when the mod starts.</summary>
     internal static readonly Settings Instance = new();
 
@@ -68,9 +79,9 @@ internal sealed class Settings : JsonModSettings
 
     /// <summary>How far a shot with no accuracy can land from where it was aimed: <see cref="Ballistics.MaxInaccuracyDegrees"/>.</summary>
     [Name("Worst spread")]
-    [Description("How far, in degrees, the least accurate shot can land from where you aimed.")]
+    [Description("How far, in degrees, the least accurate shot can land from where you aimed, on top of the gun's own small spread. Most shots land much closer.")]
     [Slider(0f, 20f, 41)]
-    public float m_MaxInaccuracyDegrees = 10f;
+    public float m_MaxInaccuracyDegrees = Ballistics.DefaultMaxInaccuracyDegrees;
 
     /// <summary>How much a bullet's speed when it hits sets its damage: <see cref="Ballistics.DamageFromSpeed"/>.</summary>
     [Section("Damage")]
@@ -93,9 +104,6 @@ internal sealed class Settings : JsonModSettings
     /// <summary>The settings file's name, in the Mods folder, which ModSettings names after the mod's assembly.</summary>
     private const string SettingsFileName = "AdaptiveArsenal.json";
 
-    /// <summary>The field 1.1.0 saved its Long-range damage setting in, which <see cref="CarryOverLongRangeDamage"/> reads.</summary>
-    private const string OldLongRangeDamageField = "m_MinDamageFraction";
-
     /// <summary>The settings only real bullets use, hidden while <see cref="m_ProjectilesEnabled"/> is off.</summary>
     private static readonly string[] ProjectileOnlyFields =
     [
@@ -113,47 +121,73 @@ internal sealed class Settings : JsonModSettings
     /// <summary>Adds the settings to the Mod Settings menu and puts the saved values into effect.</summary>
     internal static void Initialize()
     {
-        Instance.CarryOverLongRangeDamage();
+        Instance.UpdateOldSettings();
         Instance.AddToModSettings(Properties.BuildInfo.Name);
         Instance.RefreshFields();
         Instance.Apply();
     }
 
     /// <summary>
-    /// Carries a player's Long-range damage setting from 1.1.0 over to <see cref="m_DamageFromSpeed"/>, once, so a
-    /// player who had turned drop-off down keeps it down.
+    /// Updates settings saved by an older version of the mod, once, with <see cref="SettingsMigration"/>, then saves
+    /// them so they aren't updated again.
     /// </summary>
     /// <remarks>
-    /// ModSettings fills only the fields the class still has, and ignores the rest of the file, so the old value is
-    /// read from the file itself. It's carried over only when the file has the old setting but not the new one, which
-    /// is a file last saved by 1.1.0, then saved so it's never carried over again. 1.1.0's Drop-off distance has no
-    /// equivalent, so it's dropped.
+    /// ModSettings looks to create the file with every setting the first time the game starts (it has a
+    /// <c>LoadOrCreate</c>), which hasn't been checked. If so, a player who never opened the settings still has the old
+    /// defaults saved, and they'd keep them without this.
     /// </remarks>
-    private void CarryOverLongRangeDamage()
+    private void UpdateOldSettings()
     {
-        var path = Path.Combine(MelonLoader.Utils.MelonEnvironment.ModsDirectory, SettingsFileName);
+        var (saved, error) = s_SavedFile;
+        if (error is not null)
+        {
+            Mod.Logger.Log($"Couldn't read the settings file before loading it, so old settings aren't updated: {error}", FlaggedLoggingLevel.Warning);
+            return;
+        }
+
+        var updated = SettingsMigration.Migrate(saved, new(m_DamageFromSpeed, m_MaxInaccuracyDegrees));
+        if (updated is not { } values)
+            return;
+
+        Mod.Logger.Log(
+            $"Updated settings saved by version {SettingsMigration.VersionOf(saved!)}: Damage from speed {m_DamageFromSpeed} -> {values.DamageFromSpeed:F2}, " +
+            $"Worst spread {m_MaxInaccuracyDegrees} -> {values.MaxInaccuracyDegrees}.",
+            FlaggedLoggingLevel.Debug);
+
+        m_DamageFromSpeed = values.DamageFromSpeed;
+        m_MaxInaccuracyDegrees = values.MaxInaccuracyDegrees;
+        Save();
+    }
+
+    /// <summary>Reads the numbers in the settings file, by field name, for <see cref="s_SavedFile"/>.</summary>
+    /// <returns>
+    /// The numbers, or <see langword="null"/> for them if there's no file, and why the file couldn't be read if it
+    /// couldn't. Nothing is logged here, since it runs before the mod's logger may be ready.
+    /// </returns>
+    private static (IReadOnlyDictionary<string, float>? Numbers, string? Error) ReadSavedFile()
+    {
         try
         {
+            var path = Path.Combine(MelonLoader.Utils.MelonEnvironment.ModsDirectory, SettingsFileName);
             if (!File.Exists(path))
-                return;
+                return (null, null);
 
             using var json = System.Text.Json.JsonDocument.Parse(File.ReadAllText(path));
-            var root = json.RootElement;
-            if (root.ValueKind != System.Text.Json.JsonValueKind.Object
-                || root.TryGetProperty(nameof(m_DamageFromSpeed), out _)
-                || !root.TryGetProperty(OldLongRangeDamageField, out var longRangeDamage)
-                || !longRangeDamage.TryGetSingle(out var value))
+            if (json.RootElement.ValueKind != System.Text.Json.JsonValueKind.Object)
+                return (null, "it isn't a JSON object");
+
+            Dictionary<string, float> numbers = [];
+            foreach (var property in json.RootElement.EnumerateObject())
             {
-                return;
+                if (property.Value.ValueKind == System.Text.Json.JsonValueKind.Number && property.Value.TryGetSingle(out var value))
+                    numbers[property.Name] = value;
             }
 
-            m_DamageFromSpeed = Ballistics.DamageFromSpeedForLongRangeDamage(value);
-            Save();
-            Mod.Logger.Log($"Carried Long-range damage {value} over from 1.1.0 as Damage from speed {m_DamageFromSpeed:F2}.", FlaggedLoggingLevel.Debug);
+            return (numbers, null);
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or System.Text.Json.JsonException)
         {
-            Mod.Logger.Log($"Couldn't read the old settings in {path}, so Damage from speed stays at {m_DamageFromSpeed}: {exception.Message}", FlaggedLoggingLevel.Warning);
+            return (null, exception.Message);
         }
     }
 

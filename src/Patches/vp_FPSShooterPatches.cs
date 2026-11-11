@@ -110,7 +110,10 @@ internal static class vp_FPSShooterPatches
             var playerManager = GameManager.GetPlayerManagerComponent();
             var accuracy = ProjectileItem.CalculateAccuracy(weapon.m_GunItem, isHipFire, !playerManager.PlayerIsCrouched(), playerManager.PlayerIsWalking());
 
-            var maxSpread = Ballistics.MaxSpreadDegrees(accuracy);
+            var spreadFloor = weapon.m_GunItem.m_GunType == GunType.Revolver
+                ? Ballistics.RevolverSpreadFloorDegrees
+                : Ballistics.RifleSpreadFloorDegrees;
+            var maxSpread = Ballistics.MaxSpreadDegrees(accuracy, spreadFloor);
             var (pitch, yaw) = Ballistics.SpreadOffset(maxSpread, Random.value, Random.value);
             var spread = Quaternion.Euler(pitch, yaw, 0f);
 

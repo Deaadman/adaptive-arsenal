@@ -53,9 +53,9 @@ public static class Projectiles
 
         for (var i = 0; i < count; i++)
         {
-            // Random within a circle, so the projectiles cover the whole spread evenly instead of bunching in the middle.
-            var offset = UnityEngine.Random.insideUnitCircle * spread;
-            var rotation = shot.Rotation * Quaternion.Euler(-offset.y, offset.x, 0f);
+            // Even within the circle, so pellets cover the whole spread instead of bunching in the middle.
+            var (pitch, yaw) = Ballistics.EvenSpreadOffset(spread, UnityEngine.Random.value, UnityEngine.Random.value);
+            var rotation = shot.Rotation * Quaternion.Euler(pitch, yaw, 0f);
             ProjectileItem.SpawnAndFire(template, shot, rotation, group);
         }
 

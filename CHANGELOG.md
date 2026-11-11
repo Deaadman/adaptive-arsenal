@@ -30,6 +30,8 @@ See docs/development.md, "Releasing". CI checks this file's format.
 - The air slows bullets as it does real ones, much more at high speed.
 - Bullets turn to follow their arc as they fly.
 - A bullet's damage falls with the energy it has left when it hits, so rifle shots past 200 metres hit harder than before.
+- Shots bunch towards where you aim, and the least accurate shot lands at most 3° away instead of 10°. If you never changed any accuracy setting, Worst spread moves to the new default.
+- Even at full skill, rifles and revolvers have a small spread of their own, as real guns do.
 
 ### Deprecated
 

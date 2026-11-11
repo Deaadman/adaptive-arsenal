@@ -24,7 +24,14 @@ Then the score is multiplied:
 | Standing (not crouching) | × 0.8 |
 | Moving | × 0.9 |
 
-At a score of 0, a shot can land up to 10° away from where you aimed, in any direction. At 100 or more, it lands exactly where you aimed. So at skill level 5, rifles and revolvers are fully accurate.
+At a score of 0, a shot can land up to 3° away from where you aimed, in any direction, and at 100 or more no further than the gun's own spread. Shots bunch towards where you aimed, as real ones do: about half land within half that distance.
+
+Even at skill level 5, every gun has a small spread of its own, as real guns do:
+
+| Gun | Own spread | At 100 m |
+| --- | --- | --- |
+| Rifles | 2 MOA (0.03°) | within about 6 cm |
+| Revolvers | 5 MOA (0.08°) | within about 15 cm |
 
 ## Muzzle velocity
 
@@ -94,7 +101,7 @@ Everything above is how the mod plays by default. To change it, open **Options**
 | Bullet speed | × 1 | Multiplies every weapon's muzzle velocity. |
 | Base accuracy | × 1.2 | Multiplies the accuracy of every shot. |
 | Hip fire, Standing, Moving | × 0.7, × 0.8, × 0.9 | Multiply accuracy in those situations. 1 means no penalty. |
-| Worst spread | 10° | How far the least accurate shot can land from where you aimed. |
+| Worst spread | 3° | How far the least accurate shot can land from where you aimed, on top of the gun's own spread. If you never changed any accuracy setting in 1.1.0, it moves from 10° to 3° when you update. |
 | Damage from speed | 1 | How much a bullet's damage falls as it slows. At 1 it follows the energy left, as in the table above. 0 means no drop-off, and values between blend the two. |
 | Walk while aiming revolver | On | Lets you walk while aiming a revolver. |
 | Show ammo count | On | Shows the loaded and carried rounds on the HUD, with the spent round animation. Off, you keep count yourself. |

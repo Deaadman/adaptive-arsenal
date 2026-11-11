@@ -49,8 +49,32 @@ internal static class Ballistics
     /// <summary>The accuracy at which a shot lands exactly where it was aimed.</summary>
     internal const float FullAccuracy = 100f;
 
-    /// <summary>How far, in degrees, a shot with an accuracy of 0 can land from where it was aimed.</summary>
-    internal static float MaxInaccuracyDegrees { get; set; } = 10f;
+    /// <summary>
+    /// How far, in degrees, a shot with an accuracy of 0 can land from where it was aimed, on top of the gun's own
+    /// spread.
+    /// </summary>
+    internal static float MaxInaccuracyDegrees { get; set; } = DefaultMaxInaccuracyDegrees;
+
+    /// <summary>The default for <see cref="MaxInaccuracyDegrees"/>.</summary>
+    internal const float DefaultMaxInaccuracyDegrees = 3f;
+
+    /// <summary>
+    /// How far, in degrees, a rifle's shots can land from where they were aimed even at full accuracy: 2 MOA, about
+    /// the spread of a real hunting rifle.
+    /// </summary>
+    internal const float RifleSpreadFloorDegrees = 2f / 60f;
+
+    /// <summary>
+    /// How far, in degrees, a revolver's shots can land from where they were aimed even at full accuracy: 5 MOA, as
+    /// a revolver's short barrel and sights spread its shots more than a rifle's.
+    /// </summary>
+    internal const float RevolverSpreadFloorDegrees = 5f / 60f;
+
+    /// <summary>
+    /// How much of the spread circle's radius the spread's standard deviation is, in <see cref="SpreadOffset"/>: half,
+    /// so the circle's edge is two standard deviations out.
+    /// </summary>
+    private const float SpreadDeviationShare = 0.5f;
 
     /// <summary>Every weapon's muzzle velocity is multiplied by this.</summary>
     internal static float MuzzleVelocityMultiplier { get; set; } = 1f;
@@ -125,19 +149,32 @@ internal static class Ballistics
     internal static float RevolverSkillAccuracy(int skillTier) => RevolverAccuracyBySkillTier[skillTier];
 
     /// <summary>
-    /// How far, in degrees, a shot can land from where it was aimed: <see cref="MaxInaccuracyDegrees"/> at an accuracy
-    /// of 0 or less, falling steadily to none at <see cref="FullAccuracy"/> or more.
+    /// How far, in degrees, a shot can land from where it was aimed: the gun's own <paramref name="floorDegrees"/>, plus
+    /// <see cref="MaxInaccuracyDegrees"/> at an accuracy of 0 or less, falling steadily to nothing more at
+    /// <see cref="FullAccuracy"/> or more.
     /// </summary>
     /// <param name="accuracy">The shot's accuracy.</param>
-    internal static float MaxSpreadDegrees(float accuracy) => Lerp(0f, MaxInaccuracyDegrees, 1f - accuracy / FullAccuracy);
+    /// <param name="floorDegrees">
+    /// The gun's own spread, which even a perfect shooter gets, like <see cref="RifleSpreadFloorDegrees"/>.
+    /// </param>
+    internal static float MaxSpreadDegrees(float accuracy, float floorDegrees) =>
+        MathF.Max(0f, floorDegrees) + Lerp(0f, MaxInaccuracyDegrees, 1f - accuracy / FullAccuracy);
 
     /// <summary>
-    /// Turns two random numbers into how far a shot lands from where it was aimed, anywhere within a circle of
-    /// <paramref name="maxSpread"/> degrees, with every point in the circle as likely as any other.
+    /// Turns two random numbers into how far a shot lands from where it was aimed, within a circle of
+    /// <paramref name="maxSpread"/> degrees, bunched towards the middle as real shots are.
     /// </summary>
     /// <remarks>
-    /// Picking the two angles separately would spread shots over a square, whose corners are further out than its
-    /// sides. The square root of the distance keeps shots from bunching up in the middle of the circle.
+    /// <para>
+    /// Real shots scatter in a normal distribution around the point of aim, so their distance from it follows a
+    /// Rayleigh distribution. This picks the distance from one cut off at the circle's edge, which is two standard
+    /// deviations out, so no shot lands further out than <paramref name="maxSpread"/>. About 45% of shots land within
+    /// half the radius, where an even spread puts 25%.
+    /// </para>
+    /// <para>
+    /// The distance comes from the Rayleigh distribution's inverse: <c>σ√(−2 ln(1 − p))</c>, with <c>p</c> scaled so
+    /// that 1 lands exactly on the edge.
+    /// </para>
     /// </remarks>
     /// <param name="maxSpread">The radius of the circle, in degrees, from <see cref="MaxSpreadDegrees"/>.</param>
     /// <param name="random1">A random number from 0 to 1, which picks the direction.</param>
@@ -145,8 +182,35 @@ internal static class Ballistics
     /// <returns>How far to turn the shot up or down (<c>Pitch</c>) and left or right (<c>Yaw</c>), in degrees.</returns>
     internal static (float Pitch, float Yaw) SpreadOffset(float maxSpread, float random1, float random2)
     {
+        if (maxSpread <= 0f)
+            return (0f, 0f);
+
         var direction = 2f * MathF.PI * random1;
-        var distance = maxSpread * MathF.Sqrt(Clamp01(random2));
+        var deviation = maxSpread * SpreadDeviationShare;
+
+        // The share of the whole distribution inside the circle, so random2 = 1 maps to its edge.
+        var insideCircle = 1f - MathF.Exp(-0.5f / (SpreadDeviationShare * SpreadDeviationShare));
+        var distance = deviation * MathF.Sqrt(-2f * MathF.Log(1f - Clamp01(random2) * insideCircle));
+        return (distance * MathF.Sin(direction), distance * MathF.Cos(direction));
+    }
+
+    /// <summary>
+    /// Turns two random numbers into how far a shot lands from where it was aimed, anywhere within a circle of
+    /// <paramref name="maxSpread"/> degrees, with every point in the circle as likely as any other, for shots fired
+    /// through the API, like a shotgun's pellets.
+    /// </summary>
+    /// <remarks>
+    /// Picking the two angles separately would spread shots over a square, whose corners are further out than its
+    /// sides. The square root of the distance keeps shots from bunching up in the middle of the circle.
+    /// </remarks>
+    /// <param name="maxSpread">The radius of the circle, in degrees.</param>
+    /// <param name="random1">A random number from 0 to 1, which picks the direction.</param>
+    /// <param name="random2">A random number from 0 to 1, which picks how far out.</param>
+    /// <returns>How far to turn the shot up or down (<c>Pitch</c>) and left or right (<c>Yaw</c>), in degrees.</returns>
+    internal static (float Pitch, float Yaw) EvenSpreadOffset(float maxSpread, float random1, float random2)
+    {
+        var direction = 2f * MathF.PI * random1;
+        var distance = MathF.Max(0f, maxSpread) * MathF.Sqrt(Clamp01(random2));
         return (distance * MathF.Sin(direction), distance * MathF.Cos(direction));
     }
 
