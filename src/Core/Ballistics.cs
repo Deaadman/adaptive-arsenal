@@ -76,6 +76,16 @@ internal static class Ballistics
     /// </summary>
     private const float SpreadDeviationShare = 0.5f;
 
+    /// <summary>
+    /// How much muzzle velocity changes for each °C the powder is from <see cref="Atmosphere.StandardTemperature"/>, as a
+    /// share of it: colder powder burns slower. 0.07% a degree is about 0.5 m/s for a rifle at 740 m/s, typical of
+    /// hunting cartridges, which differ a lot.
+    /// </summary>
+    private const float PowderTemperatureSensitivity = 0.0007f;
+
+    /// <summary>The lowest share of its muzzle velocity the cold can leave a shot, so a broken reading can't stop it.</summary>
+    private const float MinPowderTemperatureFactor = 0.5f;
+
     /// <summary>Every weapon's muzzle velocity is multiplied by this.</summary>
     internal static float MuzzleVelocityMultiplier { get; set; } = 1f;
 
@@ -193,6 +203,16 @@ internal static class Ballistics
         var distance = deviation * MathF.Sqrt(-2f * MathF.Log(1f - Clamp01(random2) * insideCircle));
         return (distance * MathF.Sin(direction), distance * MathF.Cos(direction));
     }
+
+    /// <summary>
+    /// A muzzle velocity changed for the powder's temperature: lower in the cold, as slower-burning powder pushes the
+    /// bullet less, and a little higher in the warm.
+    /// </summary>
+    /// <param name="muzzleVelocity">The muzzle velocity at <see cref="Atmosphere.StandardTemperature"/>, in m/s.</param>
+    /// <param name="celsius">The powder's temperature, taken to be the air's, in °C.</param>
+    internal static float MuzzleVelocityAtTemperature(float muzzleVelocity, float celsius) =>
+        muzzleVelocity * MathF.Max(MinPowderTemperatureFactor,
+            1f + PowderTemperatureSensitivity * (celsius - Atmosphere.StandardTemperature));
 
     /// <summary>
     /// Turns two random numbers into how far a shot lands from where it was aimed, anywhere within a circle of

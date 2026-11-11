@@ -57,6 +57,17 @@ public sealed class ProjectileShot
     public float ZeroDistance { get; set; }
 
     /// <summary>
+    /// Whether the game's weather affects the projectile, while the player has the mod's Weather affects bullets
+    /// setting on: the wind pushes it, cold air drags on it more, and cold lowers its <see cref="MuzzleVelocity"/>.
+    /// <see langword="null"/>, the default, means it does with a <see cref="BallisticCoefficient"/> and doesn't with
+    /// only <see cref="Drag"/>, so shots made before 1.2.0 fly as they did.
+    /// </summary>
+    public bool? AffectedByWeather { get; set; }
+
+    /// <summary>Whether the weather affects this shot, working out <see cref="AffectedByWeather"/>'s default.</summary>
+    internal bool IsAffectedByWeather => AffectedByWeather ?? BallisticCoefficient > 0f;
+
+    /// <summary>
     /// The damage at the muzzle, for the mod to deal when <see cref="OnShotFinished"/> is empty, and for
     /// <see cref="ProjectileHit.Damage"/>. With a <see cref="BallisticCoefficient"/>, it falls as the projectile slows,
     /// as the mod's own bullets' damage does. With only <see cref="Drag"/>, it falls with distance, as before 1.2.0. 0

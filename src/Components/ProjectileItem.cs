@@ -13,7 +13,7 @@ namespace AdaptiveArsenal.Components;
 /// <remarks>
 /// <see cref="ProjectileTemplates"/> builds an inactive template with this component for each kind of ammo, and
 /// <see cref="Patches.vp_FPSShooterPatches"/> fires a copy of it with
-/// <see cref="SpawnAndFire(GameObject, GunItem, Vector3, Quaternion)"/> for each shot. When it hits something, it stops
+/// <see cref="SpawnAndFire(GameObject, GunItem, Vector3, Quaternion, ShotWeather)"/> for each shot. When it hits something, it stops
 /// and hides, and lingers for <see cref="ImpactLingerDuration"/> while its trail fades and its impact sound plays.
 ///
 /// The bullet has no rigidbody: <see cref="Flight.Step"/> moves it each physics step, so its drag can grow with its
@@ -98,6 +98,9 @@ public class ProjectileItem : MonoBehaviour
     /// <summary>How the air slows the bullet.</summary>
     private DragModel m_Drag;
 
+    /// <summary>The air the bullet flies through, read from the weather when it's fired.</summary>
+    private Atmosphere m_Atmosphere;
+
     /// <summary>Where the bullet was fired from, to work out how far it has travelled when it hits.</summary>
     private Vector3 m_FirePosition;
 
@@ -152,17 +155,19 @@ public class ProjectileItem : MonoBehaviour
     /// <param name="gunItem">The gun firing it. Il2Cpp doesn't copy this component's fields, so it's passed here.</param>
     /// <param name="position">Where to fire it from, in world space.</param>
     /// <param name="rotation">The direction to fire it in, in world space.</param>
-    internal static void SpawnAndFire(GameObject template, GunItem gunItem, Vector3 position, Quaternion rotation) =>
-        Spawn(template, position, rotation).Fire(gunItem);
+    /// <param name="weather">The weather the shot is fired in, from <see cref="ProjectileUtilities.ReadWeather"/>.</param>
+    internal static void SpawnAndFire(GameObject template, GunItem gunItem, Vector3 position, Quaternion rotation, ShotWeather weather) =>
+        Spawn(template, position, rotation).Fire(gunItem, weather);
 
     /// <summary>Makes a copy of a bullet template and fires it as another mod asked, through <see cref="Projectiles.Fire"/>.</summary>
     /// <param name="template">An inactive template from <see cref="ProjectileTemplates"/>.</param>
     /// <param name="shot">The shot to fire.</param>
     /// <param name="rotation">The direction to fire it in, in world space: the shot's, with this projectile's spread.</param>
     /// <param name="group">The shot it's part of, to tell what it hits, or <see langword="null"/> to damage it itself.</param>
+    /// <param name="weather">The weather the whole shot is fired in, read once for all its projectiles.</param>
     internal static void SpawnAndFire(GameObject template, ProjectileShot shot, Quaternion rotation,
-        ProjectileGroup<ProjectileHit>? group) =>
-        Spawn(template, shot.Position, rotation).Fire(shot, group);
+        ProjectileGroup<ProjectileHit>? group, ShotWeather weather) =>
+        Spawn(template, shot.Position, rotation).Fire(shot, group, weather);
 
     /// <summary>Makes an active copy of a bullet template, ready to fire.</summary>
     /// <param name="template">An inactive template from <see cref="ProjectileTemplates"/>.</param>
@@ -238,7 +243,7 @@ public class ProjectileItem : MonoBehaviour
 
     /// <summary>
     /// Works out where the bullet will be after this physics step, looks along the straight line to there and hits the
-    /// first thing on it. If there's nothing, it moves the bullet there, facing the way it's now going.
+    /// first thing on it. If there's nothing, it moves the bullet there, facing the way it's now going through the air.
     /// </summary>
     /// <remarks>
     /// The game's arrows find what they hit with a raycast each physics step too. The step's path is really a slight
@@ -250,7 +255,7 @@ public class ProjectileItem : MonoBehaviour
             return;
 
         var origin = transform.position;
-        var next = Flight.Step(new(origin.ToNumerics(), m_Velocity.ToNumerics()), Physics.gravity.ToNumerics(), m_Drag, Time.fixedDeltaTime);
+        var next = Flight.Step(new(origin.ToNumerics(), m_Velocity.ToNumerics()), Physics.gravity.ToNumerics(), m_Drag, m_Atmosphere, Time.fixedDeltaTime);
         var destination = next.Position.ToUnity();
 
         var path = destination - origin;
@@ -271,7 +276,9 @@ public class ProjectileItem : MonoBehaviour
 
         m_Velocity = next.Velocity.ToUnity();
         m_LowestSpeed = Mathf.Min(m_LowestSpeed, m_Velocity.magnitude);
-        var rotation = m_Velocity.sqrMagnitude > 0f ? Quaternion.LookRotation(m_Velocity) : transform.rotation;
+        // A spinning bullet points into the air flowing past it, which in a crosswind is a little off its path.
+        var airVelocity = m_Velocity - m_Atmosphere.Wind.ToUnity();
+        var rotation = airVelocity.sqrMagnitude > 0f ? Quaternion.LookRotation(airVelocity) : transform.rotation;
         transform.SetPositionAndRotation(destination, rotation);
     }
 
@@ -351,7 +358,8 @@ public class ProjectileItem : MonoBehaviour
     /// the player's hands, with its ammo's drag and the gun's sights zeroed.
     /// </summary>
     /// <param name="gunItem">The gun firing it.</param>
-    private void Fire(GunItem gunItem)
+    /// <param name="weather">The weather the shot is fired in, or <see cref="ShotWeather.None"/>.</param>
+    private void Fire(GunItem gunItem, ShotWeather weather)
     {
         m_GunType = gunItem.m_GunType;
         m_MuzzleDamage = gunItem.m_DamageHP;
@@ -375,13 +383,14 @@ public class ProjectileItem : MonoBehaviour
             _ => 0f
         };
 
-        Launch(muzzleVelocity, drag, zeroDistance);
+        Launch(muzzleVelocity, drag, zeroDistance, weather);
     }
 
     /// <summary>Launches the bullet as another mod asked, through <see cref="Projectiles.Fire"/>.</summary>
     /// <param name="shot">The shot to fire.</param>
     /// <param name="group">The shot it's part of, to tell what it hits, or <see langword="null"/> to damage it itself.</param>
-    private void Fire(ProjectileShot shot, ProjectileGroup<ProjectileHit>? group)
+    /// <param name="weather">The weather the shot is fired in, or <see cref="ShotWeather.None"/>.</param>
+    private void Fire(ProjectileShot shot, ProjectileGroup<ProjectileHit>? group, ShotWeather weather)
     {
         m_MuzzleDamage = shot.Damage;
         m_WeaponSource = shot.WeaponSource;
@@ -389,7 +398,7 @@ public class ProjectileItem : MonoBehaviour
         m_PlayImpactEffects = shot.PlayImpactEffects;
 
         var drag = shot.BallisticCoefficient > 0f ? DragModel.G1(shot.BallisticCoefficient) : DragModel.Linear(shot.Drag);
-        Launch(shot.MuzzleVelocity * Ballistics.MuzzleVelocityMultiplier, drag, shot.ZeroDistance);
+        Launch(shot.MuzzleVelocity * Ballistics.MuzzleVelocityMultiplier, drag, shot.ZeroDistance, weather);
     }
 
     /// <summary>
@@ -397,13 +406,22 @@ public class ProjectileItem : MonoBehaviour
     /// <paramref name="zeroDistance"/>, then starts its trail.
     /// </summary>
     /// <remarks>
+    /// <para>
     /// The zero angle is worked out for a level shot and added to whatever way the bullet is aimed, as a real gun's
     /// sights are set once and stay at that angle to the barrel, uphill or down.
+    /// </para>
+    /// <para>
+    /// The weather, read once for the whole shot, sets the air it flies through and the powder's temperature, which
+    /// lowers the muzzle velocity in the cold. The zero is still for 15 °C and still air, so the cold and wind move the
+    /// bullet off the point of aim, and damage is still measured against the muzzle velocity at 15 °C, so a cold shot
+    /// does a little less.
+    /// </para>
     /// </remarks>
-    /// <param name="muzzleVelocity">How fast it leaves the muzzle, in metres per second.</param>
+    /// <param name="muzzleVelocity">How fast it leaves the muzzle at 15 °C, in metres per second.</param>
     /// <param name="drag">How the air slows it.</param>
     /// <param name="zeroDistance">Where it should cross the line of sight, in metres, or 0 to fire it straight along it.</param>
-    private void Launch(float muzzleVelocity, DragModel drag, float zeroDistance)
+    /// <param name="weather">The weather the shot is fired in, or <see cref="ShotWeather.None"/>.</param>
+    private void Launch(float muzzleVelocity, DragModel drag, float zeroDistance, ShotWeather weather)
     {
         m_FireTime = Time.time;
         enabled = true;
@@ -414,10 +432,13 @@ public class ProjectileItem : MonoBehaviour
         if (zeroAngle > 0f)
             transform.rotation *= Quaternion.Euler(-zeroAngle, 0f, 0f);
 
-        var velocity = transform.forward * muzzleVelocity;
+        m_Atmosphere = weather.Atmosphere;
+        var launchSpeed = weather.MuzzleVelocity(muzzleVelocity);
+
+        var velocity = transform.forward * launchSpeed;
         m_Velocity = velocity;
         m_MuzzleSpeed = muzzleVelocity;
-        m_LowestSpeed = muzzleVelocity;
+        m_LowestSpeed = launchSpeed;
 
         m_FirePosition = transform.position;
 

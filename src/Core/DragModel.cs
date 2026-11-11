@@ -38,12 +38,6 @@ internal readonly record struct DragModel
     /// </summary>
     internal float LinearDrag { get; }
 
-    /// <summary>The density of air at sea level and 15 °C, in kg/m³, which the G1 curve is for.</summary>
-    internal const float StandardAirDensity = 1.225f;
-
-    /// <summary>The speed of sound at 15 °C, in m/s, which turns a speed into a Mach number.</summary>
-    internal const float StandardSpeedOfSound = 340.3f;
-
     /// <summary>How many kg/m³ one lb/in² is, to use a published ballistic coefficient in metric units.</summary>
     private const float KilogramsPerSquareMetrePerPoundPerSquareInch = 703.0696f;
 
@@ -85,24 +79,25 @@ internal readonly record struct DragModel
     internal bool IsG1 => BallisticCoefficient > 0f;
 
     /// <summary>
-    /// The acceleration G1 drag gives a projectile, in m/s², against its velocity. Linear drag gives none here, since
-    /// <see cref="Flight.Step"/> applies it the way a rigidbody does instead.
+    /// The acceleration G1 drag gives a projectile, in m/s², against its velocity through the air. Linear drag gives
+    /// none here, since <see cref="Flight.Step"/> applies it the way a rigidbody does instead.
     /// </summary>
-    /// <param name="velocity">The projectile's velocity through the air, in m/s.</param>
-    internal Vec3 Acceleration(Vec3 velocity)
+    /// <param name="airVelocity">The projectile's velocity through the air, in m/s: its velocity less the wind's.</param>
+    /// <param name="atmosphere">The air, whose density and speed of sound set the drag.</param>
+    internal Vec3 Acceleration(Vec3 airVelocity, Atmosphere atmosphere)
     {
         if (!IsG1)
             return Vec3.Zero;
 
-        var speed = velocity.Length();
+        var speed = airVelocity.Length();
         if (speed <= 0f)
             return Vec3.Zero;
 
         // Drag is ρv²·Cd·A/2m, with A = πd²/4. The bullet's Cd is i times the G1 curve's, and the coefficient is
         // m/(i·d²), so the deceleration is ρv²·Cd(G1)·π/(8·BC).
-        var deceleration = StandardAirDensity * speed * speed * G1DragCoefficient(speed / StandardSpeedOfSound) * MathF.PI
+        var deceleration = atmosphere.Density * speed * speed * G1DragCoefficient(speed / atmosphere.SpeedOfSound) * MathF.PI
                            / (8f * BallisticCoefficient * KilogramsPerSquareMetrePerPoundPerSquareInch);
-        return -velocity / speed * deceleration;
+        return -airVelocity / speed * deceleration;
     }
 
     /// <summary>

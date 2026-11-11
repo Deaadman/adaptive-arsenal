@@ -21,7 +21,7 @@ public class FlightTests
         // A huge coefficient leaves G1 drag negligible, and the midpoint method is exact under constant gravity.
         FlightState state = new(Vector3.Zero, new Vector3(100f, 0f, 0f));
         for (var i = 0; i < 50; i++)
-            state = Flight.Step(state, new Vector3(0f, -Gravity, 0f), DragModel.G1(1e9f), Step);
+            state = Flight.Step(state, new Vector3(0f, -Gravity, 0f), DragModel.G1(1e9f), Atmosphere.Standard, Step);
 
         // After 1 s: 100 m along, ½gt² down, and falling at g.
         Assert.Equal(100f, state.Position.X, 0.001f);
@@ -33,7 +33,7 @@ public class FlightTests
     public void Linear_drag_moves_a_projectile_as_a_rigidbody_does()
     {
         FlightState start = new(new Vector3(1f, 2f, 3f), new Vector3(400f, 50f, 0f));
-        var state = Flight.Step(start, new Vector3(0f, -Gravity, 0f), DragModel.Linear(0.1f), Step);
+        var state = Flight.Step(start, new Vector3(0f, -Gravity, 0f), DragModel.Linear(0.1f), Atmosphere.Standard, Step);
 
         // Gravity first, then the velocity damped by 1 − drag × step, then the move.
         var velocity = (start.Velocity + new Vector3(0f, -Gravity * Step, 0f)) * (1f - 0.1f * Step);
@@ -46,7 +46,7 @@ public class FlightTests
     {
         FlightState state = new(Vector3.Zero, new Vector3(400f, 0f, 0f));
         for (var i = 0; i < 50; i++)
-            state = Flight.Step(state, Vector3.Zero, DragModel.Linear(0.1f), Step);
+            state = Flight.Step(state, Vector3.Zero, DragModel.Linear(0.1f), Atmosphere.Standard, Step);
 
         Assert.Equal(400f * MathF.Pow(1f - 0.1f * Step, 50), state.Velocity.X, 0.01f);
     }
@@ -56,7 +56,7 @@ public class FlightTests
     [InlineData(1000f)]
     public void Linear_drag_strong_enough_to_stop_a_projectile_in_one_step_stops_it(float drag)
     {
-        var state = Flight.Step(new(Vector3.Zero, new Vector3(400f, 0f, 0f)), Vector3.Zero, DragModel.Linear(drag), Step);
+        var state = Flight.Step(new(Vector3.Zero, new Vector3(400f, 0f, 0f)), Vector3.Zero, DragModel.Linear(drag), Atmosphere.Standard, Step);
 
         Assert.Equal(Vector3.Zero, state.Velocity);
     }
@@ -69,7 +69,7 @@ public class FlightTests
         FlightState state = new(Vector3.Zero, new Vector3(400f, 0f, 0f));
         for (var i = 0; i < 20; i++)
         {
-            var next = Flight.Step(state, Vector3.Zero, DragModel.G1(ballisticCoefficient), Step);
+            var next = Flight.Step(state, Vector3.Zero, DragModel.G1(ballisticCoefficient), Atmosphere.Standard, Step);
             Assert.True(next.Velocity.X >= 0f, $"reversed at step {i}");
             Assert.True(next.Velocity.X <= state.Velocity.X, $"sped up at step {i}");
             state = next;
@@ -179,7 +179,7 @@ public class FlightTests
     {
         FlightState state = new(Vector3.Zero, new Vector3(muzzleVelocity, 0f, 0f));
         while (state.Position.X < distance)
-            state = Flight.Step(state, new Vector3(0f, -Gravity, 0f), drag, Step);
+            state = Flight.Step(state, new Vector3(0f, -Gravity, 0f), drag, Atmosphere.Standard, Step);
 
         return state.Velocity.Length();
     }

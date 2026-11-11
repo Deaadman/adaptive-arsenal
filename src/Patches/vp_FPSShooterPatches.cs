@@ -119,7 +119,7 @@ internal static class vp_FPSShooterPatches
 
             // The spread turns the shot around its own axes, so it's the same whichever way the player faces.
             var direction = isHipFire ? Quaternion.LookRotation(GameManager.GetVpFPSCamera().transform.forward) : aimRotation;
-            ProjectileItem.SpawnAndFire(__instance.ProjectilePrefab, weapon.m_GunItem, position, direction * spread);
+            ProjectileItem.SpawnAndFire(__instance.ProjectilePrefab, weapon.m_GunItem, position, direction * spread, ProjectileUtilities.ReadWeather());
         }
 
         private static void Finalizer(vp_FPSShooter __instance, ShooterBullets? __state) =>

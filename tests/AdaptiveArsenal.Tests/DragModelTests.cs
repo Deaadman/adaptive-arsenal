@@ -34,7 +34,7 @@ public class DragModelTests
     public void A_rifle_bullet_at_the_muzzle_slows_by_about_535_metres_per_second_squared()
     {
         // ρv²·Cd·π/(8·BC), with Cd 0.5715 at Mach 2.175 and the coefficient in kg/m².
-        var acceleration = DragModel.G1(0.40f).Acceleration(new Vector3(740f, 0f, 0f));
+        var acceleration = DragModel.G1(0.40f).Acceleration(new Vector3(740f, 0f, 0f), Atmosphere.Standard);
 
         Assert.Equal(-535.3f, acceleration.X, 0.5f);
         Assert.Equal(0f, acceleration.Y);
@@ -45,8 +45,8 @@ public class DragModelTests
     public void G1_drag_is_against_the_velocity_and_grows_faster_than_the_speed()
     {
         var drag = DragModel.G1(0.40f);
-        var slow = drag.Acceleration(new Vector3(0f, 0f, 200f));
-        var fast = drag.Acceleration(new Vector3(0f, 0f, 400f));
+        var slow = drag.Acceleration(new Vector3(0f, 0f, 200f), Atmosphere.Standard);
+        var fast = drag.Acceleration(new Vector3(0f, 0f, 400f), Atmosphere.Standard);
 
         Assert.True(slow.Z < 0f && fast.Z < 0f);
         Assert.True(fast.Z < 2f * slow.Z);
@@ -57,16 +57,36 @@ public class DragModelTests
     {
         Vector3 velocity = new(500f, 0f, 0f);
 
-        Assert.True(DragModel.G1(0.5f).Acceleration(velocity).X > DragModel.G1(0.25f).Acceleration(velocity).X);
+        Assert.True(DragModel.G1(0.5f).Acceleration(velocity, Atmosphere.Standard).X > DragModel.G1(0.25f).Acceleration(velocity, Atmosphere.Standard).X);
     }
 
     [Fact]
     public void Linear_drag_gives_no_acceleration_since_the_step_applies_it() =>
-        Assert.Equal(Vector3.Zero, DragModel.Linear(0.1f).Acceleration(new Vector3(300f, -40f, 10f)));
+        Assert.Equal(Vector3.Zero, DragModel.Linear(0.1f).Acceleration(new Vector3(300f, -40f, 10f), Atmosphere.Standard));
 
     [Fact]
     public void Nothing_slows_a_projectile_that_isnt_moving() =>
-        Assert.Equal(Vector3.Zero, DragModel.G1(0.40f).Acceleration(Vector3.Zero));
+        Assert.Equal(Vector3.Zero, DragModel.G1(0.40f).Acceleration(Vector3.Zero, Atmosphere.Standard));
+
+    [Fact]
+    public void Denser_air_drags_harder_in_proportion()
+    {
+        Vector3 velocity = new(200f, 0f, 0f);
+        Atmosphere dense = new(Atmosphere.Standard.Density * 1.2f, Atmosphere.Standard.SpeedOfSound, Vector3.Zero);
+
+        Assert.Equal(1.2f * DragModel.G1(0.40f).Acceleration(velocity, Atmosphere.Standard).X,
+            DragModel.G1(0.40f).Acceleration(velocity, dense).X, 0.01f);
+    }
+
+    [Fact]
+    public void A_lower_speed_of_sound_reaches_the_sharp_rise_in_drag_sooner()
+    {
+        // 300 m/s is below the speed of sound at 15 °C but above it in much colder air.
+        Vector3 velocity = new(300f, 0f, 0f);
+        Atmosphere slowSound = new(Atmosphere.Standard.Density, 290f, Vector3.Zero);
+
+        Assert.True(DragModel.G1(0.40f).Acceleration(velocity, slowSound).X < 1.5f * DragModel.G1(0.40f).Acceleration(velocity, Atmosphere.Standard).X);
+    }
 
     [Fact]
     public void Negative_linear_drag_counts_as_none() =>

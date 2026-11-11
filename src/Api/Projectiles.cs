@@ -51,12 +51,15 @@ public static class Projectiles
             : new ProjectileGroup<ProjectileHit>(count, Time.time, shot.ResultDelay, (fired, hits) =>
                 ProjectileItem.CallOtherMod(() => onShotFinished(new(fired, hits)), nameof(ProjectileShot.OnShotFinished)));
 
+        // Read once for every projectile in the shot.
+        var weather = shot.IsAffectedByWeather ? ProjectileUtilities.ReadWeather() : ShotWeather.None;
+
         for (var i = 0; i < count; i++)
         {
             // Even within the circle, so pellets cover the whole spread instead of bunching in the middle.
             var (pitch, yaw) = Ballistics.EvenSpreadOffset(spread, UnityEngine.Random.value, UnityEngine.Random.value);
             var rotation = shot.Rotation * Quaternion.Euler(pitch, yaw, 0f);
-            ProjectileItem.SpawnAndFire(template, shot, rotation, group);
+            ProjectileItem.SpawnAndFire(template, shot, rotation, group, weather);
         }
 
         return true;

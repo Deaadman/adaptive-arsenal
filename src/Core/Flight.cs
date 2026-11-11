@@ -41,25 +41,31 @@ internal static class Flight
     /// <para>
     /// Linear drag moves it the way PhysX, which Unity uses, moves a rigidbody: gravity is added to the velocity, the
     /// velocity is multiplied by 1 − drag × step (but not below 0), then the projectile moves at that velocity. So shots
-    /// with linear drag fly as they did when they were rigidbodies.
+    /// with linear drag fly as they did when they were rigidbodies, in <see cref="Atmosphere.Standard"/>.
+    /// </para>
+    /// <para>
+    /// Drag works on the projectile's velocity through the air, its velocity less the wind's, so the wind pushes it
+    /// along and a headwind slows it more. Denser air scales linear drag by its density, as it does G1 drag.
     /// </para>
     /// </remarks>
     /// <param name="state">Where the projectile is and its velocity.</param>
     /// <param name="gravity">Gravity, in m/s².</param>
     /// <param name="drag">How the air slows it.</param>
+    /// <param name="atmosphere">The air it flies through.</param>
     /// <param name="deltaTime">The length of the step, in seconds.</param>
     /// <returns>Where the projectile is and its velocity at the end of the step.</returns>
-    internal static FlightState Step(FlightState state, Vec3 gravity, DragModel drag, float deltaTime)
+    internal static FlightState Step(FlightState state, Vec3 gravity, DragModel drag, Atmosphere atmosphere, float deltaTime)
     {
+        var wind = atmosphere.Wind;
         if (!drag.IsG1)
         {
-            var damping = MathF.Max(0f, 1f - drag.LinearDrag * deltaTime);
-            var dampedVelocity = (state.Velocity + gravity * deltaTime) * damping;
+            var damping = MathF.Max(0f, 1f - drag.LinearDrag * atmosphere.DensityRatio * deltaTime);
+            var dampedVelocity = wind + (state.Velocity + gravity * deltaTime - wind) * damping;
             return new(state.Position + dampedVelocity * deltaTime, dampedVelocity);
         }
 
-        var halfStepVelocity = state.Velocity + gravity * (deltaTime / 2f) + LimitedDrag(drag, state.Velocity, deltaTime / 2f);
-        var velocity = state.Velocity + gravity * deltaTime + LimitedDrag(drag, halfStepVelocity, deltaTime);
+        var halfStepVelocity = state.Velocity + gravity * (deltaTime / 2f) + LimitedDrag(drag, state.Velocity - wind, atmosphere, deltaTime / 2f);
+        var velocity = state.Velocity + gravity * deltaTime + LimitedDrag(drag, halfStepVelocity - wind, atmosphere, deltaTime);
         return new(state.Position + halfStepVelocity * deltaTime, velocity);
     }
 
@@ -74,20 +80,21 @@ internal static class Flight
         Vec3.Lerp(start, end, Math.Clamp(fraction, 0f, 1f));
 
     /// <summary>
-    /// The change in velocity G1 drag makes over <paramref name="deltaTime"/>, limited so it can at most stop the
-    /// projectile, rather than turn it around.
+    /// The change in velocity G1 drag makes over <paramref name="deltaTime"/>, limited so it can at most bring the
+    /// projectile to a stop in the air, moving with the wind, rather than turn it around.
     /// </summary>
     /// <remarks>
     /// Drag strong enough to stop a projectile within one step, like a ballistic coefficient near 0 from another mod,
     /// would otherwise reverse its velocity and make the next step's drag even stronger.
     /// </remarks>
     /// <param name="drag">How the air slows the projectile.</param>
-    /// <param name="velocity">The velocity drag works on.</param>
+    /// <param name="airVelocity">The projectile's velocity through the air, which drag works on.</param>
+    /// <param name="atmosphere">The air.</param>
     /// <param name="deltaTime">How long it works for, in seconds.</param>
-    private static Vec3 LimitedDrag(DragModel drag, Vec3 velocity, float deltaTime)
+    private static Vec3 LimitedDrag(DragModel drag, Vec3 airVelocity, Atmosphere atmosphere, float deltaTime)
     {
-        var change = drag.Acceleration(velocity) * deltaTime;
-        var speed = velocity.Length();
+        var change = drag.Acceleration(airVelocity, atmosphere) * deltaTime;
+        var speed = airVelocity.Length();
         var changeSize = change.Length();
         return changeSize > speed ? change * (speed / changeSize) : change;
     }
@@ -98,7 +105,8 @@ internal static class Flight
     /// </summary>
     /// <remarks>
     /// <para>
-    /// The angle is for a level shot, as a gun is zeroed on a flat range, and the shot starts on the line of sight. It
+    /// The angle is for a level shot in still air at 15 °C (<see cref="Atmosphere.Standard"/>), as a gun is zeroed once
+    /// on a flat range, so wind and cold still move the shot off the point of aim. The shot starts on the line of sight. It
     /// tries angles a degree apart until one reaches the line at that distance, then halves the gap between it and the
     /// one before until the shot lands on the line. That finds the low, flat path, as real sights give, rather than a
     /// high lob.
@@ -200,7 +208,7 @@ internal static class Flight
 
         for (var time = 0f; time < MaxZeroFlightTime; time += deltaTime)
         {
-            var next = Step(state, gravityVector, drag, deltaTime);
+            var next = Step(state, gravityVector, drag, Atmosphere.Standard, deltaTime);
             if (next.Position.X >= distance)
             {
                 var t = (distance - state.Position.X) / (next.Position.X - state.Position.X);

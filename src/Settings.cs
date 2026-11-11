@@ -46,6 +46,13 @@ internal sealed class Settings : JsonModSettings
     [Slider(10f, 500f, 50)]
     public float m_TrailLength = 200f;
 
+    /// <summary>
+    /// Whether the wind pushes bullets and the cold slows them, read from the game's weather when each bullet is fired.
+    /// </summary>
+    [Name("Weather affects bullets")]
+    [Description("The wind pushes bullets sideways, and cold air and cold powder slow them, so they drop a little more. Off, bullets fly as in still air at 15 °C.")]
+    public bool m_WeatherAffectsBullets = true;
+
     /// <summary>What every weapon's muzzle velocity is multiplied by: <see cref="Ballistics.MuzzleVelocityMultiplier"/>.</summary>
     [Name("Bullet speed")]
     [Description("Multiplies how fast every bullet flies. Faster bullets reach their target sooner and drop less.")]
@@ -109,6 +116,7 @@ internal sealed class Settings : JsonModSettings
     [
         nameof(m_TrailsEnabled),
         nameof(m_TrailLength),
+        nameof(m_WeatherAffectsBullets),
         nameof(m_MuzzleVelocityMultiplier),
         nameof(m_BaseAccuracyMultiplier),
         nameof(m_HipFireAccuracyMultiplier),

@@ -63,6 +63,18 @@ Each gun's sights are set so its bullets cross the line of sight at a set distan
 
 The bullet leaves the barrel aimed a little above the sights, rises to meet the line of sight at the zero distance, then falls below it. A rifle lands within about 10 cm of where you aimed out to 150 metres. Further out, aim high.
 
+The sights are zeroed for still air at 15 °C, so the wind and the cold move bullets off where you aimed.
+
+## Weather
+
+The game's weather affects each bullet, read when you fire:
+
+- **Wind** pushes bullets sideways. A 10 m/s (22 mph) crosswind moves a rifle bullet about half a metre at 300 metres, and a revolver bullet a few centimetres at 50 metres. Indoors there's no wind.
+- **Cold air** is denser, so it slows bullets more. At −30 °C, air is about a fifth denser than at 15 °C.
+- **Cold powder** burns slower, so bullets leave the barrel a little slower: about 3% at −30 °C. They drop a little more and do a little less damage.
+
+Turn **Weather affects bullets** off for bullets that fly as in still air at 15 °C.
+
 ## Damage drop-off
 
 A bullet does its weapon's full damage close up, the same as the game gives that weapon. As the air slows it, its damage falls with the energy it has left, as a real bullet's does. That's the square of its speed compared with its speed at the muzzle:
@@ -98,6 +110,7 @@ Everything above is how the mod plays by default. To change it, open **Options**
 | Real bullets | On | Off, rifles and revolvers fire the game's own instant shots, and the bullet settings below are hidden. |
 | Bullet trails | On | Shows the trail behind each bullet. |
 | Trail length | 200 m | How far behind the bullet its trail reaches. |
+| Weather affects bullets | On | The wind pushes bullets, and cold air and powder slow them. Off, bullets fly as in still air at 15 °C. |
 | Bullet speed | × 1 | Multiplies every weapon's muzzle velocity. |
 | Base accuracy | × 1.2 | Multiplies the accuracy of every shot. |
 | Hip fire, Standing, Moving | × 0.7, × 0.8, × 0.9 | Multiply accuracy in those situations. 1 means no penalty. |

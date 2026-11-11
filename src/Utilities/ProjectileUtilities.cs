@@ -1,10 +1,42 @@
+using AdaptiveArsenal.Core;
+
 namespace AdaptiveArsenal.Utilities;
 
 /// <summary>
-/// Works out where a shot starts and which way it goes, the way the game does for its own shots.
+/// Works out where a shot starts and which way it goes, the way the game does for its own shots, and the weather it's
+/// fired in.
 /// </summary>
 internal static class ProjectileUtilities
 {
+    /// <summary>
+    /// Reads the weather a shot is fired in from the game, once for all its projectiles, when
+    /// <see cref="Settings.m_WeatherAffectsBullets"/> is on, or <see cref="ShotWeather.None"/> when it's off.
+    /// </summary>
+    /// <remarks>
+    /// The temperature is the air's, without nearby fires (<see cref="Weather.GetCurrentTemperatureWithoutHeatSources"/>)
+    /// and without wind chill, which the game keeps separately. That it's in °C and leaves fires out is read from the
+    /// method names, not checked. There's no wind indoors. <see cref="ShotWeather.WindVelocity"/> says which way the
+    /// wind is taken to blow.
+    /// </remarks>
+    internal static ShotWeather ReadWeather()
+    {
+        if (!Settings.Instance.m_WeatherAffectsBullets)
+            return ShotWeather.None;
+
+        var weather = GameManager.GetWeatherComponent();
+        if (weather == null)
+            return ShotWeather.None;
+
+        var wind = GameManager.GetWindComponent();
+        var shotWeather = wind == null
+            ? ShotWeather.FromGame(weather.GetCurrentTemperatureWithoutHeatSources(), System.Numerics.Vector3.Zero, 0f, indoors: true)
+            : ShotWeather.FromGame(weather.GetCurrentTemperatureWithoutHeatSources(), wind.GetWindDirection().ToNumerics(), wind.GetSpeedMPH(),
+                weather.IsIndoorEnvironment());
+
+        Mod.Logger.Log($"Shot fired in air at {shotWeather.AirTemperature:F1} °C with wind {shotWeather.Atmosphere.Wind} m/s.", FlaggedLoggingLevel.Debug);
+        return shotWeather;
+    }
+
     /// <summary>
     /// Works out where a bullet should be fired from, and in which direction, to go where the weapon is aimed.
     /// </summary>
