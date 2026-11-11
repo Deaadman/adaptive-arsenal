@@ -42,8 +42,10 @@ Call everything from the game's main thread. Exceptions your callbacks throw are
 Reference the [AdaptiveArsenal NuGet package](https://www.nuget.org/packages/AdaptiveArsenal), at the version of Adaptive Arsenal your mod needs. `ExcludeAssets="runtime"` keeps `AdaptiveArsenal.dll` out of your mod's output, since players install it themselves.
 
 ```xml
-<PackageReference Include="AdaptiveArsenal" Version="1.1.0" ExcludeAssets="runtime" />
+<PackageReference Include="AdaptiveArsenal" Version="1.2.0" ExcludeAssets="runtime" />
 ```
+
+`ApiVersion` only goes up for changes that break mods, so it stays the same when members are added. Members marked "Since 1.2.0" don't exist in Adaptive Arsenal 1.1.0, and using one with 1.1.0 installed throws `MissingMethodException`. If your mod uses them but should still work with 1.1.0, check the installed version first, as below, and leave them out when it's older. Mods that only use what 1.1.0 had can keep referencing 1.1.0.
 
 If your mod should still work without Adaptive Arsenal, say it's optional, so MelonLoader loads it first when it's there:
 
@@ -56,8 +58,17 @@ Then keep every use of its types in one class, and only call that class once you
 ```csharp
 internal static class AdaptiveArsenalSupport
 {
-    internal static bool IsLoaded { get; } =
-        MelonBase.RegisteredMelons.Any(melon => melon.Info.Name == "Adaptive Arsenal");
+    private static readonly MelonBase? s_Melon =
+        MelonBase.RegisteredMelons.FirstOrDefault(melon => melon.Info.Name == "Adaptive Arsenal");
+
+    internal static bool IsLoaded => s_Melon != null;
+
+    // 1.2.0 added BallisticCoefficient, ZeroDistance, AffectedByWeather and ProjectileHit.Damage. Nightly builds have
+    // a suffix like "1.2.0-nightly.20261112+g1a2b3c4", and any version may have "+" metadata, both dropped before comparing.
+    internal static bool HasBallistics { get; } =
+        s_Melon != null
+        && Version.TryParse(s_Melon.Info.Version.Split('-', '+')[0], out var version)
+        && version >= new Version(1, 2, 0);
 }
 ```
 
@@ -68,7 +79,7 @@ A good place to fire is the prefix where your mod already handles the game's `vp
 Leave `OnShotFinished` empty and the mod deals the damage itself, as it does for its own rifle: it falls as the bullet slows, and body parts scale it, bleed and roll critical hits for `WeaponSource`.
 
 ```csharp
-// Only called when AdaptiveArsenalSupport.IsLoaded is true.
+// Only called when AdaptiveArsenalSupport.HasBallistics is true, since it uses members added in 1.2.0.
 internal static class AdaptiveArsenalRifle
 {
     internal static bool TryFire(vp_Bullet bullet)
@@ -144,7 +155,7 @@ internal static class AdaptiveArsenalLeverAction
 Set `Count` and `Spread`, and one call fires every pellet. Set `OnShotFinished` to do the damage yourself: it gets every pellet's hit at once, so it can add up the damage on each animal, work out how many of the pellets hit it, and apply the damage, bleeding and critical hits once for the whole shot.
 
 ```csharp
-// Only called when AdaptiveArsenalSupport.IsLoaded is true.
+// Only called when AdaptiveArsenalSupport.IsLoaded is true. It reads DamageAtDistance, not Damage, so it works with 1.1.0 too.
 internal static class AdaptiveArsenalShotgun
 {
     internal static bool TryFire(vp_Bullet bullet, int pellets, float spread)
@@ -174,7 +185,9 @@ internal static class AdaptiveArsenalShotgun
                 continue;
 
             var coverage = animal.Count() / (float)result.Fired;
-            var damage = animal.Sum(hit => hit.Damage);
+#pragma warning disable CS0618 // DamageAtDistance is Damage under its 1.1.0 name, which 1.1.0 has too.
+            var damage = animal.Sum(hit => hit.DamageAtDistance);
+#pragma warning restore CS0618
             // Scale bleeding and the chance of a critical hit by coverage, then apply it all once.
         }
     }

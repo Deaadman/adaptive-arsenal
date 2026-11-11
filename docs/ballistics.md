@@ -247,3 +247,24 @@ Other mods fire projectiles through [`Projectiles.Fire`](../src/Api/Projectiles.
 6. Ricochets (part 9).
 
 Each step adds tests to `tests/AdaptiveArsenal.Tests`, updates [How it works](features.md) and adds a line to `CHANGELOG.md`, and is checked in game.
+
+### Progress
+
+Steps 1 to 5 are in the code, with tests, on the `1.2.0/projectiles-overhaul` branch. None of them has been checked in game yet. Step 6, ricochets, is still to do.
+
+Where the code differs from the plan above, after review:
+
+- **Damage for other mods' shots.** Shots fired through the API with only linear `Drag` keep 1.1.0's falloff by distance, since linear drag barely slows them and damage by speed would hardly fall with range. Shots with a `BallisticCoefficient` follow part 5.
+- **The weather for other mods' shots.** Rather than applying to every projectile, it follows `ProjectileShot.AffectedByWeather`, which defaults to on with a `BallisticCoefficient` and off with only `Drag`, so mods written for 1.1.0 fly exactly as before.
+- **`ProjectileHit.Damage`** replaces `DamageAtDistance`, which stays as an obsolete alias, since its value now follows speed.
+- **Damage uses the slowest speed** the bullet reached before it hit, so speed gravity adds late in a high arc doesn't raise it again.
+- **Settings from 1.1.0 are updated once**, by `SettingsMigration` in `src/Core`: Long-range damage carries over to Damage from speed, and Worst spread moves from 10° to 3° only if every accuracy setting was left at its default.
+- **The API's spread stays even**, through `Ballistics.EvenSpreadOffset`, since pellets should cover the whole spread. Only the mod's own guns get the centre-weighted spread.
+
+To check in game:
+
+- Shots land on target at 100 m with a rifle and 25 m with a revolver.
+- Bullets still hit animals, the ground and loose gear without a collider, and don't stop on the player.
+- Bullets drift downwind, not upwind. If they drift upwind, turn the direction round in `ShotWeather.WindVelocity`.
+- `Weather.GetCurrentTemperatureWithoutHeatSources` gives the air's temperature in °C, without fires or wind chill.
+- A settings file saved by 1.1.0 is updated as described above.
