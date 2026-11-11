@@ -28,18 +28,33 @@ At a score of 0, a shot can land up to 10° away from where you aimed, in any di
 
 ## Muzzle velocity
 
-Each weapon fires its bullets at its own speed. Faster bullets reach the target sooner and drop less on the way.
+Each weapon fires its bullets at about the speed of a real gun like it. Faster bullets reach the target sooner and drop less on the way.
 
 | Weapon | Game ID | Muzzle velocity (m/s) |
 | --- | --- | --- |
-| Trader's (Bunker) rifle | `GEAR_Rifle_Traders` | 550 |
-| Curator's rifle | `GEAR_Rifle_Curators` | 500 |
-| Hunting rifle | `GEAR_Rifle` | 400 |
-| Barbara's rifle | `GEAR_Rifle_Barbs` | 400 |
-| Vaughn's rifle | `GEAR_Rifle_Vaughns` | 350 |
-| Revolver | `GEAR_RevolverFancy` | 300 |
-| Revolver | `GEAR_Revolver`, `GEAR_RevolverGreen` | 200 |
-| Revolver | `GEAR_RevolverStubNosed` | 150 |
+| Trader's (Bunker) rifle | `GEAR_Rifle_Traders` | 820 |
+| Curator's rifle | `GEAR_Rifle_Curators` | 780 |
+| Hunting rifle | `GEAR_Rifle` | 740 |
+| Barbara's rifle | `GEAR_Rifle_Barbs` | 740 |
+| Vaughn's rifle | `GEAR_Rifle_Vaughns` | 700 |
+| Revolver | `GEAR_RevolverFancy` | 330 |
+| Revolver | `GEAR_Revolver`, `GEAR_RevolverGreen` | 270 |
+| Revolver | `GEAR_RevolverStubNosed` | 240 |
+
+## Drag
+
+The air slows bullets as it does real ones: much more at high speed, and most of all just above the speed of sound. A rifle bullet keeps a little over half its speed at 500 metres. Revolver bullets are blunter, so they slow more for their speed, but they're slow to start with and keep most of it over a revolver's range.
+
+## Zeroed sights
+
+Each gun's sights are set so its bullets cross the line of sight at a set distance, as a real gun's are:
+
+| Gun | Zero distance |
+| --- | --- |
+| Rifles | 100 m |
+| Revolvers | 25 m |
+
+The bullet leaves the barrel aimed a little above the sights, rises to meet the line of sight at the zero distance, then falls below it. A rifle lands within about 10 cm of where you aimed out to 150 metres. Further out, aim high.
 
 ## Damage drop-off
 

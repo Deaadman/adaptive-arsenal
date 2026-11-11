@@ -16,8 +16,10 @@ Adaptive Arsenal replaces rifle and revolver shots with bullets that fly, drop a
 | `Position`, `Rotation` | Where it's fired from and where the gun is aimed. |
 | `Count` | How many projectiles to fire, like a shell's pellets. The default is 1. |
 | `Spread` | The furthest each projectile can stray from the aim, in degrees. Each gets its own random direction within it, spread evenly. The default is 0. |
-| `MuzzleVelocity` | Its speed at the muzzle in metres per second. The player's bullet speed setting scales it, as it does the mod's own bullets (150 to 550). |
-| `Drag` | How quickly the air slows it, as the Unity rigidbody's drag. Higher slows it sooner, so it drops more at range. The mod's own bullets use 0.1. |
+| `MuzzleVelocity` | Its speed at the muzzle in metres per second. The player's bullet speed setting scales it, as it does the mod's own bullets (240 to 820). |
+| `BallisticCoefficient` | Its G1 ballistic coefficient in lb/in², as published for real bullets. Above 0, the air slows it as it does a real bullet, much more at high speed. The mod's own bullets use 0.40 for rifles and 0.15 for revolvers. The default is 0, which uses `Drag`. Since 1.2.0. |
+| `Drag` | How quickly the air slows it while `BallisticCoefficient` is 0: the share of its speed it loses each second, like a Unity rigidbody's drag. Higher slows it sooner, so it drops more at range. The default is 0.1. |
+| `ZeroDistance` | Where it crosses the line of sight, in metres, as with zeroed sights: it's fired a little above `Rotation` to rise to meet it there. The mod zeroes rifles at 100 and revolvers at 25. The default is 0, which fires straight along `Rotation`. Since 1.2.0. |
 | `Damage`, `WeaponSource` | For the mod to damage animals when `OnShotFinished` is empty: the damage at the muzzle, which falls with distance, and the weapon body parts scale it for. |
 | `AmmoGearName` | The ammo whose single round it looks like in flight, like `GEAR_RifleAmmoSingle`. Empty is invisible. |
 | `PlayImpactEffects` | Whether it plays the game's impact particles, decal and sound. Turn it off to play your own. |
@@ -75,7 +77,9 @@ internal static class AdaptiveArsenalRifle
         {
             Position = bullet.transform.position,
             Rotation = bullet.transform.rotation,
-            MuzzleVelocity = 450f,
+            MuzzleVelocity = 740f,
+            BallisticCoefficient = 0.40f,
+            ZeroDistance = 100f,
             Damage = bullet.Damage,
             WeaponSource = WeaponSource.Rifle,
             AmmoGearName = "GEAR_RifleAmmoSingle"

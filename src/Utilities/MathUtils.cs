@@ -3,7 +3,7 @@ using AdaptiveArsenal.Core;
 namespace AdaptiveArsenal.Utilities;
 
 /// <summary>
-/// <see cref="Curves"/> for Unity's vectors.
+/// <see cref="Curves"/> for Unity's vectors, and conversions between them and the vectors <c>src/Core</c> uses.
 /// </summary>
 internal static class MathUtils
 {
@@ -20,4 +20,12 @@ internal static class MathUtils
             Curves.QuadraticBezier(start.x, control.x, end.x, t),
             Curves.QuadraticBezier(start.y, control.y, end.y, t),
             Curves.QuadraticBezier(start.z, control.z, end.z, t));
+
+    /// <summary>Converts a Unity vector to the <see cref="System.Numerics.Vector3"/> that <c>src/Core</c> uses.</summary>
+    /// <param name="vector">The vector.</param>
+    internal static System.Numerics.Vector3 ToNumerics(this Vector3 vector) => new(vector.x, vector.y, vector.z);
+
+    /// <summary>Converts a <see cref="System.Numerics.Vector3"/> from <c>src/Core</c> to a Unity vector.</summary>
+    /// <param name="vector">The vector.</param>
+    internal static Vector3 ToUnity(this System.Numerics.Vector3 vector) => new(vector.X, vector.Y, vector.Z);
 }

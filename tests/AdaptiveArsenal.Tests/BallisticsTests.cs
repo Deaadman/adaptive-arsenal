@@ -101,21 +101,21 @@ public class BallisticsTests
         Assert.Equal(expected, Ballistics.MaxSpreadDegrees(accuracy), Precision);
 
     [Theory]
-    [InlineData("GEAR_Rifle", 400f)]
-    [InlineData("GEAR_Rifle_Barbs", 400f)]
-    [InlineData("GEAR_Rifle_Curators", 500f)]
-    [InlineData("GEAR_Rifle_Traders", 550f)]
-    [InlineData("GEAR_Rifle_Vaughns", 350f)]
-    [InlineData("GEAR_Revolver", 200f)]
-    [InlineData("GEAR_RevolverFancy", 300f)]
-    [InlineData("GEAR_RevolverGreen", 200f)]
-    [InlineData("GEAR_RevolverStubNosed", 150f)]
+    [InlineData("GEAR_Rifle", 740f)]
+    [InlineData("GEAR_Rifle_Barbs", 740f)]
+    [InlineData("GEAR_Rifle_Curators", 780f)]
+    [InlineData("GEAR_Rifle_Traders", 820f)]
+    [InlineData("GEAR_Rifle_Vaughns", 700f)]
+    [InlineData("GEAR_Revolver", 270f)]
+    [InlineData("GEAR_RevolverFancy", 330f)]
+    [InlineData("GEAR_RevolverGreen", 270f)]
+    [InlineData("GEAR_RevolverStubNosed", 240f)]
     public void Each_weapon_has_its_muzzle_velocity(string gearName, float expected) =>
         Assert.Equal(expected, Ballistics.GetMuzzleVelocity(gearName));
 
     [Theory]
-    [InlineData("GEAR_Rifle_Traders(Clone)", 550f)]
-    [InlineData("GEAR_RevolverStubNosed(Clone)", 150f)]
+    [InlineData("GEAR_Rifle_Traders(Clone)", 820f)]
+    [InlineData("GEAR_RevolverStubNosed(Clone)", 240f)]
     public void Specific_weapons_match_before_the_plain_rifle_and_revolver(string gearName, float expected) =>
         Assert.Equal(expected, Ballistics.GetMuzzleVelocity(gearName));
 
@@ -125,4 +125,17 @@ public class BallisticsTests
     [InlineData("")]
     public void An_unlisted_weapon_gets_no_muzzle_velocity(string gearName) =>
         Assert.Equal(0f, Ballistics.GetMuzzleVelocity(gearName));
+
+    [Theory]
+    [InlineData("GEAR_RifleAmmoSingle", 0.40f)]
+    [InlineData("GEAR_RevolverAmmoSingle", 0.15f)]
+    [InlineData("GEAR_RifleAmmoSingle(Clone)", 0.40f)]
+    public void Each_ammo_has_its_ballistic_coefficient(string gearName, float expected) =>
+        Assert.Equal(expected, Ballistics.GetBallisticCoefficient(gearName));
+
+    [Theory]
+    [InlineData("GEAR_FlareGunAmmoSingle")]
+    [InlineData("")]
+    public void Unlisted_ammo_gets_no_ballistic_coefficient(string gearName) =>
+        Assert.Equal(0f, Ballistics.GetBallisticCoefficient(gearName));
 }

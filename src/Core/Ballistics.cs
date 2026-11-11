@@ -53,19 +53,42 @@ internal static class Ballistics
     /// <see cref="GetMuzzleVelocity"/> uses the first entry whose name the gear name contains, so the more specific
     /// names come before <c>GEAR_Rifle</c> and <c>GEAR_Revolver</c>, which every rifle and revolver name contains. It's
     /// an array rather than a dictionary because the order matters.
+    ///
+    /// The speeds are about those of real rifles and revolvers like the game's. Guns firing the same ammo differ mostly
+    /// through the length of their barrels, so the stub-nosed revolver is the slowest.
     /// </remarks>
     private static readonly (string GearName, float Velocity)[] MuzzleVelocities =
     [
-        ("GEAR_Rifle_Barbs", 400f),
-        ("GEAR_Rifle_Curators", 500f),
-        ("GEAR_Rifle_Traders", 550f),
-        ("GEAR_Rifle_Vaughns", 350f),
-        ("GEAR_Rifle", 400f),
-        ("GEAR_RevolverFancy", 300f),
-        ("GEAR_RevolverGreen", 200f),
-        ("GEAR_RevolverStubNosed", 150f),
-        ("GEAR_Revolver", 200f)
+        ("GEAR_Rifle_Barbs", 740f),
+        ("GEAR_Rifle_Curators", 780f),
+        ("GEAR_Rifle_Traders", 820f),
+        ("GEAR_Rifle_Vaughns", 700f),
+        ("GEAR_Rifle", 740f),
+        ("GEAR_RevolverFancy", 330f),
+        ("GEAR_RevolverGreen", 270f),
+        ("GEAR_RevolverStubNosed", 240f),
+        ("GEAR_Revolver", 270f)
     ];
+
+    /// <summary>
+    /// The G1 ballistic coefficient of each kind of ammo's bullet, in lb/in², keyed by part of its gear name.
+    /// </summary>
+    /// <remarks>
+    /// The bullet is the same whichever gun fires it, so this goes by the ammo, while muzzle velocity goes by the gun.
+    /// The game doesn't say what calibres its guns fire, so these are typical of a round-nosed .303 or .30-06 hunting
+    /// bullet and a lead .38 revolver bullet.
+    /// </remarks>
+    private static readonly (string GearName, float BallisticCoefficient)[] BallisticCoefficients =
+    [
+        ("GEAR_RifleAmmo", 0.40f),
+        ("GEAR_RevolverAmmo", 0.15f)
+    ];
+
+    /// <summary>The distance, in metres, at which rifle shots cross the line of sight.</summary>
+    internal const float RifleZeroDistance = 100f;
+
+    /// <summary>The distance, in metres, at which revolver shots cross the line of sight.</summary>
+    internal const float RevolverZeroDistance = 25f;
 
     /// <summary>
     /// What a shot's base accuracy is multiplied by: <see cref="BaseAccuracyMultiplier"/>, times the multiplier for
@@ -140,6 +163,15 @@ internal static class Ballistics
     /// <returns>The muzzle velocity, or 0 for a weapon that isn't listed.</returns>
     internal static float GetMuzzleVelocity(string gearItemName) =>
         MuzzleVelocities.FirstOrDefault(entry => gearItemName.Contains(entry.GearName)).Velocity * MuzzleVelocityMultiplier;
+
+    /// <summary>
+    /// The G1 ballistic coefficient of an ammo's bullet, from the first entry in <see cref="BallisticCoefficients"/>
+    /// whose name its gear name contains.
+    /// </summary>
+    /// <param name="ammoGearName">The ammo's gear name, like <c>GEAR_RifleAmmoSingle</c>.</param>
+    /// <returns>The coefficient, or 0 for ammo that isn't listed.</returns>
+    internal static float GetBallisticCoefficient(string ammoGearName) =>
+        BallisticCoefficients.FirstOrDefault(entry => ammoGearName.Contains(entry.GearName)).BallisticCoefficient;
 
     /// <summary>The same as Unity's <c>Mathf.Clamp01</c>.</summary>
     private static float Clamp01(float value) => value < 0f ? 0f : value > 1f ? 1f : value;

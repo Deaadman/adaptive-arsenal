@@ -6,7 +6,7 @@ namespace AdaptiveArsenal.Utilities;
 
 /// <summary>
 /// Builds the bullet that <see cref="O:AdaptiveArsenal.Components.ProjectileItem.SpawnAndFire"/> copies for each
-/// shot: the mesh and materials of a single round of ammo, with a rigidbody, a collider and a
+/// shot: the mesh and materials of a single round of ammo, with a
 /// <see cref="ProjectileItem"/>, and nothing else.
 /// </summary>
 /// <remarks>
@@ -17,13 +17,16 @@ namespace AdaptiveArsenal.Utilities;
 internal static class ProjectileTemplates
 {
     /// <summary>
-    /// The game's gear layer (<c>vp_Layer.Gear</c>). Bullets used to be copies of the ammo's gear item, which is on
-    /// it, so this keeps them colliding with the same things.
+    /// The game's gear layer (<c>vp_Layer.Gear</c>), which bullets are on because they used to be copies of the ammo's
+    /// gear item.
     /// </summary>
-    private const int GearLayer = 17;
-
-    /// <summary>The radius of the bullet's collider, in metres.</summary>
-    private const float ColliderRadius = 0.01f;
+    /// <remarks>
+    /// Bullets have no collider now, so the layer doesn't change what they hit, except that
+    /// <see cref="ProjectileItem"/> also looks for every layer the gear layer collides with, as the collider they had
+    /// would have hit. It's kept for the mesh in case the game draws or lights layers differently, which hasn't been
+    /// checked.
+    /// </remarks>
+    internal const int GearLayer = 17;
 
     /// <summary>The templates built so far, by the gear name of the ammo they look like, or empty for an invisible one.</summary>
     private static readonly Dictionary<string, GameObject> s_Templates = [];
@@ -56,15 +59,19 @@ internal static class ProjectileTemplates
     /// <returns>The inactive template, or <see langword="null"/> if the gun has no ammo or it couldn't be loaded.</returns>
     internal static GameObject? Get(GunType gunType)
     {
-        var ammoGearName = gunType switch
-        {
-            GunType.Rifle => "GEAR_RifleAmmoSingle",
-            GunType.Revolver => "GEAR_RevolverAmmoSingle",
-            _ => null
-        };
-
+        var ammoGearName = GetAmmoGearName(gunType);
         return ammoGearName == null ? null : GetForAmmo(ammoGearName);
     }
+
+    /// <summary>The gear name of a single round of a gun's ammo.</summary>
+    /// <param name="gunType">The gun.</param>
+    /// <returns>The gear name, or <see langword="null"/> for a gun other than a rifle or revolver.</returns>
+    internal static string? GetAmmoGearName(GunType gunType) => gunType switch
+    {
+        GunType.Rifle => "GEAR_RifleAmmoSingle",
+        GunType.Revolver => "GEAR_RevolverAmmoSingle",
+        _ => null
+    };
 
     /// <summary>Gets the bullet template that looks like a single round of some ammo, building it the first time.</summary>
     /// <param name="ammoGearName">
@@ -110,8 +117,6 @@ internal static class ProjectileTemplates
         if (ammoPrefab != null)
             CopyMesh(ammoPrefab, template);
 
-        template.AddComponent<Rigidbody>();
-        template.AddComponent<SphereCollider>().radius = ColliderRadius;
         template.AddComponent<ProjectileItem>();
 
         return template;

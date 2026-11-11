@@ -6,7 +6,7 @@ namespace AdaptiveArsenal.Api;
 /// <see cref="Spread"/>.
 /// </summary>
 /// <remarks>
-/// Each projectile flies as a physics object under gravity, like the mod's rifle and revolver bullets. With
+/// Each projectile flies under gravity and drag, like the mod's rifle and revolver bullets. With
 /// <see cref="OnShotFinished"/> left empty, each damages the animal it hits itself, the way those bullets do; set it
 /// to do your own damage instead. The object is read when it's fired, so changing it afterwards changes nothing.
 /// </remarks>
@@ -32,15 +32,29 @@ public sealed class ProjectileShot
 
     /// <summary>
     /// How fast the projectile leaves the muzzle, in metres per second, before the player's bullet speed setting
-    /// scales it. The mod's rifle and revolver bullets fly at 150 to 550.
+    /// scales it. The mod's rifle and revolver bullets fly at 240 to 820.
     /// </summary>
     public float MuzzleVelocity { get; set; }
 
     /// <summary>
-    /// How quickly the air slows the projectile, as the Unity rigidbody's drag: higher slows it sooner, so it drops
-    /// more at range. The mod's own bullets use 0.1.
+    /// How quickly the air slows the projectile while <see cref="BallisticCoefficient"/> is 0: the share of its speed
+    /// it loses each second, like a Unity rigidbody's drag. Higher slows it sooner, so it drops more at range.
     /// </summary>
     public float Drag { get; set; } = 0.1f;
+
+    /// <summary>
+    /// The projectile's G1 ballistic coefficient, in lb/in², as published for real bullets. When it's above 0, the air
+    /// slows the projectile as it does a real bullet, much more at high speed, and <see cref="Drag"/> isn't used. The
+    /// mod's own bullets use 0.40 for rifles and 0.15 for revolvers. 0, the default, uses <see cref="Drag"/>.
+    /// </summary>
+    public float BallisticCoefficient { get; set; }
+
+    /// <summary>
+    /// The distance, in metres, at which the projectile crosses the line of sight, as with a real gun's zeroed sights.
+    /// It's fired a little above <see cref="Rotation"/> so it rises to meet the line there. The mod zeroes rifles at
+    /// 100 and revolvers at 25. 0, the default, fires it straight along <see cref="Rotation"/>.
+    /// </summary>
+    public float ZeroDistance { get; set; }
 
     /// <summary>
     /// The damage at the muzzle, for the mod to deal when <see cref="OnShotFinished"/> is empty, and for

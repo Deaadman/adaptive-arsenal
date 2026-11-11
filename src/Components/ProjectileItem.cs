@@ -8,13 +8,16 @@ namespace AdaptiveArsenal.Components;
 
 /// <summary>
 /// A bullet fired from a rifle or revolver, or by another mod through <see cref="Projectiles.Fire"/>. It flies through
-/// the world as a physics object, instead of hitting instantly like the game's own shots, and draws a trail behind it.
+/// the world under gravity and drag, instead of hitting instantly like the game's own shots, and draws a trail behind it.
 /// </summary>
 /// <remarks>
 /// <see cref="ProjectileTemplates"/> builds an inactive template with this component for each kind of ammo, and
 /// <see cref="Patches.vp_FPSShooterPatches"/> fires a copy of it with
 /// <see cref="SpawnAndFire(GameObject, GunItem, Vector3, Quaternion)"/> for each shot. When it hits something, it stops
 /// and hides, and lingers for <see cref="ImpactLingerDuration"/> while its trail fades and its impact sound plays.
+///
+/// The bullet has no rigidbody: <see cref="Flight.Step"/> moves it each physics step, so its drag can grow with its
+/// speed, and its sights can be zeroed with the same flight.
 /// </remarks>
 [RegisterTypeInIl2Cpp(false)]
 public class ProjectileItem : MonoBehaviour
@@ -26,14 +29,13 @@ public class ProjectileItem : MonoBehaviour
     private const int AiBodyPartLayer = 27;
 
     /// <summary>
-    /// The layers the bullet looks for ahead of it each physics step, besides animals: the ground, buildings, props
-    /// and gear the game's own shots hit (<see cref="Utils.m_WeaponProjectileCollisionLayerMask"/>), and the colliders
-    /// on animals' body parts.
+    /// The layers the bullet looks for ahead of it each physics step, besides animals, worked out the first time it's
+    /// needed: see <see cref="HitLayerMask"/>.
     /// </summary>
-    private static readonly int s_HitLayerMask = Utils.m_WeaponProjectileCollisionLayerMask | 1 << AiBodyPartLayer;
+    private static int? s_HitLayerMask;
 
     /// <summary>
-    /// The layer of animals' own objects, which the bullet only looks for when <see cref="s_HitLayerMask"/> finds
+    /// The layer of animals' own objects, which the bullet only looks for when <see cref="HitLayerMask"/> finds
     /// nothing. Their colliders are thought to surround the body parts, so looking for both at once would hit these
     /// first and miss the body part's damage scaling.
     /// </summary>
@@ -54,7 +56,7 @@ public class ProjectileItem : MonoBehaviour
     /// </summary>
     private const float MaxFlightTime = 10f;
 
-    /// <summary>The rigidbody drag of the mod's own bullets.</summary>
+    /// <summary>The linear drag of a bullet from a gun whose ammo has no ballistic coefficient, as the mod's bullets had before.</summary>
     private const float DefaultDrag = 0.1f;
 
     /// <summary>How many trail points to make room for up front.</summary>
@@ -87,13 +89,11 @@ public class ProjectileItem : MonoBehaviour
     /// <summary>Whether the bullet has told its <see cref="m_Group"/> it hit or missed, so it only does once.</summary>
     private bool m_Finished;
 
-    /// <summary>
-    /// The bullet's velocity at the last physics step, so a hit knows which way it was going before the collision
-    /// changed it.
-    /// </summary>
+    /// <summary>The bullet's velocity, in metres per second, which <see cref="FixedUpdate"/> moves it by.</summary>
     private Vector3 m_Velocity;
 
-    private Rigidbody? m_Rigidbody;
+    /// <summary>How the air slows the bullet.</summary>
+    private DragModel m_Drag;
 
     /// <summary>Where the bullet was fired from, to work out how far it has travelled when it hits.</summary>
     private Vector3 m_FirePosition;
@@ -168,7 +168,6 @@ public class ProjectileItem : MonoBehaviour
 
     private void Awake()
     {
-        m_Rigidbody = GetComponent<Rigidbody>();
         m_TrailPoints = new List<Vector3>(InitialTrailCapacity);
 
         ConfigureComponents();
@@ -197,42 +196,67 @@ public class ProjectileItem : MonoBehaviour
     }
 
     /// <summary>
-    /// Remembers the bullet's velocity, then looks along the path it will travel this physics step and hits the first
-    /// thing on it, before the physics moves it there.
+    /// The layers the bullet looks for ahead of it each physics step, besides animals: the ground, buildings, props
+    /// and gear the game's own shots hit (<see cref="Utils.m_WeaponProjectileCollisionLayerMask"/>), the colliders on
+    /// animals' body parts, and every layer the gear layer collides with.
     /// </summary>
     /// <remarks>
-    /// The bullet is on the gear layer, which doesn't collide with animals, so <see cref="OnCollisionEnter"/> never
-    /// sees them. The game's arrows find what they hit with a raycast each physics step too.
+    /// Bullets used to have a collider on the gear layer, which stopped them on anything that layer collides with,
+    /// even where the raycast's layers didn't include it. Looking for those layers too keeps them hitting the same
+    /// things. The animals' own layer stays out, so body parts are found first.
     /// </remarks>
-    private void FixedUpdate()
+    private static int HitLayerMask
     {
-        if (m_HasHit || m_Rigidbody is null)
-            return;
+        get
+        {
+            if (s_HitLayerMask is { } mask)
+                return mask;
 
-        m_Velocity = m_Rigidbody.velocity;
-        var stepDistance = m_Velocity.magnitude * Time.fixedDeltaTime;
-        if (stepDistance <= 0f)
-            return;
+            mask = Utils.m_WeaponProjectileCollisionLayerMask | 1 << AiBodyPartLayer;
+            for (var layer = 0; layer < 32; layer++)
+            {
+                if (layer != AiLayer && !Physics.GetIgnoreLayerCollision(ProjectileTemplates.GearLayer, layer))
+                    mask |= 1 << layer;
+            }
 
-        var origin = m_Rigidbody.position;
-        var direction = m_Velocity.normalized;
-
-        if (Physics.Raycast(origin, direction, out var hit, stepDistance, s_HitLayerMask, QueryTriggerInteraction.Ignore)
-            || Physics.Raycast(origin, direction, out hit, stepDistance, AiLayerMask, QueryTriggerInteraction.Ignore))
-            Hit(hit.collider, hit.point, hit.normal);
+            s_HitLayerMask = mask;
+            return mask;
+        }
     }
 
     /// <summary>
-    /// Hits whatever the bullet collides with, for anything <see cref="FixedUpdate"/>'s raycast didn't see first.
+    /// Works out where the bullet will be after this physics step, looks along the straight line to there and hits the
+    /// first thing on it. If there's nothing, it moves the bullet there, facing the way it's now going.
     /// </summary>
-    /// <param name="collision">The collision.</param>
-    private void OnCollisionEnter(Collision collision)
+    /// <remarks>
+    /// The game's arrows find what they hit with a raycast each physics step too. The step's path is really a slight
+    /// curve, but at a few metres to a few tens of metres a step, the straight line is close enough.
+    /// </remarks>
+    private void FixedUpdate()
     {
         if (m_HasHit)
             return;
 
-        var contact = collision.GetContact(0);
-        Hit(collision.collider, contact.point, contact.normal);
+        var origin = transform.position;
+        var next = Flight.Step(new(origin.ToNumerics(), m_Velocity.ToNumerics()), Physics.gravity.ToNumerics(), m_Drag, Time.fixedDeltaTime);
+        var destination = next.Position.ToUnity();
+
+        var path = destination - origin;
+        var stepDistance = path.magnitude;
+        if (stepDistance > 0f)
+        {
+            var direction = path / stepDistance;
+            if (Physics.Raycast(origin, direction, out var hit, stepDistance, HitLayerMask, QueryTriggerInteraction.Ignore)
+                || Physics.Raycast(origin, direction, out hit, stepDistance, AiLayerMask, QueryTriggerInteraction.Ignore))
+            {
+                Hit(hit.collider, hit.point, hit.normal);
+                return;
+            }
+        }
+
+        m_Velocity = next.Velocity.ToUnity();
+        var rotation = m_Velocity.sqrMagnitude > 0f ? Quaternion.LookRotation(m_Velocity) : transform.rotation;
+        transform.SetPositionAndRotation(destination, rotation);
     }
 
     /// <summary>
@@ -273,16 +297,10 @@ public class ProjectileItem : MonoBehaviour
     private void OnDestroy() => Miss();
 
     /// <summary>
-    /// Sets up the rigidbody for fast movement and, if <see cref="Settings.m_TrailsEnabled"/> is on, creates the trail
-    /// using the arrow's trail material.
+    /// If <see cref="Settings.m_TrailsEnabled"/> is on, creates the trail using the arrow's trail material.
     /// </summary>
     private void ConfigureComponents()
     {
-        if (m_Rigidbody is null)
-            return;
-
-        m_Rigidbody.collisionDetectionMode = CollisionDetectionMode.Continuous;
-
         if (!Settings.Instance.m_TrailsEnabled)
             return;
 
@@ -314,7 +332,7 @@ public class ProjectileItem : MonoBehaviour
 
     /// <summary>
     /// Counts the shot in the player's statistics, then launches the bullet at the muzzle velocity of the weapon in
-    /// the player's hands.
+    /// the player's hands, with its ammo's drag and the gun's sights zeroed.
     /// </summary>
     /// <param name="gunItem">The gun firing it.</param>
     private void Fire(GunItem gunItem)
@@ -330,7 +348,18 @@ public class ProjectileItem : MonoBehaviour
         if (muzzleVelocity == 0)
             Mod.Logger.Log($"{weaponName} has no muzzle velocity, so its bullet drops at the muzzle.", FlaggedLoggingLevel.Warning);
 
-        Launch(muzzleVelocity, DefaultDrag);
+        var ammoGearName = ProjectileTemplates.GetAmmoGearName(gunItem.m_GunType);
+        var ballisticCoefficient = ammoGearName == null ? 0f : Ballistics.GetBallisticCoefficient(ammoGearName);
+        var drag = ballisticCoefficient > 0f ? DragModel.G1(ballisticCoefficient) : DragModel.Linear(DefaultDrag);
+
+        var zeroDistance = gunItem.m_GunType switch
+        {
+            GunType.Rifle => Ballistics.RifleZeroDistance,
+            GunType.Revolver => Ballistics.RevolverZeroDistance,
+            _ => 0f
+        };
+
+        Launch(muzzleVelocity, drag, zeroDistance);
     }
 
     /// <summary>Launches the bullet as another mod asked, through <see cref="Projectiles.Fire"/>.</summary>
@@ -343,30 +372,33 @@ public class ProjectileItem : MonoBehaviour
         m_Group = group;
         m_PlayImpactEffects = shot.PlayImpactEffects;
 
-        Launch(shot.MuzzleVelocity * Ballistics.MuzzleVelocityMultiplier, shot.Drag);
+        var drag = shot.BallisticCoefficient > 0f ? DragModel.G1(shot.BallisticCoefficient) : DragModel.Linear(shot.Drag);
+        Launch(shot.MuzzleVelocity * Ballistics.MuzzleVelocityMultiplier, drag, shot.ZeroDistance);
     }
 
-    /// <summary>Releases the bullet and launches it forwards, then starts its trail.</summary>
+    /// <summary>
+    /// Releases the bullet and launches it forwards, raised by the angle that zeroes it at
+    /// <paramref name="zeroDistance"/>, then starts its trail.
+    /// </summary>
+    /// <remarks>
+    /// The zero angle is worked out for a level shot and added to whatever way the bullet is aimed, as a real gun's
+    /// sights are set once and stay at that angle to the barrel, uphill or down.
+    /// </remarks>
     /// <param name="muzzleVelocity">How fast it leaves the muzzle, in metres per second.</param>
-    /// <param name="drag">The rigidbody's drag.</param>
-    private void Launch(float muzzleVelocity, float drag)
+    /// <param name="drag">How the air slows it.</param>
+    /// <param name="zeroDistance">Where it should cross the line of sight, in metres, or 0 to fire it straight along it.</param>
+    private void Launch(float muzzleVelocity, DragModel drag, float zeroDistance)
     {
         m_FireTime = Time.time;
         enabled = true;
-
-        Utils.SetIsKinematic(m_Rigidbody, false);
         transform.parent = null;
+        m_Drag = drag;
 
-        if (m_Rigidbody is null)
-            return;
-
-        m_Rigidbody.velocity = Vector3.zero;
-        m_Rigidbody.mass = 0.02f;
-        m_Rigidbody.drag = drag;
-        m_Rigidbody.angularDrag = 0.1f;
+        var zeroAngle = Flight.ZeroAngle(muzzleVelocity, drag, Physics.gravity.magnitude, zeroDistance, Time.fixedDeltaTime);
+        if (zeroAngle > 0f)
+            transform.rotation *= Quaternion.Euler(-zeroAngle, 0f, 0f);
 
         var velocity = transform.forward * muzzleVelocity;
-        m_Rigidbody.AddForce(velocity, ForceMode.VelocityChange);
         m_Velocity = velocity;
 
         m_FirePosition = transform.position;
@@ -499,17 +531,7 @@ public class ProjectileItem : MonoBehaviour
     /// <param name="point">Where the bullet hit, in world space.</param>
     private void StopAt(Vector3 point)
     {
-        if (m_Rigidbody is not null)
-        {
-            m_Rigidbody.velocity = Vector3.zero;
-            m_Rigidbody.isKinematic = true;
-        }
-
         transform.position = point;
-
-        var bulletCollider = GetComponent<Collider>();
-        if (bulletCollider != null)
-            bulletCollider.enabled = false;
 
         foreach (var meshRenderer in GetComponentsInChildren<MeshRenderer>())
             meshRenderer.enabled = false;

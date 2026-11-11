@@ -134,7 +134,7 @@ Today the rifles range from 350 to 550 m/s. The proposal narrows that gap, becau
 | Rifles | 100 m |
 | Revolvers | 25 m |
 
-- The angle depends on the muzzle velocity, the BC and the **Bullet speed** setting. It's worked out once for each combination and remembered.
+- The angle depends on the muzzle velocity, the BC and the **Bullet speed** setting. It's cheap enough to work out again for each shot.
 - It ignores wind and the cold, as a real zero does, so those still move the bullet off the point of aim.
 - Hip-fire shots get the same angle, so they still go where the camera points at the zero distance.
 - Shots fired by other mods through the API aren't zeroed unless they ask (part 10).

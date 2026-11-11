@@ -19,6 +19,17 @@ See docs/development.md, "Releasing". CI checks this file's format.
 
 ## [Unreleased]
 
+### Added
+
+- Rifles are zeroed at 100 metres and revolvers at 25, so bullets land where you aim at that distance instead of always a little low.
+- Other mods can give their projectiles a ballistic coefficient and a zero distance through the API.
+
+### Changed
+
+- Bullets fly at about the speed of real ones, so they drop much less and reach their target sooner.
+- The air slows bullets as it does real ones, much more at high speed.
+- Bullets turn to follow their arc as they fly.
+
 ## [1.1.0] - 2026-11-08
 
 Adaptive Arsenal now works with The Long Dark 2.58. Bullets hit animals reliably, each gun does its own damage, and a new settings page lets you tune accuracy, bullet speed and damage drop-off. Other mods can now fire its bullets too.
