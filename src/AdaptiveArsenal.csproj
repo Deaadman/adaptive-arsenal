@@ -24,7 +24,7 @@
         <Copyright>Copyright (c) 2026 $(Authors)</Copyright>
         <Product>Adaptive Arsenal</Product>
         <!-- The release version. Nightly builds add a suffix: 1.1.0-nightly.20261022+g1a2b3c4. -->
-        <VersionPrefix>1.1.0</VersionPrefix>
+        <VersionPrefix>1.2.0</VersionPrefix>
         <RepositoryUrl>https://github.com/Deaadman/adaptive-arsenal</RepositoryUrl>
     </PropertyGroup>
 
