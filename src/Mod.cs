@@ -18,4 +18,15 @@ internal sealed class Mod : MelonMod
         Settings.Initialize();
         Logger.Log($"{Properties.BuildInfo.Name} {Properties.BuildInfo.Version} initialized.", FlaggedLoggingLevel.Debug);
     }
+
+    /// <inheritdoc />
+    /// <remarks>
+    /// Loading a save or moving between regions loads a scene, where the player starts afresh, so prone, slides and
+    /// sprinting crouched are forgotten.
+    /// </remarks>
+    public override void OnSceneWasLoaded(int buildIndex, string sceneName)
+    {
+        Utilities.Prone.Reset();
+        Utilities.CrouchSprintAndSlide.Reset();
+    }
 }

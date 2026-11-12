@@ -23,6 +23,7 @@ Then the score is multiplied:
 | Firing from the hip | × 0.7 |
 | Standing (not crouching) | × 0.8 |
 | Moving | × 0.9 |
+| Lying prone | × 1.2 |
 
 At a score of 0, a shot can land up to 10° away from where you aimed, in any direction. At 100 or more, it lands exactly where you aimed. So at skill level 5, rifles and revolvers are fully accurate.
 
@@ -57,6 +58,10 @@ Without the mod, sprinting stands you up. With it, sprinting while crouched keep
 
 Crouching while sprinting slides you along the ground, a little faster than you were running. The slide slows down and leaves you crouched after a few metres on flat ground. It goes further downhill, up to 3 seconds, and stops sooner uphill or when you hit something. You can't steer while sliding, but standing up ends the slide.
 
+## Prone
+
+Press **Z** to lie prone, lower than crouching. If you're standing, you crouch first. Prone, you move at 0.4 times your crouch-walking speed, animals can see you and hear your footsteps from half as far as when crouched, and your shots are more accurate. Press **Z** or crouch again to get back up to a crouch, if there's room above you. Letting go of a held crouch key leaves you prone. Sprinting ends it too.
+
 ## Ammo count
 
 The HUD shows how many rounds are loaded in your rifle or revolver, and how many more you're carrying, as the game does, and each shot plays an animation of the spent round. With **Show ammo count** off, it hides them, so you have to keep count. It still shows the icon for the type of ammo the weapon takes.
@@ -73,6 +78,7 @@ Everything above is how the mod plays by default. To change it, open **Options**
 | Bullet speed | × 1 | Multiplies every weapon's muzzle velocity. |
 | Base accuracy | × 1.2 | Multiplies the accuracy of every shot. |
 | Hip fire, Standing, Moving | × 0.7, × 0.8, × 0.9 | Multiply accuracy in those situations. 1 means no penalty. |
+| Prone (accuracy) | × 1.2 | Multiplies accuracy when lying prone. 1 means no bonus. |
 | Worst spread | 10° | How far the least accurate shot can land from where you aimed. |
 | Drop-off distance | 500 m | How far a bullet flies before its damage has fallen as far as it will. |
 | Long-range damage | 0.1 | How much of its damage a bullet still does at that distance. 1 means no drop-off. |
@@ -80,5 +86,8 @@ Everything above is how the mod plays by default. To change it, open **Options**
 | Crouched sprint speed | × 1.75 | How many times faster than crouch-walking you move when sprinting crouched. |
 | Sliding | On | Crouching while sprinting starts a slide. |
 | Slide distance | × 1 | Multiplies how far a slide carries you. |
+| Prone | On | Lets you lie prone. |
+| Prone key | Z | The key that lies you down and gets you back up. |
+| Prone speed | × 0.4 | Multiplies your crouch-walking speed while prone. |
 | Walk while aiming revolver | On | Lets you walk while aiming a revolver. |
 | Show ammo count | On | Shows the loaded and carried rounds on the HUD, with the spent round animation. Off, you keep count yourself. |

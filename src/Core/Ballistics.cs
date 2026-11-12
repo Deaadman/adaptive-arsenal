@@ -31,6 +31,9 @@ internal static class Ballistics
     /// <summary>Accuracy is multiplied by this when standing rather than crouching.</summary>
     internal static float StandingAccuracyMultiplier { get; set; } = 0.8f;
 
+    /// <summary>Accuracy is multiplied by this when lying prone, on top of not standing.</summary>
+    internal static float ProneAccuracyMultiplier { get; set; } = 1.2f;
+
     /// <summary>Accuracy is multiplied by this when moving.</summary>
     internal static float MovingAccuracyMultiplier { get; set; } = 0.9f;
 
@@ -74,13 +77,15 @@ internal static class Ballistics
     /// <param name="isHipFire">Whether the gun is fired from the hip, rather than aimed.</param>
     /// <param name="isStanding">Whether the player is standing, rather than crouching.</param>
     /// <param name="isMoving">Whether the player is moving.</param>
-    internal static float AccuracyMultiplier(bool isHipFire, bool isStanding, bool isMoving)
+    /// <param name="isProne">Whether the player is lying prone.</param>
+    internal static float AccuracyMultiplier(bool isHipFire, bool isStanding, bool isMoving, bool isProne = false)
     {
         var multiplier = BaseAccuracyMultiplier;
 
         if (isHipFire) multiplier *= HipFireAccuracyMultiplier;
         if (isStanding) multiplier *= StandingAccuracyMultiplier;
         if (isMoving) multiplier *= MovingAccuracyMultiplier;
+        if (isProne && !isStanding) multiplier *= ProneAccuracyMultiplier;
 
         return multiplier;
     }

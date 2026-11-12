@@ -123,7 +123,16 @@ public class ProjectileItem : MonoBehaviour
     /// The rifle's skill-based range, or the revolver's skill-based accuracy plus its own, multiplied by
     /// <see cref="Ballistics.AccuracyMultiplier"/>.
     /// </returns>
-    public static float CalculateAccuracy(GunItem gunItem, bool isHipFire, bool isStanding, bool isMoving)
+    public static float CalculateAccuracy(GunItem gunItem, bool isHipFire, bool isStanding, bool isMoving) =>
+        CalculateAccuracy(gunItem, isHipFire, isStanding, isMoving, isProne: false);
+
+    /// <inheritdoc cref="CalculateAccuracy(GunItem, bool, bool, bool)"/>
+    /// <param name="gunItem">The gun being fired.</param>
+    /// <param name="isHipFire">Whether the gun is fired from the hip, rather than aimed.</param>
+    /// <param name="isStanding">Whether the player is standing, rather than crouching.</param>
+    /// <param name="isMoving">Whether the player is moving.</param>
+    /// <param name="isProne">Whether the player is lying prone.</param>
+    public static float CalculateAccuracy(GunItem gunItem, bool isHipFire, bool isStanding, bool isMoving, bool isProne)
     {
         var baseAccuracy = gunItem.m_GunType switch
         {
@@ -132,7 +141,7 @@ public class ProjectileItem : MonoBehaviour
             _ => gunItem.m_AccuracyRange
         };
 
-        return baseAccuracy * Ballistics.AccuracyMultiplier(isHipFire, isStanding, isMoving);
+        return baseAccuracy * Ballistics.AccuracyMultiplier(isHipFire, isStanding, isMoving, isProne);
     }
 
     /// <summary>Makes a copy of a bullet template and fires it from a rifle or revolver.</summary>

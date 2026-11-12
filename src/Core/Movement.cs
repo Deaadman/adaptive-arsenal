@@ -1,7 +1,7 @@
 namespace AdaptiveArsenal.Core;
 
 /// <summary>
-/// The numbers behind sprinting while crouched and sliding.
+/// The numbers behind sprinting while crouched, sliding and lying prone.
 /// </summary>
 /// <remarks>
 /// A slide starts at the speed the player was sprinting, a little faster, and slows down as friction and the slope
@@ -39,6 +39,27 @@ internal static class Movement
 
     /// <summary>The smallest sprint multiplier <see cref="CrouchSprintAccelerationMultiplier"/> divides by, so a broken one can't make it huge.</summary>
     private const float MinSprintMultiplier = 0.1f;
+
+    /// <summary>Lying prone, the player's collision shape is this fraction of its crouched height.</summary>
+    internal const float ProneHeightFraction = 0.5f;
+
+    /// <summary>Lying prone, the camera is this fraction of its crouched height.</summary>
+    internal const float ProneEyeHeightFraction = 0.4f;
+
+    /// <summary>Lying prone, the range animals can see the player from is multiplied by this, on top of crouching.</summary>
+    internal const float ProneDetectionMultiplier = 0.5f;
+
+    /// <summary>Lying prone, the range animals can hear the player's footsteps from is multiplied by this, on top of crouching.</summary>
+    internal const float ProneFootstepMultiplier = 0.5f;
+
+    /// <summary>The sphere that checks for room above a prone player is this fraction of their radius, so it doesn't catch walls beside them.</summary>
+    internal const float HeadroomRadiusFraction = 0.9f;
+
+    /// <summary>How much taller than its two end spheres a collision capsule has to be, so it stays a capsule.</summary>
+    private const float MinCapsuleSlack = 0.01f;
+
+    /// <summary>How much slower than crouch-walking the player moves while prone: their speed is multiplied by this.</summary>
+    internal static float ProneSpeedMultiplier { get; set; } = 0.4f;
 
     /// <summary>How much faster than crouch-walking the player moves when sprinting while crouched.</summary>
     internal static float CrouchSprintSpeedMultiplier { get; set; } = 1.75f;
@@ -136,4 +157,35 @@ internal static class Movement
     /// <param name="usagePerSecond">The stamina sprinting uses each second.</param>
     /// <param name="deltaTime">The frame's length, in seconds.</param>
     internal static float StaminaUsed(float usagePerSecond, float deltaTime) => Math.Max(usagePerSecond * deltaTime, 0f);
+
+    /// <summary>
+    /// The height of the player's collision capsule while prone: <see cref="ProneHeightFraction"/> of its crouched
+    /// height, but never so short it stops being a capsule, nor taller than crouched.
+    /// </summary>
+    /// <param name="crouchedHeight">The capsule's height crouched.</param>
+    /// <param name="radius">The capsule's radius.</param>
+    internal static float ProneHeight(float crouchedHeight, float radius) =>
+        Math.Min(Math.Max(crouchedHeight * ProneHeightFraction, 2f * radius + MinCapsuleSlack), crouchedHeight);
+
+    /// <summary>
+    /// Where the middle of the prone capsule goes, up from the player's position, so its bottom stays where the
+    /// crouched capsule's was.
+    /// </summary>
+    /// <param name="crouchedCenterY">The crouched capsule's middle, up from the player's position.</param>
+    /// <param name="crouchedHeight">The crouched capsule's height.</param>
+    /// <param name="proneHeight">The prone capsule's height, as from <see cref="ProneHeight"/>.</param>
+    internal static float ProneCenterY(float crouchedCenterY, float crouchedHeight, float proneHeight) =>
+        crouchedCenterY - (crouchedHeight - proneHeight) / 2f;
+
+    /// <summary>
+    /// How much room a prone player needs above the top of their capsule to crouch: the difference in height, since
+    /// both capsules share a bottom.
+    /// </summary>
+    /// <param name="crouchedHeight">The crouched capsule's height.</param>
+    /// <param name="proneHeight">The prone capsule's height.</param>
+    internal static float HeadroomToCrouch(float crouchedHeight, float proneHeight) => Math.Max(crouchedHeight - proneHeight, 0f);
+
+    /// <summary>The camera's height while prone: <see cref="ProneEyeHeightFraction"/> of its crouched height.</summary>
+    /// <param name="crouchedEyeHeight">The camera's height crouched.</param>
+    internal static float ProneEyeHeight(float crouchedEyeHeight) => crouchedEyeHeight * ProneEyeHeightFraction;
 }

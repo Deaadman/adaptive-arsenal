@@ -72,6 +72,14 @@ public class BallisticsTests
         Assert.Equal(1.2f, Ballistics.AccuracyMultiplier(isHipFire: false, isStanding: false, isMoving: false), Precision);
 
     [Fact]
+    public void Lying_prone_raises_accuracy_on_top_of_crouching() =>
+        Assert.Equal(1.2f * 1.2f, Ballistics.AccuracyMultiplier(isHipFire: false, isStanding: false, isMoving: false, isProne: true), Precision);
+
+    [Fact]
+    public void Prone_and_standing_at_once_gets_no_prone_bonus() =>
+        Assert.Equal(1.2f * 0.8f, Ballistics.AccuracyMultiplier(isHipFire: false, isStanding: true, isMoving: false, isProne: true), Precision);
+
+    [Fact]
     public void Hip_fire_standing_and_moving_each_lower_accuracy()
     {
         var best = Ballistics.AccuracyMultiplier(false, false, false);

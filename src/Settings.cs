@@ -60,6 +60,12 @@ internal sealed class Settings : JsonModSettings
     [Slider(0f, 1f, 21)]
     public float m_StandingAccuracyMultiplier = 0.8f;
 
+    /// <summary>What accuracy is multiplied by when lying prone: <see cref="Ballistics.ProneAccuracyMultiplier"/>.</summary>
+    [Name("Prone")]
+    [Description("Multiplies accuracy when lying prone, on top of not standing. 1 means no bonus.")]
+    [Slider(1f, 2f, 21)]
+    public float m_ProneAccuracyMultiplier = 1.2f;
+
     /// <summary>What accuracy is multiplied by when moving: <see cref="Ballistics.MovingAccuracyMultiplier"/>.</summary>
     [Name("Moving")]
     [Description("Multiplies accuracy when moving. 1 means no penalty.")]
@@ -108,6 +114,22 @@ internal sealed class Settings : JsonModSettings
     [Slider(0.5f, 2f, 16)]
     public float m_SlideDistanceMultiplier = 1f;
 
+    /// <summary>Whether the player can lie prone.</summary>
+    [Name("Prone")]
+    [Description("A key lies you down, lower than crouching: slower, harder for animals to see and hear, and steadier to shoot from. Sprinting or standing up ends it.")]
+    public bool m_ProneEnabled = true;
+
+    /// <summary>The key that lies the player down and gets them back up to a crouch.</summary>
+    [Name("Prone key")]
+    [Description("Lies you down, or gets you back up to a crouch if there's room.")]
+    public KeyCode m_ProneKey = KeyCode.Z;
+
+    /// <summary>How fast the player moves prone, compared to crouch-walking: <see cref="Movement.ProneSpeedMultiplier"/>.</summary>
+    [Name("Prone speed")]
+    [Description("Multiplies your crouch-walking speed while prone.")]
+    [Slider(0.1f, 1f, 19)]
+    public float m_ProneSpeedMultiplier = 0.4f;
+
     /// <summary>Whether the player can walk while aiming a revolver.</summary>
     [Section("Other")]
     [Name("Walk while aiming revolver")]
@@ -133,13 +155,15 @@ internal sealed class Settings : JsonModSettings
             nameof(m_BaseAccuracyMultiplier),
             nameof(m_HipFireAccuracyMultiplier),
             nameof(m_StandingAccuracyMultiplier),
+            nameof(m_ProneAccuracyMultiplier),
             nameof(m_MovingAccuracyMultiplier),
             nameof(m_MaxInaccuracyDegrees),
             nameof(m_DamageFalloffRange),
             nameof(m_MinDamageFraction)
         ]),
         (nameof(m_CrouchSprintEnabled), settings => settings.m_CrouchSprintEnabled, [nameof(m_CrouchSprintSpeedMultiplier)]),
-        (nameof(m_SlideEnabled), settings => settings.m_SlideEnabled, [nameof(m_SlideDistanceMultiplier)])
+        (nameof(m_SlideEnabled), settings => settings.m_SlideEnabled, [nameof(m_SlideDistanceMultiplier)]),
+        (nameof(m_ProneEnabled), settings => settings.m_ProneEnabled, [nameof(m_ProneKey), nameof(m_ProneSpeedMultiplier)])
     ];
 
     /// <summary>Adds the settings to the Mod Settings menu and puts the saved values into effect.</summary>
@@ -178,12 +202,14 @@ internal sealed class Settings : JsonModSettings
         Ballistics.BaseAccuracyMultiplier = m_BaseAccuracyMultiplier;
         Ballistics.HipFireAccuracyMultiplier = m_HipFireAccuracyMultiplier;
         Ballistics.StandingAccuracyMultiplier = m_StandingAccuracyMultiplier;
+        Ballistics.ProneAccuracyMultiplier = m_ProneAccuracyMultiplier;
         Ballistics.MovingAccuracyMultiplier = m_MovingAccuracyMultiplier;
         Ballistics.MaxInaccuracyDegrees = m_MaxInaccuracyDegrees;
         Ballistics.DamageFalloffRange = m_DamageFalloffRange;
         Ballistics.MinDamageFraction = m_MinDamageFraction;
         Movement.CrouchSprintSpeedMultiplier = m_CrouchSprintSpeedMultiplier;
         Movement.SlideDistanceMultiplier = m_SlideDistanceMultiplier;
+        Movement.ProneSpeedMultiplier = m_ProneSpeedMultiplier;
     }
 
     /// <summary>Shows or hides some settings.</summary>

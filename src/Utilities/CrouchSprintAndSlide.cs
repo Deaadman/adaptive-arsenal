@@ -78,6 +78,9 @@ internal static class CrouchSprintAndSlide
     /// </summary>
     internal static bool IsCrouchSprinting => s_CrouchSprinting && Time.frameCount - s_CrouchSprintingFrame <= 1;
 
+    /// <summary>Whether the player is sliding, or about to start in the next update.</summary>
+    internal static bool IsSliding => s_Sliding || s_SlideRequested;
+
     /// <summary>
     /// Whether to stop the game standing the player up now: when <see cref="PlayerMovement.Update"/> does it, because
     /// they're sprinting, while they slide or sprint crouched.
@@ -93,28 +96,21 @@ internal static class CrouchSprintAndSlide
     /// crouched, and sets the controller's acceleration for either.
     /// </summary>
     /// <param name="controller">The player's controller.</param>
-    /// <param name="player">The player.</param>
-    /// <returns>What to put back after the update.</returns>
-    internal static ControllerUpdate BeforeControllerUpdate(vp_FPSController controller, vp_FPSPlayer player)
+    /// <param name="update">The player's state for this update, and what's changed, to put back afterwards.</param>
+    internal static void BeforeControllerUpdate(vp_FPSController controller, ref ControllerUpdate update)
     {
-        var update = new ControllerUpdate { m_IsPlayers = true };
-        var playerManager = GameManager.GetPlayerManagerComponent();
-        var movement = GameManager.GetPlayerMovementComponent();
-        if (playerManager == null || movement == null)
-            return update;
-
-        var crouched = playerManager.PlayerIsCrouched();
-        var moveUnblocked = GameManager.IsMoveInputUnblocked();
+        var player = update.m_Player;
+        var movement = update.m_Movement;
 
         if (s_SlideRequested)
-            crouched = StartRequestedSlide(player, playerManager, controller, crouched);
+            update.m_Crouched = StartRequestedSlide(player, update.m_PlayerManager, controller, update.m_Crouched);
         else if (!s_Sliding && Settings.Instance.m_SlideEnabled)
-            MaybeRequestSlide(player, controller, moveUnblocked);
+            MaybeRequestSlide(player, controller, update.m_MoveUnblocked);
 
-        if (s_Sliding && (!crouched || !moveUnblocked))
-            EndSlide(crouched ? "movement was taken over" : "the player stood up");
+        if (s_Sliding && (!update.m_Crouched || !update.m_MoveUnblocked))
+            EndSlide(update.m_Crouched ? "movement was taken over" : "the player stood up");
 
-        var crouchSprinting = WantsToCrouchSprint(player, playerManager, movement, crouched, moveUnblocked);
+        var crouchSprinting = WantsToCrouchSprint(update);
         s_CrouchSprintingFrame = Time.frameCount;
         if (crouchSprinting != s_CrouchSprinting)
         {
@@ -135,29 +131,23 @@ internal static class CrouchSprintAndSlide
         else if (s_CrouchSprinting)
         {
             // GetSprintMovementMultiplier asks PlayerIsSprinting, which now says the player is sprinting.
-            var multiplier = Movement.CrouchSprintAccelerationMultiplier(movement.GetSprintMovementMultiplier());
-            update.ChangeAcceleration(controller, controller.MotorAcceleration * multiplier);
+            update.MultiplyAcceleration(controller, Movement.CrouchSprintAccelerationMultiplier(movement.GetSprintMovementMultiplier()));
         }
-
-        return update;
     }
 
     /// <summary>
-    /// After the player's controller has moved them: puts the acceleration back, moves a slide on, makes sure
-    /// sprinting crouched uses stamina, and remembers how the player was moving for the next update.
+    /// After the player's controller has moved them: moves a slide on, makes sure sprinting crouched uses stamina, and
+    /// remembers how the player was moving for the next update.
     /// </summary>
     /// <param name="controller">The player's controller.</param>
-    /// <param name="update">What <see cref="BeforeControllerUpdate"/> returned.</param>
-    internal static void AfterControllerUpdate(vp_FPSController controller, ControllerUpdate update)
+    /// <param name="update">The player's state for this update.</param>
+    internal static void AfterControllerUpdate(vp_FPSController controller, in ControllerUpdate update)
     {
-        update.RestoreAcceleration(controller);
-
         var characterController = controller.m_Controller;
-        var playerManager = GameManager.GetPlayerManagerComponent();
-        var movement = GameManager.GetPlayerMovementComponent();
-        if (characterController == null || playerManager == null || movement == null)
+        if (characterController == null)
             return;
 
+        var movement = update.m_Movement;
         if (s_Sliding)
             MoveSlide(controller, characterController, movement);
         else if (s_CrouchSprinting)
@@ -165,8 +155,18 @@ internal static class CrouchSprintAndSlide
 
         var velocity = characterController.velocity;
         s_LastGroundVelocity = new Vector3(velocity.x, 0f, velocity.z);
-        s_WasSprintingStanding = !s_Sliding && !s_CrouchSprinting && playerManager.PlayerIsSprinting() && !playerManager.PlayerIsCrouched();
+        s_WasSprintingStanding = !s_Sliding && !s_CrouchSprinting && !update.m_Crouched && update.m_PlayerManager.PlayerIsSprinting();
         s_StaminaAfterLastUpdate = movement.CurrentStamina;
+    }
+
+    /// <summary>Forgets any slide or crouched sprint, for a new scene, where the player starts afresh.</summary>
+    internal static void Reset()
+    {
+        s_Sliding = false;
+        s_SlideRequested = false;
+        s_CrouchSprinting = false;
+        s_WasSprintingStanding = false;
+        s_LastGroundVelocity = Vector3.zero;
     }
 
     /// <summary>
@@ -176,23 +176,20 @@ internal static class CrouchSprintAndSlide
     /// The same rules as the game's sprint, as far as the decompiled code shows them: the sprint key, moving mostly
     /// forward, stamina left, and nothing like an injury, heavy load or aiming stopping it.
     /// </remarks>
-    /// <param name="player">The player.</param>
-    /// <param name="playerManager">The player manager.</param>
-    /// <param name="movement">The player's movement rules.</param>
-    /// <param name="crouched">Whether the player is crouched.</param>
-    /// <param name="moveUnblocked">Whether the player can move, with nothing like a menu in the way.</param>
-    private static bool WantsToCrouchSprint(vp_FPSPlayer player, PlayerManager playerManager, PlayerMovement movement, bool crouched, bool moveUnblocked)
+    /// <param name="update">The player's state for this update.</param>
+    private static bool WantsToCrouchSprint(in ControllerUpdate update)
     {
-        if (!Settings.Instance.m_CrouchSprintEnabled || s_Sliding || !crouched || !moveUnblocked || !InputManager.GetSprintDown(player))
+        if (!Settings.Instance.m_CrouchSprintEnabled || s_Sliding || Prone.IsProne || !update.m_Crouched || !update.m_MoveUnblocked || !InputManager.GetSprintDown(update.m_Player))
             return false;
 
-        if (playerManager.PlayerCantSprintBecauseOfInjury() || playerManager.PlayerIsZooming())
+        if (update.m_PlayerManager.PlayerCantSprintBecauseOfInjury() || update.m_PlayerManager.PlayerIsZooming())
             return false;
 
+        var movement = update.m_Movement;
         if (movement.CurrentStamina <= 0f && !PlayerMovement.m_UnlimitedSprint)
             return false;
 
-        var input = player.GetMovementInput();
+        var input = update.m_Player.GetMovementInput();
         return Movement.InputCanSprint(input.y, input.x, movement.m_SprintDisableWhenForwardInputBelow, movement.m_SprintDisableWhenStrafeInputAbove);
     }
 
@@ -231,6 +228,8 @@ internal static class CrouchSprintAndSlide
     private static bool StartRequestedSlide(vp_FPSPlayer player, PlayerManager playerManager, vp_FPSController controller, bool crouched)
     {
         s_SlideRequested = false;
+        if (Prone.IsProne)
+            return crouched;
 
         // The game may not crouch while sprinting.
         if (!crouched)
@@ -346,45 +345,5 @@ internal static class CrouchSprintAndSlide
     {
         s_Sliding = false;
         Mod.Logger.Log($"Slide ended after {s_SlideSeconds:F1} s because {reason}.", FlaggedLoggingLevel.Debug);
-    }
-
-    /// <summary>
-    /// What one update of the player's controller changed, for <see cref="AfterControllerUpdate"/> to put back.
-    /// </summary>
-    internal struct ControllerUpdate
-    {
-        /// <summary>Whether the update is of the player's controller, rather than another one in the scene.</summary>
-        internal bool m_IsPlayers;
-
-        /// <summary>Whether <see cref="ChangeAcceleration"/> changed the acceleration.</summary>
-        private bool m_ChangedAcceleration;
-
-        /// <summary>The acceleration before it was changed.</summary>
-        private float m_OriginalAcceleration;
-
-        /// <summary>The acceleration it was changed to.</summary>
-        private float m_ChangedAccelerationTo;
-
-        /// <summary>Changes the controller's acceleration for this update, remembering what it was.</summary>
-        /// <param name="controller">The player's controller.</param>
-        /// <param name="acceleration">The acceleration to use.</param>
-        internal void ChangeAcceleration(vp_FPSController controller, float acceleration)
-        {
-            m_ChangedAcceleration = true;
-            m_OriginalAcceleration = controller.MotorAcceleration;
-            m_ChangedAccelerationTo = acceleration;
-            controller.MotorAcceleration = acceleration;
-        }
-
-        /// <summary>
-        /// Puts the controller's acceleration back, unless something else set it during the update, like a change of
-        /// stance, whose value is left as it is.
-        /// </summary>
-        /// <param name="controller">The player's controller.</param>
-        internal readonly void RestoreAcceleration(vp_FPSController controller)
-        {
-            if (m_ChangedAcceleration && controller.MotorAcceleration == m_ChangedAccelerationTo)
-                controller.MotorAcceleration = m_OriginalAcceleration;
-        }
     }
 }

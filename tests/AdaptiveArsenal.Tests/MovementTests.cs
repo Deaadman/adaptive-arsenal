@@ -116,6 +116,40 @@ public class MovementTests
         Assert.Equal(expected, Movement.InputCanSprint(forward, strafe, minForward: 0.5f, maxStrafe: 0.5f));
 
     [Fact]
+    public void Prone_is_half_the_crouched_height() =>
+        Assert.Equal(0.6f, Movement.ProneHeight(crouchedHeight: 1.2f, radius: 0.2f), Precision);
+
+    [Fact]
+    public void A_prone_capsule_is_never_shorter_than_its_two_end_spheres() =>
+        Assert.Equal(2f * 0.4f + 0.01f, Movement.ProneHeight(crouchedHeight: 1.2f, radius: 0.4f), Precision);
+
+    [Fact]
+    public void Prone_is_never_taller_than_crouched() =>
+        Assert.Equal(0.5f, Movement.ProneHeight(crouchedHeight: 0.5f, radius: 0.4f), Precision);
+
+    [Fact]
+    public void The_prone_capsule_keeps_its_bottom_where_the_crouched_one_was()
+    {
+        const float crouchedHeight = 1.2f;
+        const float crouchedCenterY = 0.6f;
+        var proneHeight = Movement.ProneHeight(crouchedHeight, radius: 0.2f);
+        var proneCenterY = Movement.ProneCenterY(crouchedCenterY, crouchedHeight, proneHeight);
+
+        Assert.Equal(crouchedCenterY - crouchedHeight / 2f, proneCenterY - proneHeight / 2f, Precision);
+    }
+
+    [Theory]
+    [InlineData(1.2f, 0.6f, 0.6f)]
+    [InlineData(0.5f, 0.5f, 0f)]
+    [InlineData(0.5f, 0.8f, 0f)]
+    public void Getting_up_needs_the_difference_in_height(float crouchedHeight, float proneHeight, float expected) =>
+        Assert.Equal(expected, Movement.HeadroomToCrouch(crouchedHeight, proneHeight), Precision);
+
+    [Fact]
+    public void The_prone_camera_is_lower_than_crouched() =>
+        Assert.Equal(0.4f, Movement.ProneEyeHeight(crouchedEyeHeight: 1f), Precision);
+
+    [Fact]
     public void Stamina_used_is_the_rate_times_the_frame_and_never_negative()
     {
         Assert.Equal(0.25f, Movement.StaminaUsed(usagePerSecond: 2.5f, deltaTime: 0.1f), Precision);

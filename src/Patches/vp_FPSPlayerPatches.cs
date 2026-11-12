@@ -29,19 +29,32 @@ internal static class vp_FPSPlayerPatches
     }
 
     /// <summary>
-    /// Stops the game standing the player up because they're sprinting, while they slide or sprint crouched: see
-    /// <see cref="CrouchSprintAndSlide.ShouldKeepCrouched"/>. Anything else can still stand them up.
+    /// Stops the game standing the player up because they're sprinting, while they slide or sprint crouched, or from
+    /// the crouch input while they're prone: see <see cref="CrouchSprintAndSlide.ShouldKeepCrouched"/> and
+    /// <see cref="Prone.ShouldKeepCrouched"/>. Anything else can still stand them up.
     /// </summary>
     [HarmonyPatch(typeof(vp_FPSPlayer), nameof(vp_FPSPlayer.EnableCrouch))]
     private static class KeepCrouched
     {
         private static bool Prefix(bool enabled, ref bool __result)
         {
-            if (enabled || !CrouchSprintAndSlide.ShouldKeepCrouched())
+            if (enabled || !(Prone.ShouldKeepCrouched() || CrouchSprintAndSlide.ShouldKeepCrouched()))
                 return true;
 
             __result = false;
             return false;
         }
+    }
+
+    /// <summary>
+    /// Marks while <see cref="vp_FPSPlayer.InputCrouch"/> runs, so <see cref="Prone"/> can tell the crouch input's
+    /// stand-ups apart from others.
+    /// </summary>
+    [HarmonyPatch(typeof(vp_FPSPlayer), nameof(vp_FPSPlayer.InputCrouch))]
+    private static class MarkCrouchInput
+    {
+        private static void Prefix() => Prone.s_CrouchInputDepth++;
+
+        private static void Postfix() => Prone.s_CrouchInputDepth--;
     }
 }

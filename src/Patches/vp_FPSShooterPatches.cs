@@ -108,7 +108,7 @@ internal static class vp_FPSShooterPatches
             var isHipFire = weapon.m_GunItem.m_AllowHipFire && !playerAnimation.IsAllowedToFire(false, weapon.m_GunItem.m_GunType);
 
             var playerManager = GameManager.GetPlayerManagerComponent();
-            var accuracy = ProjectileItem.CalculateAccuracy(weapon.m_GunItem, isHipFire, !playerManager.PlayerIsCrouched(), playerManager.PlayerIsWalking());
+            var accuracy = ProjectileItem.CalculateAccuracy(weapon.m_GunItem, isHipFire, !playerManager.PlayerIsCrouched(), playerManager.PlayerIsWalking(), Prone.IsProne);
 
             var maxSpread = Ballistics.MaxSpreadDegrees(accuracy);
             var (pitch, yaw) = Ballistics.SpreadOffset(maxSpread, Random.value, Random.value);
