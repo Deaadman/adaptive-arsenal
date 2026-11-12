@@ -7,6 +7,25 @@ namespace AdaptiveArsenal.Utilities;
 /// </summary>
 internal static class PrefabMaterials
 {
+    /// <summary>The arrow's trail material, looked up the first time it's needed.</summary>
+    private static Material? s_ArrowTrail;
+
+    /// <summary>
+    /// The material of the arrow's trail, which bullets' trails and tracers' glow use, or <see langword="null"/> if it
+    /// couldn't be found.
+    /// </summary>
+    internal static Material? ArrowTrail
+    {
+        get
+        {
+            // Unity objects need == null, not ??=, to tell when they've been destroyed.
+            if (s_ArrowTrail == null)
+                s_ArrowTrail = GetLineRendererMaterial("GEAR_Arrow", "LineRenderer");
+
+            return s_ArrowTrail;
+        }
+    }
+
     /// <summary>
     /// Gets the material of the <see cref="LineRenderer"/> on a child of a gear item's prefab.
     /// </summary>

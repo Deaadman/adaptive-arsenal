@@ -16,6 +16,18 @@ internal sealed class Mod : MelonMod
     public override void OnInitializeMelon()
     {
         Settings.Initialize();
+        Utilities.RuntimeAddressables.RegisterTypes();
         Logger.Log($"{Properties.BuildInfo.Name} {Properties.BuildInfo.Version} initialized.", FlaggedLoggingLevel.Debug);
+    }
+
+    /// <summary>
+    /// Once Addressables has started, which it has by the first scene, makes the mod's own items and lets the game
+    /// load them. Both only happen once.
+    /// </summary>
+    /// <inheritdoc />
+    public override void OnSceneWasInitialized(int buildIndex, string sceneName)
+    {
+        Utilities.RuntimeAddressables.AddLocator();
+        Utilities.TracerAmmo.Build();
     }
 }

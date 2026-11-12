@@ -60,9 +60,6 @@ public class ProjectileItem : MonoBehaviour
     /// <summary>How many trail points to make room for up front.</summary>
     private const int InitialTrailCapacity = 100;
 
-    /// <summary>The arrow's trail material, which every bullet's trail uses, looked up the first time it's needed.</summary>
-    private static Material? s_TrailMaterial;
-
     /// <summary>The rifle or revolver that fired the bullet, or <see langword="null"/> for one another mod fired.</summary>
     private GunType? m_GunType;
 
@@ -106,6 +103,9 @@ public class ProjectileItem : MonoBehaviour
 
     /// <summary>How long, in seconds, since the bullet hit something.</summary>
     private float m_TimeSinceHit;
+
+    /// <summary>The bullet's red glow, if it's a tracer, or <see langword="null"/>.</summary>
+    private TracerGlow? m_TracerGlow;
 
     private LineRenderer? m_Trail;
     private List<Vector3>? m_TrailPoints;
@@ -193,6 +193,7 @@ public class ProjectileItem : MonoBehaviour
         else
         {
             ExtendTrail();
+            m_TracerGlow?.Follow(transform.position);
         }
     }
 
@@ -286,11 +287,8 @@ public class ProjectileItem : MonoBehaviour
         if (!Settings.Instance.m_TrailsEnabled)
             return;
 
-        // Unity objects need == null, not ??=, to tell when they've been destroyed.
-        if (s_TrailMaterial == null)
-            s_TrailMaterial = PrefabMaterials.GetLineRendererMaterial("GEAR_Arrow", "LineRenderer");
-
-        if (s_TrailMaterial == null)
+        var trailMaterial = PrefabMaterials.ArrowTrail;
+        if (trailMaterial == null)
         {
             Mod.Logger.Log("Couldn't find the arrow's trail material, so bullets have no trail.", FlaggedLoggingLevel.Warning);
             return;
@@ -299,7 +297,7 @@ public class ProjectileItem : MonoBehaviour
         GameObject trailObject = new("LineRenderer") { transform = { parent = transform } };
 
         m_Trail = trailObject.AddComponent<LineRenderer>();
-        m_Trail.material = s_TrailMaterial;
+        m_Trail.material = trailMaterial;
         m_Trail.startWidth = 0.4f;
         m_Trail.endWidth = 0.1f;
 
@@ -331,6 +329,10 @@ public class ProjectileItem : MonoBehaviour
             Mod.Logger.Log($"{weaponName} has no muzzle velocity, so its bullet drops at the muzzle.", FlaggedLoggingLevel.Warning);
 
         Launch(muzzleVelocity, DefaultDrag);
+
+        // Tracers fly exactly like standard rounds, and only glow.
+        if (TracerAmmo.IsLoaded(gunItem))
+            m_TracerGlow = new TracerGlow(transform);
     }
 
     /// <summary>Launches the bullet as another mod asked, through <see cref="Projectiles.Fire"/>.</summary>
@@ -513,6 +515,8 @@ public class ProjectileItem : MonoBehaviour
 
         foreach (var meshRenderer in GetComponentsInChildren<MeshRenderer>())
             meshRenderer.enabled = false;
+
+        m_TracerGlow?.Extinguish();
 
         // The trail ends where the bullet hit.
         if (m_Trail is not null && m_TrailPoints is not null)

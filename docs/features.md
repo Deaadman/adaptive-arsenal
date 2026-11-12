@@ -47,6 +47,12 @@ A bullet does its weapon's full damage close up, the same as the game gives that
 
 Hits count towards your Rifle or Revolver skill and the wildlife hits statistic, as they do without the mod. Bullets also knock loose items around, as the game's own bullets do.
 
+## Tracer rounds
+
+Rifles can load tracer cartridges (`GEAR_RifleAmmoSingleTracer`) as well as standard ones, and switch between them as the game switches ammo. A tracer flies and hits exactly like a standard round, but glows bright red in flight, with a red light around it. Its trail is the same as any other bullet's.
+
+Tracers only glow with **Real bullets** on. With it off, they fire the game's own shots, like standard rounds.
+
 ## Revolver movement
 
 Without the mod, aiming a revolver stops you moving. With it, you can walk while you aim, and the HUD no longer shows the limited-movement icon for it. Rifles still stop you moving while you aim.

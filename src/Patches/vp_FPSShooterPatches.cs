@@ -72,11 +72,20 @@ internal static class vp_FPSShooterPatches
     private static class FireProjectile
     {
         // __state is the shooter's bullets to put back, or null when the mod's weren't swapped in.
+        /// <summary>Whether the log has said tracers don't glow with real bullets off, so it only says once.</summary>
+        private static bool s_WarnedTracerWithoutProjectiles;
+
         private static void Prefix(vp_FPSShooter __instance, out ShooterBullets? __state)
         {
             __state = null;
-            if (!Settings.Instance.m_ProjectilesEnabled || !s_ShooterBullets.TryGetValue(__instance.Pointer, out var bullets))
+            if (!s_ShooterBullets.TryGetValue(__instance.Pointer, out var bullets))
                 return;
+
+            if (!Settings.Instance.m_ProjectilesEnabled)
+            {
+                WarnIfTracer(__instance.m_Weapon.m_GunItem);
+                return;
+            }
 
             bullets.Use(__instance, true);
             __state = bullets;
@@ -121,6 +130,20 @@ internal static class vp_FPSShooterPatches
 
         private static void Finalizer(vp_FPSShooter __instance, ShooterBullets? __state) =>
             __state?.Use(__instance, false);
+
+        /// <summary>
+        /// Says in the log, once, that tracer cartridges fire the game's own shots, which don't glow, while
+        /// <see cref="Settings.m_ProjectilesEnabled"/> is off.
+        /// </summary>
+        /// <param name="gunItem">The gun firing, or <see langword="null"/>.</param>
+        private static void WarnIfTracer(GunItem? gunItem)
+        {
+            if (s_WarnedTracerWithoutProjectiles || gunItem == null || !TracerAmmo.IsLoaded(gunItem))
+                return;
+
+            s_WarnedTracerWithoutProjectiles = true;
+            Mod.Logger.Log("Tracer cartridges only glow with Real bullets on. With it off, they fire the game's own shots.", FlaggedLoggingLevel.Warning);
+        }
     }
 
     /// <summary>A shooter's bullets: the game's own, and the mod's template.</summary>

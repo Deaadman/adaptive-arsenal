@@ -19,6 +19,10 @@ See docs/development.md, "Releasing". CI checks this file's format.
 
 ## [Unreleased]
 
+### Added
+
+- Rifles can load tracer cartridges, which fly like standard rounds but glow bright red in flight.
+
 ## [1.1.0] - 2026-11-08
 
 Adaptive Arsenal now works with The Long Dark 2.58. Bullets hit animals reliably, each gun does its own damage, and a new settings page lets you tune accuracy, bullet speed and damage drop-off. Other mods can now fire its bullets too.
