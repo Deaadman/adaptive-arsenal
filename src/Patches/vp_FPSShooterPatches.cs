@@ -86,16 +86,8 @@ internal static class vp_FPSShooterPatches
             var weapon = __instance.m_Weapon;
             var playerAnimation = GameManager.GetPlayerAnimationComponent();
 
-            if (Time.time < __instance.m_NextAllowedFireTime
-                || weapon.ReloadInProgress()
-                || !playerAnimation.IsAllowedToFire(weapon.m_GunItem.m_AllowHipFire, weapon.m_GunItem.m_GunType)
-                || playerAnimation.IsReloading()
-                || weapon.GetAmmoCount() < 1
-                || weapon.m_GunItem.m_IsJammed
-                || __instance.ProjectilePrefab == null)
-            {
+            if (!ProjectileUtilities.WillFire(__instance) || __instance.ProjectilePrefab == null)
                 return;
-            }
 
             if (!__instance.ProjectilePrefab.GetComponent<ProjectileItem>())
                 return;
@@ -151,6 +143,8 @@ internal static class vp_FPSShooterPatches
         }
 
         private static void Postfix(int __state) => ManualBolt.AfterTrigger(__state, s_Trigger);
+
+        private static void Finalizer() => ManualBolt.EndTrigger();
     }
 
     /// <summary>A shooter's bullets: the game's own, and the mod's template.</summary>

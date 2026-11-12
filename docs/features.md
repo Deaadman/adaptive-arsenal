@@ -53,11 +53,13 @@ Without the mod, a rifle cycles its bolt by itself after every shot. With it, th
 
 Press **V** to work the bolt without firing. After a shot, it cycles the bolt, the same as pulling the trigger again. Otherwise, it ejects the round in the chamber unfired and chambers the next one, clearing the round the same way the game clears a jammed one. It does nothing while the safety is on. It works even with **Manual bolt** turned off.
 
+When a rifle misfires, the round stays in the chamber as a dud. The HUD says "Misfire", and the trigger only clicks until you press **V** to eject the dud. Reloading also clears a dud, since it opens the bolt. A dud stays in a rifle you put away and take out again, but not through saving and loading. How likely a misfire is uses the game's own misfire chance for the round, which depends on its condition.
+
 A rifle also holds one more round, in the chamber, on top of its magazine. The hunting rifle holds 11 instead of 10. The HUD shows at most the magazine's rounds.
 
 ## Safety
 
-Rifles have a safety. Press **B** to put it on or off, and the HUD says which. While it's on, pulling the trigger does nothing, and the bolt can't be worked: the rifle doesn't fire, and its bolt doesn't cycle. Each time you take a rifle out, its safety is on, so take it off before you need to shoot. Revolvers have no safety.
+Rifles have a safety. Press **B** to put it on or off, and the HUD says which. While it's on, pulling the trigger does nothing, and the bolt can't be worked: the rifle doesn't fire, and its bolt doesn't cycle. Each time you take a rifle out, its safety is on, so take it off before you need to shoot. The safety only goes on when the bolt is ready: not straight after a shot before you cycle it, and not with a dud in the chamber, since the rifle isn't cocked then. Revolvers have no safety.
 
 ## Revolver movement
 

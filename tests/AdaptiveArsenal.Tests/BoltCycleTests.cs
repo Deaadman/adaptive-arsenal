@@ -116,6 +116,64 @@ public class BoltCycleTests
         Assert.Equal(expected, BoltCycle.EjectHasStalled(seconds, playing));
 
     [Fact]
+    public void A_dud_clicks_on_each_new_pull_and_never_fires()
+    {
+        var bolt = new BoltCycle();
+        bolt.Misfired();
+
+        Assert.Equal(TriggerAction.Click, Pull(bolt, frame: 10));
+        Assert.Equal(TriggerAction.Ignore, Pull(bolt, frame: 11));
+        Assert.Equal(TriggerAction.Click, Pull(bolt, frame: 50));
+        Assert.False(bolt.IsReady);
+    }
+
+    [Fact]
+    public void Working_the_bolt_ejects_a_dud_and_the_next_pull_fires()
+    {
+        var bolt = new BoltCycle();
+        bolt.Misfired();
+
+        Assert.Equal(HandCycle.EjectRound, bolt.CycleByHand(roundsInRifle: 5));
+        Assert.True(bolt.IsReady);
+        Assert.Equal(TriggerAction.Fire, Pull(bolt, frame: 50));
+    }
+
+    [Fact]
+    public void Lowering_the_rifle_leaves_a_dud_in_the_chamber()
+    {
+        var bolt = new BoltCycle();
+        bolt.Misfired();
+
+        Assert.False(bolt.Release());
+        Assert.Equal(BoltPhase.Dud, bolt.Phase);
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void Following_another_rifle_restores_its_dud(bool hasDud)
+    {
+        var bolt = new BoltCycle();
+        bolt.Fired(time: 1f, roundsLeft: 5, willJam: false);
+        bolt.Reset(hasDud);
+
+        Assert.Equal(hasDud ? BoltPhase.Dud : BoltPhase.Ready, bolt.Phase);
+    }
+
+    [Fact]
+    public void The_bolt_is_only_ready_between_shots()
+    {
+        var bolt = new BoltCycle();
+        Assert.True(bolt.IsReady);
+
+        bolt.Fired(time: 1f, roundsLeft: 5, willJam: false);
+        Assert.False(bolt.IsReady);
+
+        bolt.TryHold(2f);
+        Assert.False(bolt.IsReady);
+    }
+
+    [Fact]
     public void The_first_pull_after_a_shot_cycles_even_without_an_earlier_pull()
     {
         var bolt = new BoltCycle();

@@ -21,14 +21,29 @@ internal static class RifleSafety
     internal static bool IsOn(GunItem gunItem) =>
         s_IsOn && Settings.Instance.m_RifleSafety && gunItem == Rifles.InHands;
 
-    /// <summary>Sets the safety of a rifle the player has just equipped, as the settings say.</summary>
-    internal static void Equipped() => s_IsOn = Settings.Instance.m_SafetyOnWhenEquipped;
+    /// <summary>
+    /// Sets the safety of a rifle the player has just equipped, as the settings say, unless its bolt isn't ready.
+    /// </summary>
+    /// <param name="gunItem">The rifle.</param>
+    internal static void Equipped(GunItem gunItem) =>
+        s_IsOn = Settings.Instance.m_SafetyOnWhenEquipped && ManualBolt.IsBoltReady(gunItem);
 
-    /// <summary>Puts the safety on or off, if rifles have one.</summary>
-    internal static void Toggle()
+    /// <summary>
+    /// Puts the safety on or off, if rifles have one. It only goes on while the bolt is ready (see
+    /// <see cref="ManualBolt.IsBoltReady"/>): straight after a shot, or with a dud in the chamber, the rifle isn't
+    /// cocked, so there's nothing for the safety to lock.
+    /// </summary>
+    /// <param name="gunItem">The rifle in the player's hands.</param>
+    internal static void Toggle(GunItem gunItem)
     {
         if (!Settings.Instance.m_RifleSafety)
             return;
+
+        if (!s_IsOn && !ManualBolt.IsBoltReady(gunItem))
+        {
+            Rifles.ShowMessage("Work the bolt first");
+            return;
+        }
 
         s_IsOn = !s_IsOn;
         Rifles.ShowMessage(s_IsOn ? "Safety on" : "Safety off");

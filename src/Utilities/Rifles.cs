@@ -47,14 +47,14 @@ internal static class Rifles
         if (gunItem != InHands)
         {
             InHands = gunItem;
-            RifleSafety.Equipped();
+            RifleSafety.Equipped(gunItem);
         }
 
         if (!CanTakeInput())
             return;
 
         if (Input.GetKeyDown(Settings.Instance.m_SafetyKey))
-            RifleSafety.Toggle();
+            RifleSafety.Toggle(gunItem);
 
         if (Input.GetKeyDown(Settings.Instance.m_CycleBoltKey))
             ManualBolt.CycleByHand(gunItem);

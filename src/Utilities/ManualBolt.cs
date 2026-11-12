@@ -38,13 +38,39 @@ internal static class ManualBolt
     /// <summary>When <see cref="s_EjectingGun"/>'s bolt was worked.</summary>
     private static float s_EjectStartTime;
 
+    /// <summary>The rounds in <see cref="s_EjectingGun"/> when its bolt was worked, to tell when one has gone.</summary>
+    private static int s_EjectRoundsBefore;
+
+    /// <summary>
+    /// The rifles with a dud in the chamber, so a dud stays when the player puts a rifle away and takes it out again.
+    /// </summary>
+    /// <remarks>
+    /// It holds the rifles themselves, not their native addresses, so a destroyed rifle is pruned (it compares equal to
+    /// null) rather than passing its dud on to a new rifle at the same address. It's cleared on every scene load,
+    /// including loading a save, so duds aren't saved.
+    /// </remarks>
+    private static readonly List<GunItem> s_DudGuns = [];
+
+    /// <summary>
+    /// Whether the game's own misfire roll is turned off, while the game fires a rifle whose misfire this has already
+    /// rolled.
+    /// </summary>
+    internal static bool SuppressGameMisfire { get; private set; }
+
     /// <summary>Whether a gun has a bolt the player cycles by hand.</summary>
     /// <param name="gunItem">The gun.</param>
     internal static bool AppliesTo(GunItem gunItem) => Settings.Instance.m_ManualBolt && Rifles.IsBoltAction(gunItem);
 
     /// <summary>
-    /// Handles a trigger pull on a rifle: says whether the game should fire, or cycles the bolt instead.
+    /// Handles a trigger pull on a rifle: says whether the game should fire, or cycles the bolt, misfires or clicks on a
+    /// dud instead.
     /// </summary>
+    /// <remarks>
+    /// The misfire is rolled here, with the game's own roll for the next round (<see cref="GunItem.RollForMisfire"/>),
+    /// and only for a pull the game will fire. A misfire leaves the round in the chamber as a dud, which the trigger
+    /// only clicks on until the player ejects it with <see cref="CycleByHand"/>. When the round does fire, the game's
+    /// own misfire roll is turned off for the shot (<see cref="SuppressGameMisfire"/>), so it isn't rolled twice.
+    /// </remarks>
     /// <param name="shooter">The shooter whose trigger was pulled.</param>
     /// <param name="pull">The trigger, already updated for this frame.</param>
     /// <param name="roundsBefore">The rounds in the rifle before the pull, or -1 when this doesn't track it.</param>
@@ -53,8 +79,9 @@ internal static class ManualBolt
     {
         roundsBefore = -1;
 
+        // A jammed rifle, including one being ejected from, is the game's to handle until it's cleared.
         var gunItem = shooter.m_Weapon != null ? shooter.m_Weapon.m_GunItem : null;
-        if (gunItem == null || !AppliesTo(gunItem))
+        if (gunItem == null || !AppliesTo(gunItem) || gunItem.m_IsJammed)
             return true;
 
         Track(gunItem);
@@ -62,6 +89,13 @@ internal static class ManualBolt
         switch (s_Bolt.PullTrigger(pull))
         {
             case TriggerAction.Fire:
+                if (ProjectileUtilities.WillFire(shooter) && RollForMisfire(gunItem))
+                {
+                    Misfire(gunItem, pull);
+                    return false;
+                }
+
+                SuppressGameMisfire = true;
                 s_FireAnimationStarted = false;
                 s_WillJam = false;
                 roundsBefore = gunItem.NumRoundsInClip();
@@ -72,9 +106,58 @@ internal static class ManualBolt
                 Mod.Logger.Log("Cycled the rifle's bolt.", FlaggedLoggingLevel.Trace);
                 return false;
 
+            case TriggerAction.Click:
+                if (ProjectileUtilities.CanPullTrigger(shooter))
+                    gunItem.PlayDryFireAudio(gunItem.gameObject);
+                return false;
+
             default:
                 return false;
         }
+    }
+
+    /// <summary>Turns the game's own misfire roll back on once the game has handled a trigger pull.</summary>
+    internal static void EndTrigger() => SuppressGameMisfire = false;
+
+    /// <summary>
+    /// Whether a rifle's bolt is ready to fire, so its safety can go on: not straight after a shot, before the bolt is
+    /// cycled, and not with a dud in the chamber.
+    /// </summary>
+    /// <param name="gunItem">The rifle.</param>
+    internal static bool IsBoltReady(GunItem gunItem)
+    {
+        if (!AppliesTo(gunItem))
+            return true;
+
+        return gunItem == s_GunItem ? s_Bolt.IsReady : !HasDud(gunItem);
+    }
+
+    /// <summary>
+    /// Clears a rifle's dud once the game has reloaded it, since reloading opens the bolt, which pulls the dud out.
+    /// </summary>
+    /// <param name="gunItem">The rifle reloaded.</param>
+    internal static void Reloaded(GunItem? gunItem)
+    {
+        if (gunItem == null || !HasDud(gunItem))
+            return;
+
+        s_DudGuns.Remove(gunItem);
+        if (gunItem == s_GunItem)
+            s_Bolt.Reset(hasDud: false);
+        Mod.Logger.Log("Reloading cleared the dud from the rifle's chamber.", FlaggedLoggingLevel.Trace);
+    }
+
+    /// <summary>
+    /// Forgets every rifle and dud, as the scene changes: on loading a save, the rifles are new objects, and duds
+    /// aren't saved.
+    /// </summary>
+    internal static void SceneLoaded()
+    {
+        s_DudGuns.Clear();
+        s_GunItem = null;
+        s_EjectingGun = null;
+        s_PausedAnimator = null;
+        s_Bolt.Reset(hasDud: false);
     }
 
     /// <summary>
@@ -146,6 +229,7 @@ internal static class ManualBolt
                 if (weapon == null)
                     return;
 
+                s_EjectRoundsBefore = gunItem.NumRoundsInClip();
                 gunItem.m_IsJammed = true;
                 playerAnimation.UpdateJamParameters(true);
                 weapon.UnJam();
@@ -200,14 +284,42 @@ internal static class ManualBolt
     }
 
     /// <summary>
-    /// Follows a rifle being ejected from: done once the game takes the jam off, and the jam taken off again if the
-    /// unjam animation stalls, so a deliberate eject never leaves the rifle jammed.
+    /// Leaves the chambered round in a rifle as a dud: the trigger clicks, and it stays until the player ejects it.
     /// </summary>
+    /// <param name="gunItem">The rifle.</param>
+    /// <param name="pull">The trigger pull that misfired, which is spent.</param>
+    private static void Misfire(GunItem gunItem, TriggerPull pull)
+    {
+        s_Bolt.Misfired();
+        if (!HasDud(gunItem))
+            s_DudGuns.Add(gunItem);
+        pull.Spend();
+        gunItem.PlayDryFireAudio(gunItem.gameObject);
+        Rifles.ShowMessage("Misfire");
+        Mod.Logger.Log("The rifle misfired, leaving a dud in the chamber.", FlaggedLoggingLevel.Trace);
+    }
+
+    /// <summary>
+    /// Follows a rifle being ejected from: done once a round has gone from it, which clears any dud, and the jam taken
+    /// off again if the unjam animation stalls before then, so a deliberate eject never leaves the rifle jammed and a
+    /// dud that wasn't ejected stays.
+    /// </summary>
+    /// <remarks>
+    /// It goes by the round count, not the jam flag, since the game may take the jam off when the unjam starts rather
+    /// than when the round comes out.
+    /// </remarks>
     private static void UpdateEject()
     {
         // Unity objects need == null, not ?., to tell when they've been destroyed.
-        if (s_EjectingGun == null || !s_EjectingGun.m_IsJammed)
+        if (s_EjectingGun == null)
         {
+            s_EjectingGun = null;
+            return;
+        }
+
+        if (s_EjectingGun.NumRoundsInClip() < s_EjectRoundsBefore)
+        {
+            s_DudGuns.Remove(s_EjectingGun);
             s_EjectingGun = null;
             return;
         }
@@ -217,15 +329,49 @@ internal static class ManualBolt
         if (!BoltCycle.EjectHasStalled(Time.time - s_EjectStartTime, unjamPlaying))
             return;
 
-        s_EjectingGun.m_IsJammed = false;
-        if (playerAnimation != null && s_EjectingGun == Rifles.InHands)
-            playerAnimation.UpdateJamParameters(false);
+        if (s_EjectingGun.m_IsJammed)
+        {
+            s_EjectingGun.m_IsJammed = false;
+            if (playerAnimation != null && s_EjectingGun == Rifles.InHands)
+                playerAnimation.UpdateJamParameters(false);
+        }
+
+        // A dud that wasn't ejected is still in the chamber.
+        if (s_EjectingGun == s_GunItem && HasDud(s_EjectingGun))
+            s_Bolt.Reset(hasDud: true);
 
         s_EjectingGun = null;
-        Mod.Logger.Log("The rifle's unjam didn't run to the end, so it isn't left jammed.", FlaggedLoggingLevel.Debug);
+        Mod.Logger.Log("The rifle's unjam didn't run to the end, so nothing was ejected.", FlaggedLoggingLevel.Debug);
     }
 
-    /// <summary>Starts tracking a rifle's bolt, letting the last tracked rifle's bolt cycle if it's a different one.</summary>
+    /// <summary>
+    /// Rolls whether the next round misfires, with the game's own roll, keeping the game's misfire flag as it was so
+    /// the game doesn't also react to the mod's misfire.
+    /// </summary>
+    /// <param name="gunItem">The rifle.</param>
+    private static bool RollForMisfire(GunItem gunItem)
+    {
+        var hadMisfired = gunItem.m_HasMisfired;
+        var misfires = gunItem.RollForMisfire();
+        gunItem.m_HasMisfired = hadMisfired;
+
+        Mod.Logger.Log($"Rolled for a misfire on round condition {gunItem.GetAmmoCondition(0)}: {(misfires ? "misfire" : "fires")}.", FlaggedLoggingLevel.Debug);
+        return misfires;
+    }
+
+    /// <summary>Whether a rifle has a dud in the chamber, pruning destroyed rifles first.</summary>
+    /// <param name="gunItem">The rifle.</param>
+    private static bool HasDud(GunItem gunItem)
+    {
+        // Unity objects need == null, not ?., to tell when they've been destroyed.
+        s_DudGuns.RemoveAll(dudGun => dudGun == null);
+        return s_DudGuns.Exists(dudGun => dudGun == gunItem);
+    }
+
+    /// <summary>
+    /// Starts tracking a rifle's bolt, letting the last tracked rifle's bolt cycle if it's a different one, and picks up
+    /// the new rifle's dud if it has one.
+    /// </summary>
     /// <param name="gunItem">The rifle.</param>
     private static void Track(GunItem gunItem)
     {
@@ -234,6 +380,7 @@ internal static class ManualBolt
 
         Release();
         s_GunItem = gunItem;
+        s_Bolt.Reset(HasDud(gunItem));
     }
 
     /// <summary>

@@ -6,6 +6,32 @@ namespace AdaptiveArsenal.Utilities;
 internal static class ProjectileUtilities
 {
     /// <summary>
+    /// Whether a trigger pull will fire, as the game decides: not between shots, while reloading, when the gun is empty
+    /// or jammed, or when the player isn't allowed to fire.
+    /// </summary>
+    /// <param name="shooter">The shooter whose trigger is pulled.</param>
+    internal static bool WillFire(vp_FPSShooter shooter) =>
+        CanPullTrigger(shooter) && shooter.m_Weapon.GetAmmoCount() >= 1 && !shooter.m_Weapon.m_GunItem.m_IsJammed;
+
+    /// <summary>
+    /// Whether the player can pull the trigger at all, as the game decides: not between shots, while reloading, or when
+    /// the player isn't allowed to fire. Unlike <see cref="WillFire"/>, the gun may be empty or jammed.
+    /// </summary>
+    /// <param name="shooter">The shooter whose trigger is pulled.</param>
+    internal static bool CanPullTrigger(vp_FPSShooter shooter)
+    {
+        var weapon = shooter.m_Weapon;
+        var playerAnimation = GameManager.GetPlayerAnimationComponent();
+        if (weapon == null || weapon.m_GunItem == null || playerAnimation == null)
+            return false;
+
+        return Time.time >= shooter.m_NextAllowedFireTime
+            && !weapon.ReloadInProgress()
+            && playerAnimation.IsAllowedToFire(weapon.m_GunItem.m_AllowHipFire, weapon.m_GunItem.m_GunType)
+            && !playerAnimation.IsReloading();
+    }
+
+    /// <summary>
     /// Works out where a bullet should be fired from, and in which direction, to go where the weapon is aimed.
     /// </summary>
     /// <remarks>

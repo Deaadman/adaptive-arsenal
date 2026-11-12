@@ -21,6 +21,9 @@ internal sealed class Mod : MelonMod
     }
 
     /// <inheritdoc />
+    public override void OnSceneWasLoaded(int buildIndex, string sceneName) => Utilities.ManualBolt.SceneLoaded();
+
+    /// <inheritdoc />
     public override void OnUpdate()
     {
         Utilities.Rifles.Update();

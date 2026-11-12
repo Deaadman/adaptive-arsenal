@@ -10,7 +10,10 @@ internal enum BoltPhase
     Settling,
 
     /// <summary>The spent case is still in the chamber and the bolt is closed until the player cycles it.</summary>
-    Held
+    Held,
+
+    /// <summary>The round in the chamber misfired. The trigger only clicks until the player ejects it.</summary>
+    Dud
 }
 
 /// <summary>What a trigger pull does, from <see cref="BoltCycle.PullTrigger"/>.</summary>
@@ -21,6 +24,9 @@ internal enum TriggerAction
 
     /// <summary>The pull cycles the bolt instead of firing.</summary>
     Cycle,
+
+    /// <summary>The firing pin falls on a dud, so the trigger clicks and nothing fires.</summary>
+    Click,
 
     /// <summary>The trigger is still held from the last pull, so nothing happens.</summary>
     Ignore
@@ -35,7 +41,7 @@ internal enum HandCycle
     /// <summary>Finishes cycling after a shot, ejecting the spent case.</summary>
     FinishCycle,
 
-    /// <summary>Ejects the live round in the chamber unfired, and chambers the next one.</summary>
+    /// <summary>Ejects the live round or dud in the chamber unfired, and chambers the next one.</summary>
     EjectRound
 }
 
@@ -70,6 +76,12 @@ internal sealed class BoltCycle
     /// <summary>Where the bolt is.</summary>
     internal BoltPhase Phase { get; private set; } = BoltPhase.Ready;
 
+    /// <summary>
+    /// Whether the bolt is ready to fire: closed on a live round, or the rifle is empty. Only then is the rifle cocked,
+    /// so only then can the safety go on.
+    /// </summary>
+    internal bool IsReady => Phase == BoltPhase.Ready;
+
     /// <summary>The time at which the bolt is held, while <see cref="Phase"/> is <see cref="BoltPhase.Settling"/>.</summary>
     private float m_HoldTime;
 
@@ -95,7 +107,8 @@ internal sealed class BoltCycle
     /// </summary>
     /// <remarks>
     /// Only a new pull cycles the bolt, so the player can keep the trigger held after a shot. A spent pull never fires,
-    /// and cycling the bolt spends the pull, so it never fires the next round however long it's held.
+    /// and cycling the bolt spends the pull, so it never fires the next round however long it's held. On a dud, each new
+    /// pull only clicks.
     /// </remarks>
     /// <param name="pull">The trigger, already updated with <see cref="TriggerPull.Pull"/> for this frame.</param>
     internal TriggerAction PullTrigger(TriggerPull pull)
@@ -106,8 +119,11 @@ internal sealed class BoltCycle
         if (!pull.IsNew)
             return TriggerAction.Ignore;
 
-        Phase = BoltPhase.Ready;
         pull.Spend();
+        if (Phase == BoltPhase.Dud)
+            return TriggerAction.Click;
+
+        Phase = BoltPhase.Ready;
         return TriggerAction.Cycle;
     }
 
@@ -125,12 +141,18 @@ internal sealed class BoltCycle
     /// Decides what working the bolt by hand, rather than with the trigger, does, and readies the bolt.
     /// </summary>
     /// <remarks>
-    /// After a shot, it finishes cycling, the same as the next trigger pull would. With a round in the chamber, it
-    /// ejects that round unfired, as when clearing a dud or unloading a real rifle.
+    /// After a shot, it finishes cycling, the same as the next trigger pull would. With a round or a dud in the
+    /// chamber, it ejects that round unfired, as when clearing a dud or unloading a real rifle.
     /// </remarks>
     /// <param name="roundsInRifle">The rounds in the rifle, the chambered one included.</param>
     internal HandCycle CycleByHand(int roundsInRifle)
     {
+        if (Phase == BoltPhase.Dud)
+        {
+            Phase = BoltPhase.Ready;
+            return HandCycle.EjectRound;
+        }
+
         if (Phase != BoltPhase.Ready)
         {
             Phase = BoltPhase.Ready;
@@ -171,13 +193,22 @@ internal sealed class BoltCycle
     }
 
     /// <summary>
-    /// Lets the bolt cycle without a trigger pull, as when the player lowers the rifle or puts it away.
+    /// Lets the bolt cycle without a trigger pull, as when the player lowers the rifle or puts it away. A dud stays in
+    /// the chamber, since only working the bolt by hand ejects it.
     /// </summary>
     /// <returns>Whether the bolt was held, so its animation needs resuming.</returns>
     internal bool Release()
     {
         var wasHeld = Phase == BoltPhase.Held;
-        Phase = BoltPhase.Ready;
+        if (Phase != BoltPhase.Dud)
+            Phase = BoltPhase.Ready;
         return wasHeld;
     }
+
+    /// <summary>Records that the chambered round misfired, so the trigger only clicks until it's ejected.</summary>
+    internal void Misfired() => Phase = BoltPhase.Dud;
+
+    /// <summary>Starts following a different rifle, whose chamber holds a dud or a ready round.</summary>
+    /// <param name="hasDud">Whether that rifle's chambered round misfired.</param>
+    internal void Reset(bool hasDud) => Phase = hasDud ? BoltPhase.Dud : BoltPhase.Ready;
 }
