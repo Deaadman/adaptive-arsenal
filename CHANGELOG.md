@@ -19,6 +19,11 @@ See docs/development.md, "Releasing". CI checks this file's format.
 
 ## [Unreleased]
 
+### Added
+
+- You can sprint while crouched, moving faster than crouch-walking and using stamina, instead of standing up.
+- Crouching while sprinting slides you along the ground, further downhill and shorter uphill.
+
 ## [1.1.0] - 2026-11-08
 
 Adaptive Arsenal now works with The Long Dark 2.58. Bullets hit animals reliably, each gun does its own damage, and a new settings page lets you tune accuracy, bullet speed and damage drop-off. Other mods can now fire its bullets too.

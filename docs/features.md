@@ -51,6 +51,12 @@ Hits count towards your Rifle or Revolver skill and the wildlife hits statistic,
 
 Without the mod, aiming a revolver stops you moving. With it, you can walk while you aim, and the HUD no longer shows the limited-movement icon for it. Rifles still stop you moving while you aim.
 
+## Sprinting crouched and sliding
+
+Without the mod, sprinting stands you up. With it, sprinting while crouched keeps you crouched and moves you 1.75 times as fast as crouch-walking. It uses stamina as sprinting does, and has the same limits: you have to be moving forward, and injuries or a heavy load stop it.
+
+Crouching while sprinting slides you along the ground, a little faster than you were running. The slide slows down and leaves you crouched after a few metres on flat ground. It goes further downhill, up to 3 seconds, and stops sooner uphill or when you hit something. You can't steer while sliding, but standing up ends the slide.
+
 ## Ammo count
 
 The HUD shows how many rounds are loaded in your rifle or revolver, and how many more you're carrying, as the game does, and each shot plays an animation of the spent round. With **Show ammo count** off, it hides them, so you have to keep count. It still shows the icon for the type of ammo the weapon takes.
@@ -70,5 +76,9 @@ Everything above is how the mod plays by default. To change it, open **Options**
 | Worst spread | 10° | How far the least accurate shot can land from where you aimed. |
 | Drop-off distance | 500 m | How far a bullet flies before its damage has fallen as far as it will. |
 | Long-range damage | 0.1 | How much of its damage a bullet still does at that distance. 1 means no drop-off. |
+| Sprint while crouched | On | Lets you sprint while crouched. Off, sprinting stands you up as usual. |
+| Crouched sprint speed | × 1.75 | How many times faster than crouch-walking you move when sprinting crouched. |
+| Sliding | On | Crouching while sprinting starts a slide. |
+| Slide distance | × 1 | Multiplies how far a slide carries you. |
 | Walk while aiming revolver | On | Lets you walk while aiming a revolver. |
 | Show ammo count | On | Shows the loaded and carried rounds on the HUD, with the spent round animation. Off, you keep count yourself. |

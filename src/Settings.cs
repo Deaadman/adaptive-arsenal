@@ -85,6 +85,29 @@ internal sealed class Settings : JsonModSettings
     [Slider(0f, 1f, 21)]
     public float m_MinDamageFraction = 0.1f;
 
+    /// <summary>Whether the player can sprint while crouched.</summary>
+    [Section("Movement")]
+    [Name("Sprint while crouched")]
+    [Description("Sprinting while crouched keeps you crouched and moves you faster, using stamina as sprinting does. Off, sprinting stands you up as usual.")]
+    public bool m_CrouchSprintEnabled = true;
+
+    /// <summary>How much faster than crouch-walking sprinting crouched is: <see cref="Movement.CrouchSprintSpeedMultiplier"/>.</summary>
+    [Name("Crouched sprint speed")]
+    [Description("How many times faster than crouch-walking you move when sprinting while crouched.")]
+    [Slider(1f, 3f, 21)]
+    public float m_CrouchSprintSpeedMultiplier = 1.75f;
+
+    /// <summary>Whether crouching while sprinting starts a slide.</summary>
+    [Name("Sliding")]
+    [Description("Crouching while sprinting slides you along the ground. Slides go further downhill and stop sooner uphill.")]
+    public bool m_SlideEnabled = true;
+
+    /// <summary>How far a slide carries the player: <see cref="Movement.SlideDistanceMultiplier"/>.</summary>
+    [Name("Slide distance")]
+    [Description("Multiplies how far a slide carries you.")]
+    [Slider(0.5f, 2f, 16)]
+    public float m_SlideDistanceMultiplier = 1f;
+
     /// <summary>Whether the player can walk while aiming a revolver.</summary>
     [Section("Other")]
     [Name("Walk while aiming revolver")]
@@ -96,34 +119,49 @@ internal sealed class Settings : JsonModSettings
     [Description("Shows how many rounds are loaded in your rifle or revolver on the HUD, and how many more you're carrying. Off, you'll have to keep count yourself.")]
     public bool m_ShowAmmoCount = true;
 
-    /// <summary>The settings only real bullets use, hidden while <see cref="m_ProjectilesEnabled"/> is off.</summary>
-    private static readonly string[] ProjectileOnlyFields =
+    /// <summary>
+    /// The settings that only matter while a switch is on, hidden while it's off: each switch, how to read it, and the
+    /// settings that depend on it.
+    /// </summary>
+    private static readonly (string Switch, Func<Settings, bool> IsOn, string[] Dependents)[] DependentFields =
     [
-        nameof(m_TrailsEnabled),
-        nameof(m_TrailLength),
-        nameof(m_MuzzleVelocityMultiplier),
-        nameof(m_BaseAccuracyMultiplier),
-        nameof(m_HipFireAccuracyMultiplier),
-        nameof(m_StandingAccuracyMultiplier),
-        nameof(m_MovingAccuracyMultiplier),
-        nameof(m_MaxInaccuracyDegrees),
-        nameof(m_DamageFalloffRange),
-        nameof(m_MinDamageFraction)
+        (nameof(m_ProjectilesEnabled), settings => settings.m_ProjectilesEnabled,
+        [
+            nameof(m_TrailsEnabled),
+            nameof(m_TrailLength),
+            nameof(m_MuzzleVelocityMultiplier),
+            nameof(m_BaseAccuracyMultiplier),
+            nameof(m_HipFireAccuracyMultiplier),
+            nameof(m_StandingAccuracyMultiplier),
+            nameof(m_MovingAccuracyMultiplier),
+            nameof(m_MaxInaccuracyDegrees),
+            nameof(m_DamageFalloffRange),
+            nameof(m_MinDamageFraction)
+        ]),
+        (nameof(m_CrouchSprintEnabled), settings => settings.m_CrouchSprintEnabled, [nameof(m_CrouchSprintSpeedMultiplier)]),
+        (nameof(m_SlideEnabled), settings => settings.m_SlideEnabled, [nameof(m_SlideDistanceMultiplier)])
     ];
 
     /// <summary>Adds the settings to the Mod Settings menu and puts the saved values into effect.</summary>
     internal static void Initialize()
     {
         Instance.AddToModSettings(Properties.BuildInfo.Name);
-        Instance.RefreshFields();
+        foreach (var (_, isOn, dependents) in DependentFields)
+            Instance.SetFieldsVisible(dependents, isOn(Instance));
         Instance.Apply();
     }
 
     /// <inheritdoc />
     protected override void OnChange(FieldInfo field, object? oldValue, object? newValue)
     {
-        if (field.Name == nameof(m_ProjectilesEnabled) && newValue is bool projectilesEnabled)
-            RefreshFields(projectilesEnabled);
+        if (newValue is not bool isOn)
+            return;
+
+        foreach (var (switchName, _, dependents) in DependentFields)
+        {
+            if (field.Name == switchName)
+                SetFieldsVisible(dependents, isOn);
+        }
     }
 
     /// <inheritdoc />
@@ -133,7 +171,7 @@ internal sealed class Settings : JsonModSettings
         Apply();
     }
 
-    /// <summary>Copies the numbers <see cref="Ballistics"/> uses into it.</summary>
+    /// <summary>Copies the numbers <see cref="Ballistics"/> and <see cref="Movement"/> use into them.</summary>
     private void Apply()
     {
         Ballistics.MuzzleVelocityMultiplier = m_MuzzleVelocityMultiplier;
@@ -144,13 +182,16 @@ internal sealed class Settings : JsonModSettings
         Ballistics.MaxInaccuracyDegrees = m_MaxInaccuracyDegrees;
         Ballistics.DamageFalloffRange = m_DamageFalloffRange;
         Ballistics.MinDamageFraction = m_MinDamageFraction;
+        Movement.CrouchSprintSpeedMultiplier = m_CrouchSprintSpeedMultiplier;
+        Movement.SlideDistanceMultiplier = m_SlideDistanceMultiplier;
     }
 
-    /// <summary>Shows the settings only real bullets use when they're on, and hides them when they're off.</summary>
-    /// <param name="projectilesEnabled">Whether real bullets are on, which may not be saved yet.</param>
-    private void RefreshFields(bool? projectilesEnabled = null)
+    /// <summary>Shows or hides some settings.</summary>
+    /// <param name="fieldNames">The settings' field names.</param>
+    /// <param name="visible">Whether to show them.</param>
+    private void SetFieldsVisible(string[] fieldNames, bool visible)
     {
-        foreach (var fieldName in ProjectileOnlyFields)
-            SetFieldVisible(fieldName, projectilesEnabled ?? m_ProjectilesEnabled);
+        foreach (var fieldName in fieldNames)
+            SetFieldVisible(fieldName, visible);
     }
 }

@@ -1,3 +1,5 @@
+using AdaptiveArsenal.Utilities;
+
 namespace AdaptiveArsenal.Patches;
 
 /// <summary>
@@ -23,6 +25,23 @@ internal static class vp_FPSPlayerPatches
             {
                 __instance.InputWalk();
             }
+        }
+    }
+
+    /// <summary>
+    /// Stops the game standing the player up because they're sprinting, while they slide or sprint crouched: see
+    /// <see cref="CrouchSprintAndSlide.ShouldKeepCrouched"/>. Anything else can still stand them up.
+    /// </summary>
+    [HarmonyPatch(typeof(vp_FPSPlayer), nameof(vp_FPSPlayer.EnableCrouch))]
+    private static class KeepCrouched
+    {
+        private static bool Prefix(bool enabled, ref bool __result)
+        {
+            if (enabled || !CrouchSprintAndSlide.ShouldKeepCrouched())
+                return true;
+
+            __result = false;
+            return false;
         }
     }
 }
