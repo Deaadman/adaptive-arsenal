@@ -47,6 +47,12 @@ A bullet does its weapon's full damage close up, the same as the game gives that
 
 Hits count towards your Rifle or Revolver skill and the wildlife hits statistic, as they do without the mod. Bullets also knock loose items around, as the game's own bullets do.
 
+## Manual bolt
+
+Without the mod, a rifle cycles its bolt by itself after every shot. With it, the bolt stays closed on the spent case until you pull the trigger again, which cycles it. The pull after that fires. Keep the trigger held after a shot to stay still with the bolt closed. Lowering the rifle, putting it away or reloading cycles the bolt too.
+
+A rifle also holds one more round, in the chamber, on top of its magazine. The hunting rifle holds 11 instead of 10. The HUD shows at most the magazine's rounds.
+
 ## Revolver movement
 
 Without the mod, aiming a revolver stops you moving. With it, you can walk while you aim, and the HUD no longer shows the limited-movement icon for it. Rifles still stop you moving while you aim.
@@ -70,5 +76,6 @@ Everything above is how the mod plays by default. To change it, open **Options**
 | Worst spread | 10° | How far the least accurate shot can land from where you aimed. |
 | Drop-off distance | 500 m | How far a bullet flies before its damage has fallen as far as it will. |
 | Long-range damage | 0.1 | How much of its damage a bullet still does at that distance. 1 means no drop-off. |
+| Manual bolt | On | Cycle a rifle's bolt by pulling the trigger again after each shot, with one more round in the chamber. The extra round applies from the next time you load a save. |
 | Walk while aiming revolver | On | Lets you walk while aiming a revolver. |
 | Show ammo count | On | Shows the loaded and carried rounds on the HUD, with the spent round animation. Off, you keep count yourself. |

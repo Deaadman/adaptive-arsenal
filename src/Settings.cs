@@ -85,6 +85,12 @@ internal sealed class Settings : JsonModSettings
     [Slider(0f, 1f, 21)]
     public float m_MinDamageFraction = 0.1f;
 
+    /// <summary>Whether the player cycles a rifle's bolt by hand, and a rifle holds a round in the chamber.</summary>
+    [Section("Rifles")]
+    [Name("Manual bolt")]
+    [Description("After a shot, pull the trigger again to cycle the bolt before the next shot, and rifles hold one more round in the chamber. Lowering the rifle cycles it too. The extra round applies from the next time you load a save.")]
+    public bool m_ManualBolt = true;
+
     /// <summary>Whether the player can walk while aiming a revolver.</summary>
     [Section("Other")]
     [Name("Walk while aiming revolver")]
