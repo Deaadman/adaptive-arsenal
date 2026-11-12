@@ -26,6 +26,19 @@ internal enum TriggerAction
     Ignore
 }
 
+/// <summary>What working the bolt by hand does, from <see cref="BoltCycle.CycleByHand"/>.</summary>
+internal enum HandCycle
+{
+    /// <summary>Nothing: the rifle is empty.</summary>
+    Nothing,
+
+    /// <summary>Finishes cycling after a shot, ejecting the spent case.</summary>
+    FinishCycle,
+
+    /// <summary>Ejects the live round in the chamber unfired, and chambers the next one.</summary>
+    EjectRound
+}
+
 /// <summary>
 /// The rules for cycling a bolt-action rifle by hand. After a shot, the bolt stays closed on the spent case until the
 /// player pulls the trigger again, which cycles it, and the pull after that fires.
@@ -47,6 +60,12 @@ internal sealed class BoltCycle
     /// </summary>
     /// <remarks>This is a first guess. It needs tuning in game against the firing animation.</remarks>
     internal const float HoldDelaySeconds = 0.3f;
+
+    /// <summary>
+    /// How long the game's unjam animation gets to start after the bolt is worked to eject a round, in seconds, before
+    /// the eject counts as stalled.
+    /// </summary>
+    internal const float EjectStartSeconds = 0.5f;
 
     /// <summary>Where the bolt is.</summary>
     internal BoltPhase Phase { get; private set; } = BoltPhase.Ready;
@@ -90,6 +109,35 @@ internal sealed class BoltCycle
         Phase = BoltPhase.Ready;
         pull.Spend();
         return TriggerAction.Cycle;
+    }
+
+    /// <summary>
+    /// Whether ejecting a round has stalled: the game's unjam animation isn't playing, and has had
+    /// <see cref="EjectStartSeconds"/> to start. It either never started or was cut short, so the rifle mustn't stay
+    /// marked jammed.
+    /// </summary>
+    /// <param name="secondsSinceEject">How long ago the bolt was worked.</param>
+    /// <param name="unjamPlaying">Whether the unjam animation is playing.</param>
+    internal static bool EjectHasStalled(float secondsSinceEject, bool unjamPlaying) =>
+        !unjamPlaying && secondsSinceEject >= EjectStartSeconds;
+
+    /// <summary>
+    /// Decides what working the bolt by hand, rather than with the trigger, does, and readies the bolt.
+    /// </summary>
+    /// <remarks>
+    /// After a shot, it finishes cycling, the same as the next trigger pull would. With a round in the chamber, it
+    /// ejects that round unfired, as when clearing a dud or unloading a real rifle.
+    /// </remarks>
+    /// <param name="roundsInRifle">The rounds in the rifle, the chambered one included.</param>
+    internal HandCycle CycleByHand(int roundsInRifle)
+    {
+        if (Phase != BoltPhase.Ready)
+        {
+            Phase = BoltPhase.Ready;
+            return HandCycle.FinishCycle;
+        }
+
+        return roundsInRifle > 0 ? HandCycle.EjectRound : HandCycle.Nothing;
     }
 
     /// <summary>

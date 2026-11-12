@@ -23,6 +23,7 @@ See docs/development.md, "Releasing". CI checks this file's format.
 
 - Rifles have a manual bolt: after a shot, pull the trigger again to cycle it before you can fire, and each rifle holds one more round in the chamber.
 - Rifles have a safety, which you put on and off with B. It's on each time you take a rifle out, and while it's on, the trigger does nothing.
+- You can work a rifle's bolt without firing with V, which ejects the round in the chamber the way the game clears a jammed one, or finishes cycling after a shot.
 
 ## [1.1.0] - 2026-11-08
 

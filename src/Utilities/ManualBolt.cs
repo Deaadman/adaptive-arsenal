@@ -32,6 +32,12 @@ internal static class ManualBolt
     /// <summary>Whether the game said that firing animation will jam the rifle.</summary>
     private static bool s_WillJam;
 
+    /// <summary>The rifle marked jammed so the game's unjam ejects its round, or null when there isn't one.</summary>
+    private static GunItem? s_EjectingGun;
+
+    /// <summary>When <see cref="s_EjectingGun"/>'s bolt was worked.</summary>
+    private static float s_EjectStartTime;
+
     /// <summary>Whether a gun has a bolt the player cycles by hand.</summary>
     /// <param name="gunItem">The gun.</param>
     internal static bool AppliesTo(GunItem gunItem) => Settings.Instance.m_ManualBolt && Rifles.IsBoltAction(gunItem);
@@ -51,11 +57,7 @@ internal static class ManualBolt
         if (gunItem == null || !AppliesTo(gunItem))
             return true;
 
-        if (gunItem != s_GunItem)
-        {
-            Release();
-            s_GunItem = gunItem;
-        }
+        Track(gunItem);
 
         switch (s_Bolt.PullTrigger(pull))
         {
@@ -66,8 +68,7 @@ internal static class ManualBolt
                 return true;
 
             case TriggerAction.Cycle:
-                if (Resume())
-                    shooter.m_NextAllowedFireTime = Time.time + BoltCycle.SecondsUntilNextShot(gunItem.m_FiringRateSeconds);
+                FinishHeldCycle(shooter, gunItem);
                 Mod.Logger.Log("Cycled the rifle's bolt.", FlaggedLoggingLevel.Trace);
                 return false;
 
@@ -104,11 +105,69 @@ internal static class ManualBolt
     }
 
     /// <summary>
+    /// Works the rifle's bolt by hand, without the trigger. After a shot, it finishes cycling, the same as the next
+    /// trigger pull would. With a round in the chamber, it ejects that round unfired, chambering the next one.
+    /// </summary>
+    /// <remarks>
+    /// Ejecting a round uses the game's own unjam: the rifle is marked jammed, and the game's unjam animation works the
+    /// bolt and clears the round, as it does for a jammed round. If the unjam doesn't start, or is cut short, the jam is
+    /// taken off again (<see cref="UpdateEject"/>), and the save doesn't store it (<see cref="IsEjecting"/>). It works
+    /// on any bolt-action rifle, even with <see cref="Settings.m_ManualBolt"/> off. Nothing happens with the safety on,
+    /// while reloading, or while the rifle is already jammed, which the game's own reload clears.
+    /// </remarks>
+    /// <param name="gunItem">The rifle in the player's hands.</param>
+    internal static void CycleByHand(GunItem gunItem)
+    {
+        if (!Rifles.IsBoltAction(gunItem) || gunItem.m_IsJammed)
+            return;
+
+        if (RifleSafety.IsOn(gunItem))
+        {
+            Rifles.ShowMessage("Safety on");
+            return;
+        }
+
+        var playerAnimation = GameManager.GetPlayerAnimationComponent();
+        var fpsCamera = GameManager.GetVpFPSCamera();
+        if (playerAnimation == null || fpsCamera == null || playerAnimation.IsReloading())
+            return;
+
+        Track(gunItem);
+
+        switch (s_Bolt.CycleByHand(gunItem.NumRoundsInClip()))
+        {
+            case HandCycle.FinishCycle:
+                FinishHeldCycle(fpsCamera.m_CurrentShooter, gunItem);
+                Mod.Logger.Log("Cycled the rifle's bolt by hand.", FlaggedLoggingLevel.Trace);
+                break;
+
+            case HandCycle.EjectRound:
+                var weapon = fpsCamera.m_CurrentWeapon;
+                if (weapon == null)
+                    return;
+
+                gunItem.m_IsJammed = true;
+                playerAnimation.UpdateJamParameters(true);
+                weapon.UnJam();
+                s_EjectingGun = gunItem;
+                s_EjectStartTime = Time.time;
+                Mod.Logger.Log("Worked the rifle's bolt to eject the chambered round.", FlaggedLoggingLevel.Trace);
+                break;
+        }
+    }
+
+    /// <summary>Whether a gun is marked jammed only because its bolt is being worked to eject a round.</summary>
+    /// <param name="gunItem">The gun.</param>
+    internal static bool IsEjecting(GunItem gunItem) => s_EjectingGun != null && gunItem == s_EjectingGun;
+
+    /// <summary>
     /// Holds the bolt once the recoil is over, and lets it cycle if the rifle is no longer aimed in the player's hands.
     /// Called every frame.
     /// </summary>
     internal static void Update()
     {
+        UpdateEject();
+
         if (s_GunItem == null)
             return;
 
@@ -138,6 +197,54 @@ internal static class ManualBolt
             Pause(playerAnimation);
 
         KeepPaused();
+    }
+
+    /// <summary>
+    /// Follows a rifle being ejected from: done once the game takes the jam off, and the jam taken off again if the
+    /// unjam animation stalls, so a deliberate eject never leaves the rifle jammed.
+    /// </summary>
+    private static void UpdateEject()
+    {
+        // Unity objects need == null, not ?., to tell when they've been destroyed.
+        if (s_EjectingGun == null || !s_EjectingGun.m_IsJammed)
+        {
+            s_EjectingGun = null;
+            return;
+        }
+
+        var playerAnimation = GameManager.GetPlayerAnimationComponent();
+        var unjamPlaying = playerAnimation != null && playerAnimation.IsReloading();
+        if (!BoltCycle.EjectHasStalled(Time.time - s_EjectStartTime, unjamPlaying))
+            return;
+
+        s_EjectingGun.m_IsJammed = false;
+        if (playerAnimation != null && s_EjectingGun == Rifles.InHands)
+            playerAnimation.UpdateJamParameters(false);
+
+        s_EjectingGun = null;
+        Mod.Logger.Log("The rifle's unjam didn't run to the end, so it isn't left jammed.", FlaggedLoggingLevel.Debug);
+    }
+
+    /// <summary>Starts tracking a rifle's bolt, letting the last tracked rifle's bolt cycle if it's a different one.</summary>
+    /// <param name="gunItem">The rifle.</param>
+    private static void Track(GunItem gunItem)
+    {
+        if (gunItem == s_GunItem)
+            return;
+
+        Release();
+        s_GunItem = gunItem;
+    }
+
+    /// <summary>
+    /// Finishes cycling a held bolt: resumes its animation, and gives the rifle the rest of its time between shots.
+    /// </summary>
+    /// <param name="shooter">The rifle's shooter, if there is one.</param>
+    /// <param name="gunItem">The rifle.</param>
+    private static void FinishHeldCycle(vp_FPSShooter? shooter, GunItem gunItem)
+    {
+        if (Resume() && shooter != null)
+            shooter.m_NextAllowedFireTime = Time.time + BoltCycle.SecondsUntilNextShot(gunItem.m_FiringRateSeconds);
     }
 
     /// <summary>Lets the bolt cycle on its own, resuming the animation if it was held, and stops tracking the rifle.</summary>

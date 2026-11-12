@@ -73,6 +73,49 @@ public class BoltCycleTests
     }
 
     [Fact]
+    public void Working_the_bolt_after_a_shot_finishes_cycling_and_the_next_pull_fires()
+    {
+        var bolt = new BoltCycle();
+        Pull(bolt, frame: 10);
+        bolt.Fired(time: 1f, roundsLeft: 5, willJam: false);
+        bolt.TryHold(2f);
+
+        Assert.Equal(HandCycle.FinishCycle, bolt.CycleByHand(roundsInRifle: 5));
+        Assert.Equal(BoltPhase.Ready, bolt.Phase);
+        Assert.Equal(TriggerAction.Fire, Pull(bolt, frame: 90));
+    }
+
+    [Fact]
+    public void Working_the_bolt_while_settling_finishes_cycling()
+    {
+        var bolt = new BoltCycle();
+        bolt.Fired(time: 1f, roundsLeft: 5, willJam: false);
+
+        Assert.Equal(HandCycle.FinishCycle, bolt.CycleByHand(roundsInRifle: 5));
+        Assert.False(bolt.TryHold(5f));
+    }
+
+    [Theory]
+    [InlineData(5, true)]
+    [InlineData(1, true)]
+    [InlineData(0, false)]
+    public void Working_a_ready_bolt_ejects_the_chambered_round_if_there_is_one(int roundsInRifle, bool ejects)
+    {
+        var bolt = new BoltCycle();
+        Assert.Equal(ejects ? HandCycle.EjectRound : HandCycle.Nothing, bolt.CycleByHand(roundsInRifle));
+        Assert.Equal(BoltPhase.Ready, bolt.Phase);
+    }
+
+    [Theory]
+    [InlineData(0.1f, false, false)]
+    [InlineData(0.1f, true, false)]
+    [InlineData(2f, true, false)]
+    [InlineData(BoltCycle.EjectStartSeconds, false, true)]
+    [InlineData(2f, false, true)]
+    public void An_eject_stalls_once_the_unjam_has_had_time_to_start_and_is_not_playing(float seconds, bool playing, bool expected) =>
+        Assert.Equal(expected, BoltCycle.EjectHasStalled(seconds, playing));
+
+    [Fact]
     public void The_first_pull_after_a_shot_cycles_even_without_an_earlier_pull()
     {
         var bolt = new BoltCycle();

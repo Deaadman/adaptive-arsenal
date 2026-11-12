@@ -40,6 +40,28 @@ internal static class GunItemPatches
         }
     }
 
+    /// <summary>
+    /// Saves a rifle whose bolt is being worked to eject a round as not jammed, since it's only marked jammed for the
+    /// game's unjam animation to eject the round.
+    /// </summary>
+    [HarmonyPatch(typeof(GunItem), nameof(GunItem.Serialize))]
+    private static class SaveEjectAsNotJammed
+    {
+        // __state is whether the jam was taken off for the save, to put back afterwards.
+        private static void Prefix(GunItem __instance, out bool __state)
+        {
+            __state = ManualBolt.IsEjecting(__instance);
+            if (__state)
+                __instance.m_IsJammed = false;
+        }
+
+        private static void Finalizer(GunItem __instance, bool __state)
+        {
+            if (__state)
+                __instance.m_IsJammed = true;
+        }
+    }
+
     /// <summary>Lets a held bolt cycle when the player stops aiming, so lowering the rifle plays its animation.</summary>
     [HarmonyPatch(typeof(GunItem), nameof(GunItem.ZoomEnd))]
     private static class CycleBoltWhenLowered

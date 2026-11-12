@@ -91,9 +91,14 @@ internal sealed class Settings : JsonModSettings
     [Description("After a shot, pull the trigger again to cycle the bolt before the next shot, and rifles hold one more round in the chamber. Lowering the rifle cycles it too. The extra round applies from the next time you load a save.")]
     public bool m_ManualBolt = true;
 
+    /// <summary>The key that works a rifle's bolt by hand, without firing.</summary>
+    [Name("Cycle bolt key")]
+    [Description("Works the bolt of the rifle in your hands without firing. After a shot, it cycles the bolt. Otherwise, it ejects the round in the chamber, the way the game clears a jammed one. Works even with Manual bolt off.")]
+    public KeyCode m_CycleBoltKey = KeyCode.V;
+
     /// <summary>Whether rifles have a safety the player puts on and off.</summary>
     [Name("Safety")]
-    [Description("Rifles have a safety. While it's on, pulling the trigger does nothing.")]
+    [Description("Rifles have a safety. While it's on, pulling the trigger does nothing, and the bolt can't be worked.")]
     public bool m_RifleSafety = true;
 
     /// <summary>The key that puts a rifle's safety on and off.</summary>

@@ -4,73 +4,34 @@ namespace AdaptiveArsenal.Utilities;
 
 /// <summary>
 /// A safety on bolt-action rifles, which the player puts on and off with <see cref="Settings.m_SafetyKey"/>. While it's
-/// on, the trigger does nothing: the rifle doesn't fire, and its bolt can't be cycled with the trigger.
+/// on, the trigger does nothing, and the bolt can't be worked: the rifle doesn't fire, and its bolt can't be cycled.
 /// </summary>
 /// <remarks>
-/// Only the rifle in the player's hands has a safety state. Each time a rifle is equipped, its safety starts on or off
-/// as <see cref="Settings.m_SafetyOnWhenEquipped"/> says. Only while <see cref="Settings.m_RifleSafety"/> is on.
+/// Only the rifle in the player's hands (<see cref="Rifles.InHands"/>) has a safety state. Each time a rifle is
+/// equipped, its safety starts on or off as <see cref="Settings.m_SafetyOnWhenEquipped"/> says. Only while
+/// <see cref="Settings.m_RifleSafety"/> is on.
 /// </remarks>
 internal static class RifleSafety
 {
-    /// <summary>
-    /// How long the safety's HUD messages show, in seconds: briefly, so a quick run of them doesn't queue up and show
-    /// a state that's no longer true.
-    /// </summary>
-    private const float MessageSeconds = 1f;
-
-    /// <summary>The rifle in the player's hands, or null when there isn't one with a safety.</summary>
-    private static GunItem? s_GunItem;
-
-    /// <summary>Whether <see cref="s_GunItem"/>'s safety is on.</summary>
+    /// <summary>Whether the safety of the rifle in the player's hands is on.</summary>
     private static bool s_IsOn;
 
-    /// <summary>Whether a gun has a safety: the game's own rifles, while the setting is on.</summary>
+    /// <summary>Whether the safety of a gun is on, so its trigger and bolt do nothing.</summary>
     /// <param name="gunItem">The gun.</param>
-    internal static bool AppliesTo(GunItem gunItem) => Settings.Instance.m_RifleSafety && Rifles.IsBoltAction(gunItem);
+    internal static bool IsOn(GunItem gunItem) =>
+        s_IsOn && Settings.Instance.m_RifleSafety && gunItem == Rifles.InHands;
 
-    /// <summary>Starts following a rifle the player has just equipped, with its safety set as the settings say.</summary>
-    /// <param name="gearItem">The item the player equipped.</param>
-    internal static void Equipped(GearItem? gearItem)
+    /// <summary>Sets the safety of a rifle the player has just equipped, as the settings say.</summary>
+    internal static void Equipped() => s_IsOn = Settings.Instance.m_SafetyOnWhenEquipped;
+
+    /// <summary>Puts the safety on or off, if rifles have one.</summary>
+    internal static void Toggle()
     {
-        var gunItem = gearItem != null ? gearItem.m_GunItem : null;
-        if (gunItem == null || !AppliesTo(gunItem))
-        {
-            s_GunItem = null;
-            return;
-        }
-
-        if (gunItem == s_GunItem)
-            return;
-
-        s_GunItem = gunItem;
-        s_IsOn = Settings.Instance.m_SafetyOnWhenEquipped;
-    }
-
-    /// <summary>
-    /// Toggles the safety when the player presses the key, and stops following the rifle once it's out of their hands.
-    /// Called every frame, and does nothing unless a rifle is equipped.
-    /// </summary>
-    internal static void Update()
-    {
-        // Unity objects need == null, not ?., to tell when they've been destroyed.
-        if (s_GunItem == null)
-            return;
-
-        var playerManager = GameManager.GetPlayerManagerComponent();
-        if (playerManager == null
-            || playerManager.m_ItemInHands == null
-            || playerManager.m_ItemInHands.m_GunItem != s_GunItem
-            || !AppliesTo(s_GunItem))
-        {
-            s_GunItem = null;
-            return;
-        }
-
-        if (!Input.GetKeyDown(Settings.Instance.m_SafetyKey) || !CanTakeInput())
+        if (!Settings.Instance.m_RifleSafety)
             return;
 
         s_IsOn = !s_IsOn;
-        ShowMessage(s_IsOn ? "Safety on" : "Safety off");
+        Rifles.ShowMessage(s_IsOn ? "Safety on" : "Safety off");
         Mod.Logger.Log($"Put the rifle's safety {(s_IsOn ? "on" : "off")}.", FlaggedLoggingLevel.Trace);
     }
 
@@ -87,26 +48,13 @@ internal static class RifleSafety
     internal static bool BlocksTrigger(vp_FPSShooter shooter, TriggerPull pull)
     {
         var gunItem = shooter.m_Weapon != null ? shooter.m_Weapon.m_GunItem : null;
-        if (!s_IsOn || gunItem == null || gunItem != s_GunItem || !AppliesTo(gunItem))
+        if (gunItem == null || !IsOn(gunItem))
             return false;
 
         if (pull.IsNew && GameManager.GetPlayerAnimationComponent().IsAllowedToFire(gunItem.m_AllowHipFire, gunItem.m_GunType))
-            ShowMessage("Safety on");
+            Rifles.ShowMessage("Safety on");
 
         pull.Spend();
         return true;
     }
-
-    /// <summary>
-    /// Whether the player is in control in the game world, rather than in a menu, the pause screen or the console.
-    /// </summary>
-    private static bool CanTakeInput() =>
-        !GameManager.m_IsPaused
-        && !InterfaceManager.IsOverlayActiveCached()
-        && !uConsole.IsOn()
-        && InputManager.HasContext(InputManager.m_CurrentContext);
-
-    /// <summary>Shows a short, high-priority message on the HUD.</summary>
-    /// <param name="message">The message.</param>
-    private static void ShowMessage(string message) => HUDMessage.AddMessage(message, MessageSeconds, highPriority: true);
 }
