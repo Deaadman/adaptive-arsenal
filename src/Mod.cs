@@ -3,7 +3,7 @@ namespace AdaptiveArsenal;
 /// <summary>
 /// The mod's entry point for MelonLoader. Most of what it does is in the Harmony patches in
 /// <see cref="Patches"/>, which MelonLoader applies when it loads the mod. Each frame, it updates
-/// <see cref="Utilities.ManualBolt"/>.
+/// <see cref="Utilities.RifleSafety"/> and <see cref="Utilities.ManualBolt"/>.
 /// </summary>
 internal sealed class Mod : MelonMod
 {
@@ -21,5 +21,9 @@ internal sealed class Mod : MelonMod
     }
 
     /// <inheritdoc />
-    public override void OnUpdate() => Utilities.ManualBolt.Update();
+    public override void OnUpdate()
+    {
+        Utilities.RifleSafety.Update();
+        Utilities.ManualBolt.Update();
+    }
 }

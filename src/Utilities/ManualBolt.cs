@@ -34,16 +34,16 @@ internal static class ManualBolt
 
     /// <summary>Whether a gun has a bolt the player cycles by hand.</summary>
     /// <param name="gunItem">The gun.</param>
-    internal static bool AppliesTo(GunItem gunItem) =>
-        Settings.Instance.m_ManualBolt && gunItem.m_GunType == GunType.Rifle && BoltCycle.IsBoltAction(gunItem.name);
+    internal static bool AppliesTo(GunItem gunItem) => Settings.Instance.m_ManualBolt && Rifles.IsBoltAction(gunItem);
 
     /// <summary>
     /// Handles a trigger pull on a rifle: says whether the game should fire, or cycles the bolt instead.
     /// </summary>
     /// <param name="shooter">The shooter whose trigger was pulled.</param>
+    /// <param name="pull">The trigger, already updated for this frame.</param>
     /// <param name="roundsBefore">The rounds in the rifle before the pull, or -1 when this doesn't track it.</param>
     /// <returns>Whether the game should go on to fire.</returns>
-    internal static bool PullTrigger(vp_FPSShooter shooter, out int roundsBefore)
+    internal static bool PullTrigger(vp_FPSShooter shooter, TriggerPull pull, out int roundsBefore)
     {
         roundsBefore = -1;
 
@@ -57,7 +57,7 @@ internal static class ManualBolt
             s_GunItem = gunItem;
         }
 
-        switch (s_Bolt.PullTrigger(Time.frameCount))
+        switch (s_Bolt.PullTrigger(pull))
         {
             case TriggerAction.Fire:
                 s_FireAnimationStarted = false;
@@ -78,17 +78,21 @@ internal static class ManualBolt
 
     /// <summary>
     /// Starts holding the bolt if the trigger pull fired a round: it used one and played the firing animation, so a
-    /// misfire that uses a round without firing isn't held.
+    /// misfire that uses a round without firing isn't held. A pull that fired is spent, so holding it never fires again.
     /// </summary>
     /// <param name="roundsBefore">The rounds before the pull, from <see cref="PullTrigger"/>.</param>
-    internal static void AfterTrigger(int roundsBefore)
+    /// <param name="pull">The trigger, already updated for this frame.</param>
+    internal static void AfterTrigger(int roundsBefore, TriggerPull pull)
     {
         if (roundsBefore < 0 || s_GunItem == null || !s_FireAnimationStarted)
             return;
 
         var roundsAfter = s_GunItem.NumRoundsInClip();
-        if (roundsAfter < roundsBefore)
-            s_Bolt.Fired(Time.time, roundsAfter, s_WillJam);
+        if (roundsAfter >= roundsBefore)
+            return;
+
+        pull.Spend();
+        s_Bolt.Fired(Time.time, roundsAfter, s_WillJam);
     }
 
     /// <summary>Remembers that the game started a firing animation, and whether it will jam the rifle.</summary>

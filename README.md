@@ -46,6 +46,7 @@ Every change is built straight away and published as the [nightly release](https
 | HUD animation | Firing plays an animation of the spent round on the ammo display |
 | Hidden ammo count | You can hide how many rounds are loaded or carried on the HUD, so you keep count yourself |
 | Manual bolt | After a rifle shot, you pull the trigger again to cycle the bolt, and rifles hold a round in the chamber |
+| Safety | Rifles have a safety you put on and off, and the trigger does nothing while it's on |
 | Revolver movement | You can walk while aiming a revolver |
 | Settings | Turn real bullets, trails, revolver movement and the ammo count on or off, and tune accuracy, speed and damage, in the game's Mod Settings menu |
 

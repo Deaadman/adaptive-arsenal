@@ -55,15 +55,6 @@ internal sealed class BoltCycle
     private float m_HoldTime;
 
     /// <summary>
-    /// The last frame the trigger was pulled on, to tell a new pull from one that's still held, or null before the
-    /// first pull.
-    /// </summary>
-    private int? m_LastTriggerFrame;
-
-    /// <summary>Whether the pull that cycled the bolt is still held, so it mustn't fire the next round.</summary>
-    private bool m_CyclePullHeld;
-
-    /// <summary>
     /// How many rounds a rifle holds with one in the chamber: its magazine, plus <see cref="ChamberRounds"/>.
     /// </summary>
     /// <param name="magazineSize">How many rounds the game lets the rifle hold.</param>
@@ -84,27 +75,20 @@ internal sealed class BoltCycle
     /// Decides what a trigger pull does, and cycles the bolt if that's what it does.
     /// </summary>
     /// <remarks>
-    /// The game may ask to fire on every frame the trigger is held, so a pull only counts as new when the trigger
-    /// wasn't pulled on the frame before. A held trigger never cycles the bolt, so the player can keep it pulled after a
-    /// shot, and the pull that cycles the bolt never fires the next round, however long it's held.
+    /// Only a new pull cycles the bolt, so the player can keep the trigger held after a shot. A spent pull never fires,
+    /// and cycling the bolt spends the pull, so it never fires the next round however long it's held.
     /// </remarks>
-    /// <param name="frame">The current frame.</param>
-    internal TriggerAction PullTrigger(int frame)
+    /// <param name="pull">The trigger, already updated with <see cref="TriggerPull.Pull"/> for this frame.</param>
+    internal TriggerAction PullTrigger(TriggerPull pull)
     {
-        var isNewPull = m_LastTriggerFrame is not { } lastFrame || frame - lastFrame > 1;
-        m_LastTriggerFrame = frame;
-
-        if (isNewPull)
-            m_CyclePullHeld = false;
-
         if (Phase == BoltPhase.Ready)
-            return m_CyclePullHeld ? TriggerAction.Ignore : TriggerAction.Fire;
+            return pull.IsSpent ? TriggerAction.Ignore : TriggerAction.Fire;
 
-        if (!isNewPull)
+        if (!pull.IsNew)
             return TriggerAction.Ignore;
 
         Phase = BoltPhase.Ready;
-        m_CyclePullHeld = true;
+        pull.Spend();
         return TriggerAction.Cycle;
     }
 

@@ -91,6 +91,21 @@ internal sealed class Settings : JsonModSettings
     [Description("After a shot, pull the trigger again to cycle the bolt before the next shot, and rifles hold one more round in the chamber. Lowering the rifle cycles it too. The extra round applies from the next time you load a save.")]
     public bool m_ManualBolt = true;
 
+    /// <summary>Whether rifles have a safety the player puts on and off.</summary>
+    [Name("Safety")]
+    [Description("Rifles have a safety. While it's on, pulling the trigger does nothing.")]
+    public bool m_RifleSafety = true;
+
+    /// <summary>The key that puts a rifle's safety on and off.</summary>
+    [Name("Safety key")]
+    [Description("Puts the safety on the rifle in your hands on or off.")]
+    public KeyCode m_SafetyKey = KeyCode.B;
+
+    /// <summary>Whether a rifle's safety is on each time the player equips it.</summary>
+    [Name("Safety on when equipped")]
+    [Description("A rifle's safety is on each time you take it out, so you have to take it off before you can fire.")]
+    public bool m_SafetyOnWhenEquipped = true;
+
     /// <summary>Whether the player can walk while aiming a revolver.</summary>
     [Section("Other")]
     [Name("Walk while aiming revolver")]

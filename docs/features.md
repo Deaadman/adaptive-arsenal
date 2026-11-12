@@ -53,6 +53,10 @@ Without the mod, a rifle cycles its bolt by itself after every shot. With it, th
 
 A rifle also holds one more round, in the chamber, on top of its magazine. The hunting rifle holds 11 instead of 10. The HUD shows at most the magazine's rounds.
 
+## Safety
+
+Rifles have a safety. Press **B** to put it on or off, and the HUD says which. While it's on, pulling the trigger does nothing: the rifle doesn't fire, and the trigger doesn't cycle the bolt. Each time you take a rifle out, its safety is on, so take it off before you need to shoot. Revolvers have no safety.
+
 ## Revolver movement
 
 Without the mod, aiming a revolver stops you moving. With it, you can walk while you aim, and the HUD no longer shows the limited-movement icon for it. Rifles still stop you moving while you aim.
@@ -77,5 +81,8 @@ Everything above is how the mod plays by default. To change it, open **Options**
 | Drop-off distance | 500 m | How far a bullet flies before its damage has fallen as far as it will. |
 | Long-range damage | 0.1 | How much of its damage a bullet still does at that distance. 1 means no drop-off. |
 | Manual bolt | On | Cycle a rifle's bolt by pulling the trigger again after each shot, with one more round in the chamber. The extra round applies from the next time you load a save. |
+| Safety | On | Gives rifles a safety. While it's on, the trigger does nothing. |
+| Safety key | B | Puts the safety on or off. |
+| Safety on when equipped | On | Puts a rifle's safety on each time you take it out. Off, it's off each time. |
 | Walk while aiming revolver | On | Lets you walk while aiming a revolver. |
 | Show ammo count | On | Shows the loaded and carried rounds on the HUD, with the spent round animation. Off, you keep count yourself. |

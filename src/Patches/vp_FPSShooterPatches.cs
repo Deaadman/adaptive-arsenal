@@ -72,7 +72,8 @@ internal static class vp_FPSShooterPatches
     private static class FireProjectile
     {
         // __state is the shooter's bullets to put back, or null when the mod's weren't swapped in. __runOriginal is false
-        // when CycleBoltOnTriggerPull has turned the pull into cycling the bolt, so nothing fires.
+        // when HandleRifleTrigger has blocked the pull with the safety or turned it into cycling the bolt, so nothing
+        // fires.
         private static void Prefix(vp_FPSShooter __instance, bool __runOriginal, out ShooterBullets? __state)
         {
             __state = null;
@@ -125,22 +126,31 @@ internal static class vp_FPSShooterPatches
     }
 
     /// <summary>
-    /// Makes the player cycle a rifle's bolt by hand with <see cref="ManualBolt"/>: after a shot, the next trigger pull
+    /// Applies a rifle's safety with <see cref="RifleSafety"/>, then makes the player cycle its bolt by hand with
+    /// <see cref="ManualBolt"/>: with the safety on, the trigger does nothing, and after a shot, the next trigger pull
     /// cycles the bolt instead of firing, and the pull after that fires.
     /// </summary>
     /// <remarks>
-    /// It runs before <see cref="FireProjectile"/>, so a pull that cycles the bolt fires no bullet either. Revolvers,
-    /// other weapons, and rifles while <see cref="Settings.m_ManualBolt"/> is off fire as they would.
+    /// It runs before <see cref="FireProjectile"/>, so a pull the safety blocks or that cycles the bolt fires no bullet
+    /// either. Revolvers, other weapons, and rifles while <see cref="Settings.m_RifleSafety"/> and
+    /// <see cref="Settings.m_ManualBolt"/> are off fire as they would.
     /// </remarks>
     [HarmonyPatch(typeof(vp_FPSShooter), nameof(vp_FPSShooter.Fire))]
-    private static class CycleBoltOnTriggerPull
+    private static class HandleRifleTrigger
     {
+        /// <summary>The trigger, followed from frame to frame for the safety and the bolt to share.</summary>
+        private static readonly TriggerPull s_Trigger = new();
+
         // __state is the rounds in the rifle before the pull, or -1 when ManualBolt isn't tracking it.
         [HarmonyPriority(Priority.First)]
-        private static bool Prefix(vp_FPSShooter __instance, out int __state) =>
-            ManualBolt.PullTrigger(__instance, out __state);
+        private static bool Prefix(vp_FPSShooter __instance, out int __state)
+        {
+            __state = -1;
+            s_Trigger.Pull(Time.frameCount);
+            return !RifleSafety.BlocksTrigger(__instance, s_Trigger) && ManualBolt.PullTrigger(__instance, s_Trigger, out __state);
+        }
 
-        private static void Postfix(int __state) => ManualBolt.AfterTrigger(__state);
+        private static void Postfix(int __state) => ManualBolt.AfterTrigger(__state, s_Trigger);
     }
 
     /// <summary>A shooter's bullets: the game's own, and the mod's template.</summary>

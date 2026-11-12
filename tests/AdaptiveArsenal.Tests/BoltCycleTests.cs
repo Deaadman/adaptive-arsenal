@@ -4,34 +4,43 @@ namespace AdaptiveArsenal.Tests;
 
 public class BoltCycleTests
 {
+    private readonly TriggerPull m_Trigger = new();
+
+    /// <summary>Pulls the trigger on a frame and asks the bolt what that does.</summary>
+    private TriggerAction Pull(BoltCycle bolt, int frame)
+    {
+        m_Trigger.Pull(frame);
+        return bolt.PullTrigger(m_Trigger);
+    }
+
     [Fact]
     public void A_ready_bolt_fires()
     {
         var bolt = new BoltCycle();
-        Assert.Equal(TriggerAction.Fire, bolt.PullTrigger(frame: 10));
+        Assert.Equal(TriggerAction.Fire, Pull(bolt, frame: 10));
     }
 
     [Fact]
     public void After_a_shot_the_next_pull_cycles_and_the_one_after_fires()
     {
         var bolt = new BoltCycle();
-        bolt.PullTrigger(frame: 10);
+        Pull(bolt, frame: 10);
         bolt.Fired(time: 1f, roundsLeft: 5, willJam: false);
 
-        Assert.Equal(TriggerAction.Cycle, bolt.PullTrigger(frame: 50));
+        Assert.Equal(TriggerAction.Cycle, Pull(bolt, frame: 50));
         Assert.Equal(BoltPhase.Ready, bolt.Phase);
-        Assert.Equal(TriggerAction.Fire, bolt.PullTrigger(frame: 90));
+        Assert.Equal(TriggerAction.Fire, Pull(bolt, frame: 90));
     }
 
     [Fact]
     public void Keeping_the_trigger_held_after_a_shot_does_not_cycle()
     {
         var bolt = new BoltCycle();
-        bolt.PullTrigger(frame: 10);
+        Pull(bolt, frame: 10);
         bolt.Fired(time: 1f, roundsLeft: 5, willJam: false);
 
         for (var frame = 11; frame < 40; frame++)
-            Assert.Equal(TriggerAction.Ignore, bolt.PullTrigger(frame));
+            Assert.Equal(TriggerAction.Ignore, Pull(bolt, frame));
 
         Assert.Equal(BoltPhase.Settling, bolt.Phase);
     }
@@ -40,14 +49,27 @@ public class BoltCycleTests
     public void Keeping_the_cycling_pull_held_does_not_fire()
     {
         var bolt = new BoltCycle();
-        bolt.PullTrigger(frame: 10);
+        Pull(bolt, frame: 10);
         bolt.Fired(time: 1f, roundsLeft: 5, willJam: false);
 
-        Assert.Equal(TriggerAction.Cycle, bolt.PullTrigger(frame: 50));
+        Assert.Equal(TriggerAction.Cycle, Pull(bolt, frame: 50));
         for (var frame = 51; frame < 200; frame++)
-            Assert.Equal(TriggerAction.Ignore, bolt.PullTrigger(frame));
+            Assert.Equal(TriggerAction.Ignore, Pull(bolt, frame));
 
-        Assert.Equal(TriggerAction.Fire, bolt.PullTrigger(frame: 250));
+        Assert.Equal(TriggerAction.Fire, Pull(bolt, frame: 250));
+    }
+
+    [Fact]
+    public void A_pull_spent_elsewhere_does_not_fire_while_held()
+    {
+        var bolt = new BoltCycle();
+        m_Trigger.Pull(10);
+        m_Trigger.Spend();
+
+        for (var frame = 11; frame < 40; frame++)
+            Assert.Equal(TriggerAction.Ignore, Pull(bolt, frame));
+
+        Assert.Equal(TriggerAction.Fire, Pull(bolt, frame: 60));
     }
 
     [Fact]
@@ -56,7 +78,7 @@ public class BoltCycleTests
         var bolt = new BoltCycle();
         bolt.Fired(time: 1f, roundsLeft: 5, willJam: false);
 
-        Assert.Equal(TriggerAction.Cycle, bolt.PullTrigger(frame: 50));
+        Assert.Equal(TriggerAction.Cycle, Pull(bolt, frame: 50));
     }
 
     [Fact]
