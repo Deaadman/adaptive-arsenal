@@ -116,7 +116,7 @@ internal sealed class Settings : JsonModSettings
 
     /// <summary>Whether the player can lie prone.</summary>
     [Name("Prone")]
-    [Description("A key lies you down, lower than crouching: slower, harder for animals to see and hear, and steadier to shoot from. Sprinting or standing up ends it.")]
+    [Description("A key lies you down, lower than crouching: slower, harder for animals to see and hear, and steadier to shoot from.")]
     public bool m_ProneEnabled = true;
 
     /// <summary>The key that lies the player down and gets them back up to a crouch.</summary>
@@ -129,6 +129,22 @@ internal sealed class Settings : JsonModSettings
     [Description("Multiplies your crouch-walking speed while prone.")]
     [Slider(0.1f, 1f, 19)]
     public float m_ProneSpeedMultiplier = 0.4f;
+
+    /// <summary>Whether sprinting while prone crawls faster, rather than standing the player up.</summary>
+    [Name("Fast crawl")]
+    [Description("Sprinting while prone crawls faster, using stamina as sprinting does. Off, sprinting stands you up.")]
+    public bool m_FastCrawlEnabled = true;
+
+    /// <summary>How much faster than crawling sprinting prone is: <see cref="Movement.ProneSprintSpeedMultiplier"/>.</summary>
+    [Name("Fast crawl speed")]
+    [Description("How many times faster than crawling you move when sprinting while prone.")]
+    [Slider(1f, 3f, 21)]
+    public float m_ProneSprintSpeedMultiplier = 2f;
+
+    /// <summary>Whether pressing the prone key while sprinting dives.</summary>
+    [Name("Diving")]
+    [Description("Pressing the prone key while sprinting throws you forward onto the ground, leaving you prone.")]
+    public bool m_DiveEnabled = true;
 
     /// <summary>Whether the player can walk while aiming a revolver.</summary>
     [Section("Other")]
@@ -143,7 +159,7 @@ internal sealed class Settings : JsonModSettings
 
     /// <summary>
     /// The settings that only matter while a switch is on, hidden while it's off: each switch, how to read it, and the
-    /// settings that depend on it.
+    /// settings that depend on it. A setting under more than one switch shows only while all of them are on.
     /// </summary>
     private static readonly (string Switch, Func<Settings, bool> IsOn, string[] Dependents)[] DependentFields =
     [
@@ -163,28 +179,43 @@ internal sealed class Settings : JsonModSettings
         ]),
         (nameof(m_CrouchSprintEnabled), settings => settings.m_CrouchSprintEnabled, [nameof(m_CrouchSprintSpeedMultiplier)]),
         (nameof(m_SlideEnabled), settings => settings.m_SlideEnabled, [nameof(m_SlideDistanceMultiplier)]),
-        (nameof(m_ProneEnabled), settings => settings.m_ProneEnabled, [nameof(m_ProneKey), nameof(m_ProneSpeedMultiplier)])
+        (nameof(m_ProneEnabled), settings => settings.m_ProneEnabled,
+            [nameof(m_ProneKey), nameof(m_ProneSpeedMultiplier), nameof(m_FastCrawlEnabled), nameof(m_ProneSprintSpeedMultiplier), nameof(m_DiveEnabled)]),
+        (nameof(m_FastCrawlEnabled), settings => settings.m_FastCrawlEnabled, [nameof(m_ProneSprintSpeedMultiplier)])
     ];
+
+    /// <summary>
+    /// The switches changed in the menu but not confirmed yet, which the fields don't show until they are.
+    /// </summary>
+    private readonly Dictionary<string, bool> m_PendingSwitches = [];
 
     /// <summary>Adds the settings to the Mod Settings menu and puts the saved values into effect.</summary>
     internal static void Initialize()
     {
         Instance.AddToModSettings(Properties.BuildInfo.Name);
-        foreach (var (_, isOn, dependents) in DependentFields)
-            Instance.SetFieldsVisible(dependents, isOn(Instance));
+        Instance.RefreshVisibility();
         Instance.Apply();
     }
 
     /// <inheritdoc />
     protected override void OnChange(FieldInfo field, object? oldValue, object? newValue)
     {
-        if (newValue is not bool isOn)
+        if (newValue is not bool isOn || !DependentFields.Any(entry => entry.Switch == field.Name))
             return;
 
-        foreach (var (switchName, _, dependents) in DependentFields)
+        m_PendingSwitches[field.Name] = isOn;
+        RefreshVisibility();
+    }
+
+    /// <summary>Shows each setting under <see cref="DependentFields"/> while all its switches are on, and hides it otherwise.</summary>
+    private void RefreshVisibility()
+    {
+        foreach (var fieldName in DependentFields.SelectMany(entry => entry.Dependents).Distinct())
         {
-            if (field.Name == switchName)
-                SetFieldsVisible(dependents, isOn);
+            var visible = DependentFields
+                .Where(entry => entry.Dependents.Contains(fieldName))
+                .All(entry => m_PendingSwitches.TryGetValue(entry.Switch, out var isOn) ? isOn : entry.IsOn(this));
+            SetFieldVisible(fieldName, visible);
         }
     }
 
@@ -192,7 +223,21 @@ internal sealed class Settings : JsonModSettings
     protected override void OnConfirm()
     {
         base.OnConfirm();
+        m_PendingSwitches.Clear();
         Apply();
+    }
+
+    /// <summary>
+    /// Forgets switches changed but not confirmed, and shows the settings under them as the saved values say. The
+    /// options menu calls this when it opens or is cancelled, since the unconfirmed changes are gone by then.
+    /// </summary>
+    internal void ForgetUnconfirmedSwitches()
+    {
+        if (m_PendingSwitches.Count == 0)
+            return;
+
+        m_PendingSwitches.Clear();
+        RefreshVisibility();
     }
 
     /// <summary>Copies the numbers <see cref="Ballistics"/> and <see cref="Movement"/> use into them.</summary>
@@ -210,14 +255,6 @@ internal sealed class Settings : JsonModSettings
         Movement.CrouchSprintSpeedMultiplier = m_CrouchSprintSpeedMultiplier;
         Movement.SlideDistanceMultiplier = m_SlideDistanceMultiplier;
         Movement.ProneSpeedMultiplier = m_ProneSpeedMultiplier;
-    }
-
-    /// <summary>Shows or hides some settings.</summary>
-    /// <param name="fieldNames">The settings' field names.</param>
-    /// <param name="visible">Whether to show them.</param>
-    private void SetFieldsVisible(string[] fieldNames, bool visible)
-    {
-        foreach (var fieldName in fieldNames)
-            SetFieldVisible(fieldName, visible);
+        Movement.ProneSprintSpeedMultiplier = m_ProneSprintSpeedMultiplier;
     }
 }

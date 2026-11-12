@@ -1,12 +1,13 @@
 namespace AdaptiveArsenal.Core;
 
 /// <summary>
-/// The numbers behind sprinting while crouched, sliding and lying prone.
+/// The numbers behind sprinting while crouched, sliding, lying prone, crawling fast and diving.
 /// </summary>
 /// <remarks>
 /// A slide starts at the speed the player was sprinting, a little faster, and slows down as friction and the slope
-/// take their share each frame. Downhill it can speed up, to <see cref="MaxSlideSpeed"/>; uphill it stops sooner.
-/// Speeds are in metres per second, slopes in metres up per metre along.
+/// take their share each frame. Downhill it can speed up, to <see cref="MaxSlideSpeed"/>; uphill it stops sooner. A
+/// dive is a slide on the player's front: it starts faster and stops much sooner. Speeds are in metres per second,
+/// slopes in metres up per metre along.
 /// </remarks>
 internal static class Movement
 {
@@ -18,6 +19,12 @@ internal static class Movement
 
     /// <summary>A slide starts this much faster than the player was sprinting.</summary>
     internal const float SlideStartBoost = 1.15f;
+
+    /// <summary>The friction between the player and the ground while diving, much more than sliding, so a dive is short.</summary>
+    internal const float DiveFriction = 0.8f;
+
+    /// <summary>A dive starts this much faster than the player was sprinting.</summary>
+    internal const float DiveStartBoost = 1.2f;
 
     /// <summary>The fastest a slide goes, however steep the hill.</summary>
     internal const float MaxSlideSpeed = 10f;
@@ -64,6 +71,9 @@ internal static class Movement
     /// <summary>How much faster than crouch-walking the player moves when sprinting while crouched.</summary>
     internal static float CrouchSprintSpeedMultiplier { get; set; } = 1.75f;
 
+    /// <summary>How much faster than crawling prone the player moves when sprinting while prone.</summary>
+    internal static float ProneSprintSpeedMultiplier { get; set; } = 2f;
+
     /// <summary>How far a slide carries the player, compared to the mod's default. Friction is divided by this.</summary>
     internal static float SlideDistanceMultiplier { get; set; } = 1f;
 
@@ -71,10 +81,12 @@ internal static class Movement
     internal static float SlideFriction => BaseSlideFriction / Math.Max(SlideDistanceMultiplier, 0.01f);
 
     /// <summary>
-    /// The speed a slide starts at.
+    /// The speed a slide or dive starts at.
     /// </summary>
     /// <param name="entrySpeed">How fast the player was moving across the ground when the slide started.</param>
-    internal static float SlideStartSpeed(float entrySpeed) => Math.Clamp(entrySpeed * SlideStartBoost, 0f, MaxSlideSpeed);
+    /// <param name="dive">Whether it's a dive, which starts faster, by <see cref="DiveStartBoost"/>.</param>
+    internal static float SlideStartSpeed(float entrySpeed, bool dive = false) =>
+        Math.Clamp(entrySpeed * (dive ? DiveStartBoost : SlideStartBoost), 0f, MaxSlideSpeed);
 
     /// <summary>
     /// How steep the ground is along a direction: how many metres it rises for each metre across. Negative is downhill.
@@ -98,12 +110,14 @@ internal static class Movement
     /// <param name="speed">The speed at the start of the frame.</param>
     /// <param name="rise">How steep the ground is along the slide, as from <see cref="Rise"/>.</param>
     /// <param name="deltaTime">The frame's length, in seconds.</param>
-    internal static float NextSlideSpeed(float speed, float rise, float deltaTime)
+    /// <param name="dive">Whether it's a dive, with <see cref="DiveFriction"/> rather than <see cref="SlideFriction"/>.</param>
+    internal static float NextSlideSpeed(float speed, float rise, float deltaTime, bool dive = false)
     {
         var length = MathF.Sqrt(1f + rise * rise);
         var sin = rise / length;
         var cos = 1f / length;
-        var acceleration = -Gravity * (sin + SlideFriction * cos);
+        var friction = dive ? DiveFriction : SlideFriction;
+        var acceleration = -Gravity * (sin + friction * cos);
         return Math.Clamp(speed + acceleration * deltaTime, 0f, MaxSlideSpeed);
     }
 
@@ -132,16 +146,18 @@ internal static class Movement
         hitSide && deltaTime > 0f ? Math.Min(speed, movedAcross / deltaTime) : speed;
 
     /// <summary>
-    /// What the controller's acceleration is multiplied by while sprinting crouched, so the player moves
-    /// <see cref="CrouchSprintSpeedMultiplier"/> times as fast as crouch-walking.
+    /// What the controller's acceleration is multiplied by while sprinting crouched or prone, so the player moves
+    /// <see cref="CrouchSprintSpeedMultiplier"/> times as fast as crouch-walking, or
+    /// <see cref="ProneSprintSpeedMultiplier"/> times as fast as crawling.
     /// </summary>
     /// <remarks>
-    /// The game counts sprinting crouched as sprinting, so it multiplies the speed by its own sprint multiplier too.
-    /// This divides that back out.
+    /// The game counts both as sprinting, so it multiplies the speed by its own sprint multiplier too. This divides
+    /// that back out. Prone's own slowdown is applied separately.
     /// </remarks>
     /// <param name="gameSprintMultiplier">The game's sprint speed multiplier, which it's already applying.</param>
-    internal static float CrouchSprintAccelerationMultiplier(float gameSprintMultiplier) =>
-        CrouchSprintSpeedMultiplier / Math.Max(gameSprintMultiplier, MinSprintMultiplier);
+    /// <param name="prone">Whether the player is prone, crawling fast.</param>
+    internal static float CrouchSprintAccelerationMultiplier(float gameSprintMultiplier, bool prone = false) =>
+        (prone ? ProneSprintSpeedMultiplier : CrouchSprintSpeedMultiplier) / Math.Max(gameSprintMultiplier, MinSprintMultiplier);
 
     /// <summary>
     /// Whether the player's movement input is enough to sprint: mostly forward, and not too much to the side.

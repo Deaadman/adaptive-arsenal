@@ -3,8 +3,8 @@ using AdaptiveArsenal.Core;
 namespace AdaptiveArsenal.Utilities;
 
 /// <summary>
-/// One update of the player's controller: the player's state, looked up once for <see cref="Prone"/> and
-/// <see cref="CrouchSprintAndSlide"/> to share, and what they changed, to put back afterwards. See
+/// One update of the player's controller: the player's state, looked up once for <see cref="PlayerMoves"/> and the
+/// moves it runs to share, and what they changed, to put back afterwards. See
 /// <see cref="Patches.vp_FPSControllerPatches"/>.
 /// </summary>
 internal struct ControllerUpdate

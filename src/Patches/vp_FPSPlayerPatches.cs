@@ -29,16 +29,16 @@ internal static class vp_FPSPlayerPatches
     }
 
     /// <summary>
-    /// Stops the game standing the player up because they're sprinting, while they slide or sprint crouched, or from
-    /// the crouch input while they're prone: see <see cref="CrouchSprintAndSlide.ShouldKeepCrouched"/> and
-    /// <see cref="Prone.ShouldKeepCrouched"/>. Anything else can still stand them up.
+    /// Stops the game standing the player up because they're sprinting while they slide, dive, sprint low or lie prone,
+    /// or from the crouch input while they're prone: see <see cref="PlayerMoves.ShouldKeepCrouched"/>. Anything else
+    /// can still stand them up.
     /// </summary>
     [HarmonyPatch(typeof(vp_FPSPlayer), nameof(vp_FPSPlayer.EnableCrouch))]
     private static class KeepCrouched
     {
         private static bool Prefix(bool enabled, ref bool __result)
         {
-            if (enabled || !(Prone.ShouldKeepCrouched() || CrouchSprintAndSlide.ShouldKeepCrouched()))
+            if (enabled || !PlayerMoves.ShouldKeepCrouched())
                 return true;
 
             __result = false;

@@ -24,6 +24,7 @@ See docs/development.md, "Releasing". CI checks this file's format.
 - You can sprint while crouched, moving faster than crouch-walking and using stamina, instead of standing up.
 - Crouching while sprinting slides you along the ground, further downhill and shorter uphill.
 - You can lie prone with the Z key, moving slower but harder for animals to spot and shooting more accurately.
+- Sprinting while prone crawls faster, and pressing the prone key while sprinting dives you onto the ground.
 
 ## [1.1.0] - 2026-11-08
 

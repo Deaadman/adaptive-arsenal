@@ -3,18 +3,18 @@ using AdaptiveArsenal.Core;
 namespace AdaptiveArsenal.Utilities;
 
 /// <summary>
-/// Lets the player sprint while crouched, and slide by crouching while sprinting. The patches on
-/// <see cref="vp_FPSController"/>, <see cref="vp_FPSPlayer"/>, <see cref="PlayerManager"/> and
-/// <see cref="PlayerMovement"/> call into this.
+/// Lets the player sprint while crouched or prone, slide by crouching while sprinting, and dive. <see cref="PlayerMoves"/>
+/// calls into this, telling it whether the player is prone, and starts dives; the patches on
+/// <see cref="vp_FPSPlayer"/>, <see cref="PlayerManager"/> and <see cref="PlayerMovement"/> also call into it.
 /// </summary>
 /// <remarks>
 /// <para>
-/// Sprinting while crouched counts as sprinting to the game: <see cref="PlayerManager.PlayerIsSprinting"/> says so,
-/// so the game uses stamina, holds off recovering it, and adds fatigue and calories as it does for any sprint. The
-/// speed comes from raising the controller's <see cref="vp_FPSController.MotorAcceleration"/> for each of its
-/// updates, dividing out the game's own sprint multiplier. The game stands the player up when they sprint, from
-/// <see cref="PlayerMovement.Update"/>, so that's blocked while sprinting crouched. If the game turns out not to use
-/// stamina for it, this does, and logs that once.
+/// Sprinting while crouched, or crawling fast while prone, counts as sprinting to the game:
+/// <see cref="PlayerManager.PlayerIsSprinting"/> says so, so the game uses stamina, holds off recovering it, and adds
+/// fatigue and calories as it does for any sprint. The speed comes from raising the controller's
+/// <see cref="vp_FPSController.MotorAcceleration"/> for each of its updates, dividing out the game's own sprint
+/// multiplier. The game stands the player up when they sprint, from <see cref="PlayerMovement.Update"/>, so that's
+/// blocked while doing either. If the game turns out not to use stamina for them, this does, and logs that once.
 /// </para>
 /// <para>
 /// A slide starts the update after the player presses crouch while sprinting, so the game has handled the press
@@ -22,6 +22,10 @@ namespace AdaptiveArsenal.Utilities;
 /// along the slide itself, at the speed from <see cref="Movement"/>, and tells the game about the move as its own
 /// movement does. It ends when the slide slows down, hits something, leaves the ground, or the player stands up or
 /// something else takes over movement, leaving the player crouched.
+/// </para>
+/// <para>
+/// A dive is a slide on the player's front, started at once from the mod's own prone key, once
+/// <see cref="PlayerMoves"/> has laid the player down. It's shorter, and leaves them prone.
 /// </para>
 /// <para>
 /// The decompiled game code only shows what calls what, so some of this is a guess at how the game behaves, logged at
@@ -33,11 +37,14 @@ internal static class CrouchSprintAndSlide
     /// <summary>Whether <see cref="PlayerMovement.Update"/> is running, so the crouch it ends can be told apart from the player's own.</summary>
     internal static bool s_InPlayerMovementUpdate;
 
-    /// <summary>Whether the player is sliding.</summary>
+    /// <summary>Whether the player is sliding or diving.</summary>
     private static bool s_Sliding;
 
     /// <summary>Whether the player pressed crouch while sprinting, so a slide starts in the next update.</summary>
     private static bool s_SlideRequested;
+
+    /// <summary>Whether the slide under way is a dive.</summary>
+    private static bool s_Diving;
 
     /// <summary>The player's velocity across the ground when they asked to slide.</summary>
     private static Vector3 s_SlideEntryVelocity;
@@ -54,8 +61,8 @@ internal static class CrouchSprintAndSlide
     /// <summary>How long the slide has been off the ground.</summary>
     private static float s_SlideAirborneSeconds;
 
-    /// <summary>Whether the player is sprinting crouched, as worked out at the start of the controller's last update.</summary>
-    private static bool s_CrouchSprinting;
+    /// <summary>Which low sprint the player is doing, as worked out at the start of the controller's last update.</summary>
+    private static LowSprint s_LowSprint;
 
     /// <summary>Whether the player was sprinting standing up at the end of the last update, which a slide starts from.</summary>
     private static bool s_WasSprintingStanding;
@@ -69,21 +76,35 @@ internal static class CrouchSprintAndSlide
     /// <summary>Whether it's been logged that the game doesn't use stamina for sprinting crouched.</summary>
     private static bool s_LoggedGameUsesNoStamina;
 
-    /// <summary>The frame <see cref="s_CrouchSprinting"/> was last worked out in.</summary>
-    private static int s_CrouchSprintingFrame;
+    /// <summary>The frame <see cref="s_LowSprint"/> was last worked out in.</summary>
+    private static int s_LowSprintFrame;
+
+    /// <summary>A sprint the player does without standing up.</summary>
+    private enum LowSprint
+    {
+        /// <summary>Not sprinting low.</summary>
+        None,
+
+        /// <summary>Sprinting while crouched.</summary>
+        Crouched,
+
+        /// <summary>Crawling fast while prone.</summary>
+        Prone
+    }
 
     /// <summary>
-    /// Whether the player is sprinting crouched, which <see cref="PlayerManager.PlayerIsSprinting"/> reports as
-    /// sprinting. Only while the player's controller is updating, so it doesn't stick after a load or in the menus.
+    /// Whether the player is sprinting crouched or crawling fast, which <see cref="PlayerManager.PlayerIsSprinting"/>
+    /// reports as sprinting. Only while the player's controller is updating, so it doesn't stick after a load or in
+    /// the menus.
     /// </summary>
-    internal static bool IsCrouchSprinting => s_CrouchSprinting && Time.frameCount - s_CrouchSprintingFrame <= 1;
+    internal static bool IsCrouchSprinting => s_LowSprint != LowSprint.None && Time.frameCount - s_LowSprintFrame <= 1;
 
-    /// <summary>Whether the player is sliding, or about to start in the next update.</summary>
+    /// <summary>Whether the player is sliding or diving, or about to start a slide in the next update.</summary>
     internal static bool IsSliding => s_Sliding || s_SlideRequested;
 
     /// <summary>
     /// Whether to stop the game standing the player up now: when <see cref="PlayerMovement.Update"/> does it, because
-    /// they're sprinting, while they slide or sprint crouched.
+    /// they're sprinting, while they slide, dive, sprint crouched or crawl fast.
     /// </summary>
     /// <remarks>
     /// Anything else can still stand them up, like the player's own crouch key, a rope or a scripted action. That ends
@@ -93,33 +114,33 @@ internal static class CrouchSprintAndSlide
 
     /// <summary>
     /// Before the player's controller moves them: starts or ends a slide, works out whether the player is sprinting
-    /// crouched, and sets the controller's acceleration for either.
+    /// crouched or crawling fast, and sets the controller's acceleration for either.
     /// </summary>
     /// <param name="controller">The player's controller.</param>
     /// <param name="update">The player's state for this update, and what's changed, to put back afterwards.</param>
-    internal static void BeforeControllerUpdate(vp_FPSController controller, ref ControllerUpdate update)
+    /// <param name="prone">Whether the player is prone.</param>
+    internal static void BeforeControllerUpdate(vp_FPSController controller, ref ControllerUpdate update, bool prone)
     {
-        var player = update.m_Player;
         var movement = update.m_Movement;
 
         if (s_SlideRequested)
-            update.m_Crouched = StartRequestedSlide(player, update.m_PlayerManager, controller, update.m_Crouched);
-        else if (!s_Sliding && Settings.Instance.m_SlideEnabled)
-            MaybeRequestSlide(player, controller, update.m_MoveUnblocked);
+            StartRequestedSlide(controller, ref update, prone);
+        else if (!s_Sliding && Settings.Instance.m_SlideEnabled && CanStartSlide(controller, update.m_MoveUnblocked) && InputManager.GetCrouchPressed(update.m_Player))
+            RequestSlide();
 
         if (s_Sliding && (!update.m_Crouched || !update.m_MoveUnblocked))
             EndSlide(update.m_Crouched ? "movement was taken over" : "the player stood up");
 
-        var crouchSprinting = WantsToCrouchSprint(update);
-        s_CrouchSprintingFrame = Time.frameCount;
-        if (crouchSprinting != s_CrouchSprinting)
+        var lowSprint = WantsToCrouchSprint(update, prone) ? (prone ? LowSprint.Prone : LowSprint.Crouched) : LowSprint.None;
+        s_LowSprintFrame = Time.frameCount;
+        if (lowSprint != s_LowSprint)
         {
-            s_CrouchSprinting = crouchSprinting;
-            Mod.Logger.Log(
-                crouchSprinting
-                    ? $"Sprinting crouched, with the game's sprint multiplier at {movement.GetSprintMovementMultiplier():F2}."
-                    : "Stopped sprinting crouched.",
-                FlaggedLoggingLevel.Debug);
+            if (s_LowSprint != LowSprint.None)
+                Mod.Logger.Log($"Stopped {Describe(s_LowSprint)}.", FlaggedLoggingLevel.Debug);
+
+            s_LowSprint = lowSprint;
+            if (lowSprint != LowSprint.None)
+                Mod.Logger.Log($"Started {Describe(lowSprint)}, with the game's sprint multiplier at {movement.GetSprintMovementMultiplier():F2}.", FlaggedLoggingLevel.Debug);
         }
 
         // Crouching for a slide can change the acceleration, so this comes after it.
@@ -128,15 +149,15 @@ internal static class CrouchSprintAndSlide
             // The slide moves the player itself, after the controller's update, so their input does nothing.
             update.ChangeAcceleration(controller, 0f);
         }
-        else if (s_CrouchSprinting)
+        else if (s_LowSprint != LowSprint.None)
         {
             // GetSprintMovementMultiplier asks PlayerIsSprinting, which now says the player is sprinting.
-            update.MultiplyAcceleration(controller, Movement.CrouchSprintAccelerationMultiplier(movement.GetSprintMovementMultiplier()));
+            update.MultiplyAcceleration(controller, Movement.CrouchSprintAccelerationMultiplier(movement.GetSprintMovementMultiplier(), prone));
         }
     }
 
     /// <summary>
-    /// After the player's controller has moved them: moves a slide on, makes sure sprinting crouched uses stamina, and
+    /// After the player's controller has moved them: moves a slide on, makes sure sprinting low uses stamina, and
     /// remembers how the player was moving for the next update.
     /// </summary>
     /// <param name="controller">The player's controller.</param>
@@ -150,36 +171,59 @@ internal static class CrouchSprintAndSlide
         var movement = update.m_Movement;
         if (s_Sliding)
             MoveSlide(controller, characterController, movement);
-        else if (s_CrouchSprinting)
+        else if (s_LowSprint != LowSprint.None)
             KeepUsingStamina(movement);
 
         var velocity = characterController.velocity;
         s_LastGroundVelocity = new Vector3(velocity.x, 0f, velocity.z);
-        s_WasSprintingStanding = !s_Sliding && !s_CrouchSprinting && !update.m_Crouched && update.m_PlayerManager.PlayerIsSprinting();
+        s_WasSprintingStanding = !s_Sliding && s_LowSprint == LowSprint.None && !update.m_Crouched && update.m_PlayerManager.PlayerIsSprinting();
         s_StaminaAfterLastUpdate = movement.CurrentStamina;
     }
 
-    /// <summary>Forgets any slide or crouched sprint, for a new scene, where the player starts afresh.</summary>
+    /// <summary>Forgets any slide, dive or low sprint, for a new scene, where the player starts afresh.</summary>
     internal static void Reset()
     {
         s_Sliding = false;
         s_SlideRequested = false;
-        s_CrouchSprinting = false;
+        s_Diving = false;
+        s_LowSprint = LowSprint.None;
         s_WasSprintingStanding = false;
         s_LastGroundVelocity = Vector3.zero;
     }
 
     /// <summary>
-    /// Whether the player is trying to sprint while crouched, and can.
+    /// Whether the player can dive: diving is on, they're not sliding, and they were sprinting standing up, on the
+    /// ground and fast enough.
+    /// </summary>
+    /// <param name="controller">The player's controller.</param>
+    /// <param name="update">The player's state for this update.</param>
+    internal static bool CanDive(vp_FPSController controller, in ControllerUpdate update) =>
+        Settings.Instance.m_DiveEnabled && !IsSliding && CanStartSlide(controller, update.m_MoveUnblocked);
+
+    /// <summary>
+    /// Starts a dive now, from the player's speed in the last update. <see cref="PlayerMoves"/> lays the player down
+    /// first.
+    /// </summary>
+    /// <param name="controller">The player's controller.</param>
+    internal static void StartDive(vp_FPSController controller)
+    {
+        s_SlideEntryVelocity = s_LastGroundVelocity;
+        StartSlide(controller, dive: true);
+    }
+
+    /// <summary>
+    /// Whether the player is trying to sprint while crouched, or crawl fast while prone, and can.
     /// </summary>
     /// <remarks>
     /// The same rules as the game's sprint, as far as the decompiled code shows them: the sprint key, moving mostly
     /// forward, stamina left, and nothing like an injury, heavy load or aiming stopping it.
     /// </remarks>
     /// <param name="update">The player's state for this update.</param>
-    private static bool WantsToCrouchSprint(in ControllerUpdate update)
+    /// <param name="prone">Whether the player is prone.</param>
+    private static bool WantsToCrouchSprint(in ControllerUpdate update, bool prone)
     {
-        if (!Settings.Instance.m_CrouchSprintEnabled || s_Sliding || Prone.IsProne || !update.m_Crouched || !update.m_MoveUnblocked || !InputManager.GetSprintDown(update.m_Player))
+        var enabled = prone ? Settings.Instance.m_FastCrawlEnabled : Settings.Instance.m_CrouchSprintEnabled;
+        if (!enabled || s_Sliding || !update.m_Crouched || !update.m_MoveUnblocked || !InputManager.GetSprintDown(update.m_Player))
             return false;
 
         if (update.m_PlayerManager.PlayerCantSprintBecauseOfInjury() || update.m_PlayerManager.PlayerIsZooming())
@@ -193,61 +237,78 @@ internal static class CrouchSprintAndSlide
         return Movement.InputCanSprint(input.y, input.x, movement.m_SprintDisableWhenForwardInputBelow, movement.m_SprintDisableWhenStrafeInputAbove);
     }
 
+    /// <summary>How a low sprint reads in the log.</summary>
+    /// <param name="lowSprint">The low sprint.</param>
+    private static string Describe(LowSprint lowSprint) => lowSprint == LowSprint.Prone ? "crawling fast" : "sprinting crouched";
+
     /// <summary>
-    /// Asks for a slide in the next update if the player pressed crouch while sprinting standing up, on the ground and
-    /// moving fast enough.
+    /// Whether a slide or dive can start: the player was sprinting standing up in the last update, can move, and is on
+    /// the ground moving fast enough.
+    /// </summary>
+    /// <param name="controller">The player's controller.</param>
+    /// <param name="moveUnblocked">Whether the player can move, with nothing like a menu in the way.</param>
+    private static bool CanStartSlide(vp_FPSController controller, bool moveUnblocked)
+    {
+        var characterController = controller.m_Controller;
+        return s_WasSprintingStanding
+            && moveUnblocked
+            && characterController != null
+            && characterController.isGrounded
+            && s_LastGroundVelocity.magnitude >= Movement.MinSlideStartSpeed;
+    }
+
+    /// <summary>
+    /// Asks for a slide in the next update, from the player's speed now.
     /// </summary>
     /// <remarks>
     /// Waiting an update lets the game handle the crouch press first, so it isn't handled twice, and only the player's
     /// own crouch starts a slide, not one the game forces.
     /// </remarks>
-    /// <param name="player">The player.</param>
-    /// <param name="controller">The player's controller.</param>
-    /// <param name="moveUnblocked">Whether the player can move, with nothing like a menu in the way.</param>
-    private static void MaybeRequestSlide(vp_FPSPlayer player, vp_FPSController controller, bool moveUnblocked)
+    private static void RequestSlide()
     {
-        if (!s_WasSprintingStanding || !moveUnblocked || !InputManager.GetCrouchPressed(player))
-            return;
-
-        var characterController = controller.m_Controller;
-        if (characterController == null || !characterController.isGrounded || s_LastGroundVelocity.magnitude < Movement.MinSlideStartSpeed)
-            return;
-
         s_SlideRequested = true;
         s_SlideEntryVelocity = s_LastGroundVelocity;
     }
 
     /// <summary>
-    /// Starts the slide asked for in the last update, crouching the player first if the game didn't.
+    /// Starts the slide asked for in the last update, crouching the player first if the game didn't, unless they've
+    /// gone prone since.
     /// </summary>
-    /// <param name="player">The player.</param>
-    /// <param name="playerManager">The player manager.</param>
     /// <param name="controller">The player's controller.</param>
-    /// <param name="crouched">Whether the player is crouched already.</param>
-    /// <returns>Whether the player is crouched now.</returns>
-    private static bool StartRequestedSlide(vp_FPSPlayer player, PlayerManager playerManager, vp_FPSController controller, bool crouched)
+    /// <param name="update">The player's state for this update, whose crouch this keeps up to date.</param>
+    /// <param name="prone">Whether the player is prone.</param>
+    private static void StartRequestedSlide(vp_FPSController controller, ref ControllerUpdate update, bool prone)
     {
         s_SlideRequested = false;
-        if (Prone.IsProne)
-            return crouched;
+        if (prone)
+            return;
 
         // The game may not crouch while sprinting.
-        if (!crouched)
+        if (!update.m_Crouched)
         {
-            player.EnableCrouch(true);
-            crouched = playerManager.PlayerIsCrouched();
+            update.m_Player.EnableCrouch(true);
+            update.m_Crouched = update.m_PlayerManager.PlayerIsCrouched();
         }
 
-        if (!crouched)
+        if (!update.m_Crouched)
         {
             Mod.Logger.Log("Couldn't crouch to start a slide.", FlaggedLoggingLevel.Debug);
-            return false;
+            return;
         }
 
+        StartSlide(controller, dive: false);
+    }
+
+    /// <summary>Starts a slide or dive from <see cref="s_SlideEntryVelocity"/>.</summary>
+    /// <param name="controller">The player's controller.</param>
+    /// <param name="dive">Whether it's a dive.</param>
+    private static void StartSlide(vp_FPSController controller, bool dive)
+    {
         var entrySpeed = s_SlideEntryVelocity.magnitude;
         s_Sliding = true;
+        s_Diving = dive;
         s_SlideDirection = s_SlideEntryVelocity / entrySpeed;
-        s_SlideSpeed = Movement.SlideStartSpeed(entrySpeed);
+        s_SlideSpeed = Movement.SlideStartSpeed(entrySpeed, dive);
         s_SlideSeconds = 0f;
         s_SlideAirborneSeconds = 0f;
 
@@ -255,8 +316,7 @@ internal static class CrouchSprintAndSlide
         var throttle = controller.m_MotorThrottle;
         controller.m_MotorThrottle = new Vector3(0f, throttle.y, 0f);
 
-        Mod.Logger.Log($"Sliding from {entrySpeed:F1} m/s at {s_SlideSpeed:F1} m/s.", FlaggedLoggingLevel.Debug);
-        return true;
+        Mod.Logger.Log($"Started a {(dive ? "dive" : "slide")} from {entrySpeed:F1} m/s at {s_SlideSpeed:F1} m/s.", FlaggedLoggingLevel.Debug);
     }
 
     /// <summary>
@@ -281,7 +341,7 @@ internal static class CrouchSprintAndSlide
         }
 
         var rise = GroundRise(characterController);
-        s_SlideSpeed = Movement.NextSlideSpeed(s_SlideSpeed, rise, deltaTime);
+        s_SlideSpeed = Movement.NextSlideSpeed(s_SlideSpeed, rise, deltaTime, s_Diving);
         if (Movement.SlideHasEnded(s_SlideSpeed, s_SlideSeconds))
         {
             EndSlide($"it slowed to {s_SlideSpeed:F1} m/s");
@@ -318,8 +378,8 @@ internal static class CrouchSprintAndSlide
     }
 
     /// <summary>
-    /// Makes sure sprinting crouched uses stamina and holds off its recovery, as sprinting does, if the game isn't
-    /// already doing it.
+    /// Makes sure sprinting low uses stamina and holds off its recovery, as sprinting does, if the game isn't already
+    /// doing it.
     /// </summary>
     /// <param name="movement">The player's movement rules.</param>
     private static void KeepUsingStamina(PlayerMovement movement)
@@ -332,18 +392,18 @@ internal static class CrouchSprintAndSlide
 
         if (!s_LoggedGameUsesNoStamina)
         {
-            Mod.Logger.Log("The game isn't using stamina for sprinting crouched, so the mod is.", FlaggedLoggingLevel.Debug);
+            Mod.Logger.Log("The game isn't using stamina for sprinting low, so the mod is.", FlaggedLoggingLevel.Debug);
             s_LoggedGameUsesNoStamina = true;
         }
 
         movement.AddSprintStamina(-Movement.StaminaUsed(movement.m_SprintStaminaUsagePerSecond, Time.deltaTime));
     }
 
-    /// <summary>Ends the slide, leaving the player crouched.</summary>
+    /// <summary>Ends the slide, leaving the player crouched, or prone after a dive.</summary>
     /// <param name="reason">Why, for the log.</param>
     private static void EndSlide(string reason)
     {
         s_Sliding = false;
-        Mod.Logger.Log($"Slide ended after {s_SlideSeconds:F1} s because {reason}.", FlaggedLoggingLevel.Debug);
+        Mod.Logger.Log($"{(s_Diving ? "Dive" : "Slide")} ended after {s_SlideSeconds:F1} s because {reason}.", FlaggedLoggingLevel.Debug);
     }
 }

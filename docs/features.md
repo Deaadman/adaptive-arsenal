@@ -60,7 +60,11 @@ Crouching while sprinting slides you along the ground, a little faster than you 
 
 ## Prone
 
-Press **Z** to lie prone, lower than crouching. If you're standing, you crouch first. Prone, you move at 0.4 times your crouch-walking speed, animals can see you and hear your footsteps from half as far as when crouched, and your shots are more accurate. Press **Z** or crouch again to get back up to a crouch, if there's room above you. Letting go of a held crouch key leaves you prone. Sprinting ends it too.
+Press **Z** to lie prone, lower than crouching. If you're standing, you crouch first. Prone, you move at 0.4 times your crouch-walking speed, animals can see you and hear your footsteps from half as far as when crouched, and your shots are more accurate. Press **Z** or crouch again to get back up to a crouch, if there's room above you. Letting go of a held crouch key leaves you prone.
+
+Sprinting while prone crawls twice as fast, using stamina as sprinting does. With **Fast crawl** off, sprinting stands you up instead.
+
+Pressing **Z** while sprinting dives: it throws you forward onto the ground, a little faster than you were running, and you slide a few metres on your front before stopping prone. Like a slide, it goes further downhill and stops when you hit something.
 
 ## Ammo count
 
@@ -89,5 +93,8 @@ Everything above is how the mod plays by default. To change it, open **Options**
 | Prone | On | Lets you lie prone. |
 | Prone key | Z | The key that lies you down and gets you back up. |
 | Prone speed | × 0.4 | Multiplies your crouch-walking speed while prone. |
+| Fast crawl | On | Sprinting while prone crawls faster. Off, sprinting stands you up. |
+| Fast crawl speed | × 2 | How many times faster than crawling you move when sprinting prone. |
+| Diving | On | Pressing the prone key while sprinting dives, leaving you prone. |
 | Walk while aiming revolver | On | Lets you walk while aiming a revolver. |
 | Show ammo count | On | Shows the loaded and carried rounds on the HUD, with the spent round animation. Off, you keep count yourself. |

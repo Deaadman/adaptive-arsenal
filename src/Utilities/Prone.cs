@@ -3,9 +3,9 @@ using AdaptiveArsenal.Core;
 namespace AdaptiveArsenal.Utilities;
 
 /// <summary>
-/// Lets the player lie prone, a stance below crouching, with its own key. The patches on
-/// <see cref="vp_FPSController"/>, <see cref="vp_FPSPlayer"/>, <see cref="InputManager"/>,
-/// <see cref="PlayerMovement"/> and <see cref="vp_FPSShooter"/> call into this.
+/// Lets the player lie prone, a stance below crouching. <see cref="PlayerMoves"/> decides when, from the prone key and
+/// the other moves; the patches on <see cref="vp_FPSPlayer"/>, <see cref="InputManager"/>,
+/// <see cref="PlayerMovement"/> and <see cref="vp_FPSShooter"/> also call into this.
 /// </summary>
 /// <remarks>
 /// <para>
@@ -16,10 +16,9 @@ namespace AdaptiveArsenal.Utilities;
 /// shoots more accurately.
 /// </para>
 /// <para>
-/// The prone key lies the player down, crouching them first if they're standing, and gets them back up to a crouch
-/// if there's room above. So does pressing crouch. Otherwise the crouch input can't stand them up while prone, so
-/// letting go of a held crouch key leaves them prone. Anything else that stands them up, like sprinting, a rope or a
-/// scripted action, ends it.
+/// The crouch input can't stand the player up while prone, so letting go of a held crouch key leaves them prone, but
+/// pressing crouch asks to get them up to a crouch, which <see cref="PlayerMoves"/> does if there's room. Anything
+/// other than the crouch input that stands them up, like sprinting, a rope or a scripted action, ends prone.
 /// </para>
 /// <para>
 /// The game can set the crouched capsule and the camera's offset itself, for a change of stance or aiming, so each
@@ -73,12 +72,12 @@ internal static class Prone
     }
 
     /// <summary>
-    /// Before the player's controller moves them: lies the player down or gets them up when they ask, ends prone if
-    /// something stood them up, and keeps them low and slow while prone.
+    /// At the start of each update of the player's controller: ends prone if something stood the player up or their
+    /// controller changed. <see cref="PlayerMoves"/> calls this first.
     /// </summary>
     /// <param name="controller">The player's controller.</param>
-    /// <param name="update">The player's state for this update, and what's changed, to put back afterwards.</param>
-    internal static void BeforeControllerUpdate(vp_FPSController controller, ref ControllerUpdate update)
+    /// <param name="update">The player's state for this update.</param>
+    internal static void Refresh(vp_FPSController controller, in ControllerUpdate update)
     {
         // The controller doesn't update during the crouch input, so this only clears a count an exception left behind.
         s_CrouchInputDepth = 0;
@@ -87,31 +86,22 @@ internal static class Prone
             Leave("the player's controller changed", resize: false);
         else if (s_Prone && !update.m_Crouched)
             Leave("the player stood up", resize: false);
+    }
 
-        // Turning prone off gets the player up too, once there's room.
-        var getUp = s_GetUpRequested || (s_Prone && !Settings.Instance.m_ProneEnabled);
-        var logIfNoRoom = s_GetUpRequested;
+    /// <summary>Takes the request to get up the player made by pressing crouch while prone, if there is one.</summary>
+    /// <returns>Whether the player asked to get up.</returns>
+    internal static bool TakeGetUpRequest()
+    {
+        var requested = s_GetUpRequested;
         s_GetUpRequested = false;
+        return requested;
+    }
 
-        if (Settings.Instance.m_ProneEnabled && update.m_MoveUnblocked && InputManager.GetKeyDown(update.m_Player, Settings.Instance.m_ProneKey))
-        {
-            if (s_Prone)
-            {
-                getUp = true;
-                logIfNoRoom = true;
-            }
-            else
-            {
-                TryLieDown(controller, ref update);
-            }
-        }
-
-        if (s_Prone && getUp)
-            TryGetUp(controller, logIfNoRoom);
-
-        if (!s_Prone)
-            return;
-
+    /// <summary>Keeps the prone player low and slow for this update.</summary>
+    /// <param name="controller">The player's controller.</param>
+    /// <param name="update">What's changed for this update, to put back afterwards.</param>
+    internal static void KeepLowAndSlow(vp_FPSController controller, ref ControllerUpdate update)
+    {
         KeepLow(controller);
         update.MultiplyAcceleration(controller, Movement.ProneSpeedMultiplier);
     }
@@ -128,15 +118,16 @@ internal static class Prone
     }
 
     /// <summary>
-    /// Lies the player down, crouching them first if they're standing, unless they're sliding or off the ground.
+    /// Lies the player down, crouching them first if they're standing, unless they're off the ground.
     /// </summary>
     /// <param name="controller">The player's controller.</param>
     /// <param name="update">The player's state for this update, whose crouch this keeps up to date.</param>
-    private static void TryLieDown(vp_FPSController controller, ref ControllerUpdate update)
+    /// <returns>Whether the player is prone now.</returns>
+    internal static bool TryLieDown(vp_FPSController controller, ref ControllerUpdate update)
     {
         var characterController = controller.m_Controller;
-        if (CrouchSprintAndSlide.IsSliding || characterController == null || !characterController.isGrounded)
-            return;
+        if (characterController == null || !characterController.isGrounded)
+            return false;
 
         if (!update.m_Crouched)
         {
@@ -145,7 +136,7 @@ internal static class Prone
             if (!update.m_Crouched)
             {
                 Mod.Logger.Log("Couldn't crouch to lie prone.", FlaggedLoggingLevel.Debug);
-                return;
+                return false;
             }
         }
 
@@ -158,12 +149,13 @@ internal static class Prone
             $"Lying prone: capsule {s_Capsule.Original.Height:F2} m to {controller.m_CompactHeight:F2} m (radius {characterController.radius:F2} m), "
             + $"camera {s_CameraOffset.Original.y:F2} to {(s_Camera != null ? s_Camera.PositionOffset.y : 0f):F2}.",
             FlaggedLoggingLevel.Debug);
+        return true;
     }
 
     /// <summary>Gets the player back up to a crouch, if there's room above them for it.</summary>
     /// <param name="controller">The player's controller.</param>
     /// <param name="logIfNoRoom">Whether to log when there isn't room, which the player asked for.</param>
-    private static void TryGetUp(vp_FPSController controller, bool logIfNoRoom)
+    internal static void TryGetUp(vp_FPSController controller, bool logIfNoRoom)
     {
         if (HasRoomToCrouch(controller))
             Leave("the player got up", resize: true);

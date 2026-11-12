@@ -61,6 +61,39 @@ public class MovementTests
     }
 
     [Fact]
+    public void A_dive_starts_faster_than_a_slide() =>
+        Assert.True(Movement.SlideStartSpeed(6f, dive: true) > Movement.SlideStartSpeed(6f));
+
+    [Fact]
+    public void A_dive_is_much_shorter_than_a_slide()
+    {
+        Assert.InRange(Distance(dive: true), 1.5f, 5f);
+        Assert.True(Distance(dive: true) < Distance(dive: false) * 0.75f);
+
+        static float Distance(bool dive)
+        {
+            var speed = Movement.SlideStartSpeed(6f, dive);
+            var distance = 0f;
+            var seconds = 0f;
+            const float frame = 1f / 60f;
+            while (!Movement.SlideHasEnded(speed, seconds))
+            {
+                speed = Movement.NextSlideSpeed(speed, rise: 0f, frame, dive);
+                distance += speed * frame;
+                seconds += frame;
+            }
+
+            return distance;
+        }
+    }
+
+    [Theory]
+    [InlineData(1f, 2f)]
+    [InlineData(2f, 1f)]
+    public void Crawling_fast_divides_out_the_games_sprint_multiplier(float gameSprintMultiplier, float expected) =>
+        Assert.Equal(expected, Movement.CrouchSprintAccelerationMultiplier(gameSprintMultiplier, prone: true), Precision);
+
+    [Fact]
     public void A_longer_slide_distance_means_less_friction()
     {
         try

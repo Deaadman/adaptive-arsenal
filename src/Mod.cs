@@ -26,7 +26,6 @@ internal sealed class Mod : MelonMod
     /// </remarks>
     public override void OnSceneWasLoaded(int buildIndex, string sceneName)
     {
-        Utilities.Prone.Reset();
-        Utilities.CrouchSprintAndSlide.Reset();
+        Utilities.PlayerMoves.Reset();
     }
 }
