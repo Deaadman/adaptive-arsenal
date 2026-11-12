@@ -34,7 +34,7 @@ jobs:
           persist-credentials: false
       - uses: actions/setup-dotnet@v6
         with:
-          dotnet-version: 10.0.x
+          dotnet-version: 11.0.x
       - name: Changelog
         shell: pwsh
         run: ./scripts/release-notes.ps1 -Check
@@ -74,7 +74,7 @@ jobs:
           persist-credentials: false
       - uses: actions/setup-dotnet@v6
         with:
-          dotnet-version: 10.0.x
+          dotnet-version: 11.0.x
       - name: Restore
         run: dotnet restore tests/AdaptiveArsenal.Tests --locked-mode
       # The game-free code in src/Core. The rest of the mod needs the game: see docs/development.md, "Testing".
