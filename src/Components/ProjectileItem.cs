@@ -104,6 +104,18 @@ public class ProjectileItem : MonoBehaviour
     /// <summary>Whether the bullet has hit something, so it only hits once.</summary>
     private bool m_HasHit;
 
+    /// <summary>
+    /// Whether <see cref="Launch"/> released the rigidbody with <see cref="Utils.SetIsKinematic"/> and
+    /// <see cref="RestoreKinematic"/> hasn't made it kinematic again yet.
+    /// </summary>
+    private bool m_IsReleased;
+
+    /// <summary>
+    /// How much releasing the rigidbody changed the game's count of reasons to keep animals' body-part colliders on
+    /// (<see cref="MatchTransform.s_CollidersEnabledCount"/>), so <see cref="RestoreKinematic"/> can undo exactly that.
+    /// </summary>
+    private int m_ReleaseCountChange;
+
     /// <summary>How long, in seconds, since the bullet hit something.</summary>
     private float m_TimeSinceHit;
 
@@ -188,6 +200,9 @@ public class ProjectileItem : MonoBehaviour
         {
             Mod.Logger.Log($"{name} flew for {MaxFlightTime} s without hitting anything, so it's removed at {transform.position}.", FlaggedLoggingLevel.Debug);
             Miss();
+
+            // Before Destroy, while the rigidbody is sure to still be there.
+            RestoreKinematic();
             Destroy(gameObject);
         }
         else
@@ -203,6 +218,13 @@ public class ProjectileItem : MonoBehaviour
     /// <remarks>
     /// The bullet is on the gear layer, which doesn't collide with animals, so <see cref="OnCollisionEnter"/> never
     /// sees them. The game's arrows find what they hit with a raycast each physics step too.
+    /// <para>
+    /// The colliders on animals' body parts are usually off. The game's own bullet turns them on with
+    /// <see cref="MatchTransform.EnableCollidersForAllActive"/> just for its raycast, which also moves them to where
+    /// the animals are now, so the bullet does the same around its own when they're off. When something else, like
+    /// releasing the bullet's rigidbody, already keeps them on, the game moves them every frame, so they're left as
+    /// they are.
+    /// </para>
     /// </remarks>
     private void FixedUpdate()
     {
@@ -217,9 +239,39 @@ public class ProjectileItem : MonoBehaviour
         var origin = m_Rigidbody.position;
         var direction = m_Velocity.normalized;
 
-        if (Physics.Raycast(origin, direction, out var hit, stepDistance, s_HitLayerMask, QueryTriggerInteraction.Ignore)
-            || Physics.Raycast(origin, direction, out hit, stepDistance, AiLayerMask, QueryTriggerInteraction.Ignore))
-            Hit(hit.collider, hit.point, hit.normal);
+        var collidersWereOn = MatchTransform.AreColliderEnabled();
+        var countBefore = MatchTransform.s_CollidersEnabledCount;
+
+        RaycastHit hit;
+        string? foundBy = null;
+        BaseAi? animal = null;
+
+        if (!collidersWereOn)
+            MatchTransform.EnableCollidersForAllActive(true);
+
+        try
+        {
+            if (Physics.Raycast(origin, direction, out hit, stepDistance, s_HitLayerMask, QueryTriggerInteraction.Ignore))
+                foundBy = "the raycast for body parts and the world";
+            else if (Physics.Raycast(origin, direction, out hit, stepDistance, AiLayerMask, QueryTriggerInteraction.Ignore))
+                foundBy = "the raycast for animals' own objects";
+
+            if (foundBy is not null)
+                animal = hit.collider.transform.GetComponentInParent<BaseAi>();
+
+            // Only for the debug log, and while the body-part colliders are still on.
+            if (animal == null && IsDebugLogging)
+                LogAnimalsPassedThrough(origin, direction, foundBy is null ? stepDistance : hit.distance, collidersWereOn, countBefore);
+        }
+        finally
+        {
+            if (!collidersWereOn)
+                MatchTransform.EnableCollidersForAllActive(false);
+        }
+
+        if (foundBy is not null)
+            Hit(hit.collider, hit.point, hit.normal, animal,
+                $"{foundBy}, with body-part colliders {(collidersWereOn ? "already on" : "turned on for it")} (count {countBefore} before)");
     }
 
     /// <summary>
@@ -232,8 +284,12 @@ public class ProjectileItem : MonoBehaviour
             return;
 
         var contact = collision.GetContact(0);
-        Hit(collision.collider, contact.point, contact.normal);
+        var animal = collision.collider.transform.GetComponentInParent<BaseAi>();
+        Hit(collision.collider, contact.point, contact.normal, animal, "a physics collision");
     }
+
+    /// <summary>Whether the player has turned on Complex Logger's debug level, so debug-only checks are worth running.</summary>
+    private static bool IsDebugLogging => ComplexLogger.Main.CurrentLevel.HasFlag(FlaggedLoggingLevel.Debug);
 
     /// <summary>
     /// Stops the bullet where it hit, then damages the animal it hit, or tells its <see cref="m_Group"/> what it hit
@@ -246,20 +302,23 @@ public class ProjectileItem : MonoBehaviour
     /// <param name="surface">The collider the bullet hit.</param>
     /// <param name="point">Where the bullet hit, in world space.</param>
     /// <param name="normal">The surface's normal where the bullet hit.</param>
-    private void Hit(Collider surface, Vector3 point, Vector3 normal)
+    /// <param name="animal">The animal the collider belongs to, or <see langword="null"/> if it isn't part of one.</param>
+    /// <param name="foundBy">How the hit was found, for the log.</param>
+    private void Hit(Collider surface, Vector3 point, Vector3 normal, BaseAi? animal, string foundBy)
     {
         m_HasHit = true;
 
         var hitObject = surface.gameObject;
         Mod.Logger.Log(
-            $"{name} hit {hitObject.name} (collider {surface.name}, layer {hitObject.layer}) at {point}, " +
-            $"{Vector3.Distance(m_FirePosition, point):F1} m from where it was fired.",
+            $"{name} hit {hitObject.name} (collider {surface.name}, layer {hitObject.layer}, " +
+            $"{(animal == null ? "not an animal" : $"part of {animal.gameObject.name}")}) at {point}, " +
+            $"{Vector3.Distance(m_FirePosition, point):F1} m from where it was fired, found by {foundBy}.",
             FlaggedLoggingLevel.Debug);
 
         StopAt(point);
 
         if (m_Group is null)
-            TryInflictDamage(hitObject, hitObject.name);
+            TryInflictDamage(hitObject, animal, hitObject.name);
         else
             ReportHit(surface, point, normal);
 
@@ -270,7 +329,76 @@ public class ProjectileItem : MonoBehaviour
     }
 
     // A bullet still in the air when its scene unloads is destroyed without hitting anything.
-    private void OnDestroy() => Miss();
+    private void OnDestroy()
+    {
+        RestoreKinematic();
+        Miss();
+    }
+
+    /// <summary>
+    /// Logs any part of an animal on the bullet's path this physics step that it didn't hit: anything with a
+    /// <see cref="BaseAi"/>, on any layer, including triggers. It's for finding why bullets pass through animals, so
+    /// it's only called when debug logging is on, and while the body-part colliders are on.
+    /// </summary>
+    /// <param name="origin">Where the bullet is, in world space.</param>
+    /// <param name="direction">Which way it's going.</param>
+    /// <param name="distance">How far along its path to look: to what it hit, or the whole step if it hit nothing.</param>
+    /// <param name="collidersWereOn">Whether the body-part colliders were on before the bullet turned them on.</param>
+    /// <param name="countBefore">The game's count of reasons to keep them on, before the bullet turned them on.</param>
+    private void LogAnimalsPassedThrough(Vector3 origin, Vector3 direction, float distance, bool collidersWereOn, int countBefore)
+    {
+        foreach (var passed in Physics.RaycastAll(origin, direction, distance, Physics.AllLayers, QueryTriggerInteraction.Collide))
+        {
+            var collider = passed.collider;
+            if (collider == null)
+                continue;
+
+            var animal = collider.transform.GetComponentInParent<BaseAi>();
+            if (animal == null)
+                continue;
+
+            Mod.Logger.Log(
+                $"{name} passed through {collider.name} (layer {collider.gameObject.layer}, part of {animal.gameObject.name}, " +
+                $"trigger {collider.isTrigger}) {Vector3.Distance(m_FirePosition, passed.point):F1} m from where it was fired. " +
+                $"Body-part colliders were {(collidersWereOn ? "on" : "off")} (count {countBefore}) before this step.",
+                FlaggedLoggingLevel.Debug);
+        }
+    }
+
+    /// <summary>
+    /// Makes the rigidbody kinematic again, if <see cref="Launch"/> released it, undoing exactly what releasing it did
+    /// to the game's count of reasons to keep animals' body-part colliders on.
+    /// </summary>
+    /// <remarks>
+    /// If releasing it changed the count, this uses <see cref="Utils.SetIsKinematic"/> to change it back, and warns if
+    /// that doesn't. If it didn't, it sets the rigidbody kinematic directly, so the count isn't lowered for something
+    /// that never raised it.
+    /// </remarks>
+    private void RestoreKinematic()
+    {
+        if (!m_IsReleased || m_Rigidbody == null)
+            return;
+
+        m_IsReleased = false;
+
+        if (m_ReleaseCountChange == 0)
+        {
+            m_Rigidbody.isKinematic = true;
+            return;
+        }
+
+        var countBefore = MatchTransform.s_CollidersEnabledCount;
+        Utils.SetIsKinematic(m_Rigidbody, true);
+        var countAfter = MatchTransform.s_CollidersEnabledCount;
+
+        if (countAfter - countBefore == -m_ReleaseCountChange)
+            Mod.Logger.Log($"{name} made its rigidbody kinematic: body-part colliders count {countBefore} -> {countAfter}.", FlaggedLoggingLevel.Debug);
+        else
+            Mod.Logger.Log(
+                $"{name} made its rigidbody kinematic, but the body-part colliders count went {countBefore} -> {countAfter}, " +
+                $"which doesn't undo the {m_ReleaseCountChange:+0;-0} from releasing it.",
+                FlaggedLoggingLevel.Warning);
+    }
 
     /// <summary>
     /// Sets up the rigidbody for fast movement and, if <see cref="Settings.m_TrailsEnabled"/> is on, creates the trail
@@ -354,7 +482,13 @@ public class ProjectileItem : MonoBehaviour
         m_FireTime = Time.time;
         enabled = true;
 
+        var countBefore = MatchTransform.s_CollidersEnabledCount;
         Utils.SetIsKinematic(m_Rigidbody, false);
+        var countAfter = MatchTransform.s_CollidersEnabledCount;
+        m_IsReleased = m_Rigidbody != null;
+        m_ReleaseCountChange = countAfter - countBefore;
+        Mod.Logger.Log($"{name} released its rigidbody: body-part colliders count {countBefore} -> {countAfter}.", FlaggedLoggingLevel.Debug);
+
         transform.parent = null;
 
         if (m_Rigidbody is null)
@@ -402,24 +536,28 @@ public class ProjectileItem : MonoBehaviour
     /// so without one the hit does unscaled damage, leaves the bleed-out time to the game and can't be critical.
     /// </remarks>
     /// <param name="victim">The object the bullet hit.</param>
+    /// <param name="animal">The animal <paramref name="victim"/> belongs to, or <see langword="null"/> if none.</param>
     /// <param name="colliderName">The name of the collider that was hit, which the game uses to tell body parts apart.</param>
-    private void TryInflictDamage(GameObject victim, string colliderName)
+    private void TryInflictDamage(GameObject victim, BaseAi? animal, string colliderName)
     {
-        var baseAi = victim.layer switch
+        if (animal == null)
+            return;
+
+        // Only an animal's own object, or a body part under it, takes damage.
+        var isDamageable = victim.layer switch
         {
-            AiLayer => victim.GetComponent<BaseAi>(),
-            AiBodyPartLayer => victim.transform.GetComponentInParent<BaseAi>(),
-            _ => null
+            AiLayer => animal.gameObject == victim,
+            AiBodyPartLayer => true,
+            _ => false
         };
 
-        if (baseAi == null)
+        if (!isDamageable)
         {
-            // An animal on another layer would be missed here, so say if the object belongs to one.
-            if (victim.transform.GetComponentInParent<BaseAi>() != null)
-                Mod.Logger.Log($"{victim.name} belongs to an animal but is on layer {victim.layer}, so the hit does no damage.", FlaggedLoggingLevel.Debug);
-
+            Mod.Logger.Log($"{victim.name} belongs to an animal but is on layer {victim.layer}, so the hit does no damage.", FlaggedLoggingLevel.Debug);
             return;
         }
+
+        var baseAi = animal;
 
         var weaponSource = m_WeaponSource;
         baseAi.MaybeFleeOrAttackFromProjectileHit(weaponSource);
@@ -502,7 +640,10 @@ public class ProjectileItem : MonoBehaviour
         if (m_Rigidbody is not null)
         {
             m_Rigidbody.velocity = Vector3.zero;
-            m_Rigidbody.isKinematic = true;
+            if (m_IsReleased)
+                RestoreKinematic();
+            else
+                m_Rigidbody.isKinematic = true;
         }
 
         transform.position = point;
