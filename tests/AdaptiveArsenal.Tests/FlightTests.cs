@@ -183,4 +183,12 @@ public class FlightTests
 
         return state.Velocity.Length();
     }
+
+    [Theory]
+    [InlineData(1f, 0f, 0f)]
+    [InlineData(1f, 1f, 45f)]
+    [InlineData(0f, -1f, -90f)]
+    [InlineData(0f, 0f, 0f)]
+    public void The_climb_angle_is_measured_from_level(float forward, float up, float degrees) =>
+        Assert.Equal(degrees, Flight.ClimbAngle(new Vector3(forward, up, 0f)), 3);
 }

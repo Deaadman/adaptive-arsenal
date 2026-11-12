@@ -79,6 +79,15 @@ internal static class Flight
     internal static Vec3 VelocityPartWay(Vec3 start, Vec3 end, float fraction) =>
         Vec3.Lerp(start, end, Math.Clamp(fraction, 0f, 1f));
 
+    /// <summary>The angle, in degrees, a velocity climbs at: above 0 going up, below 0 going down.</summary>
+    /// <param name="velocity">The velocity, with Y up.</param>
+    /// <returns>The angle, from −90 to 90, or 0 if the velocity is zero.</returns>
+    internal static float ClimbAngle(Vec3 velocity)
+    {
+        var speed = velocity.Length();
+        return speed > 0f ? MathF.Asin(Math.Clamp(velocity.Y / speed, -1f, 1f)) * 180f / MathF.PI : 0f;
+    }
+
     /// <summary>
     /// The change in velocity G1 drag makes over <paramref name="deltaTime"/>, limited so it can at most bring the
     /// projectile to a stop in the air, moving with the wind, rather than turn it around.

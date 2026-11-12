@@ -38,7 +38,7 @@ internal sealed class Settings : JsonModSettings
     /// <summary>Whether bullets leave a trail.</summary>
     [Name("Bullet trails")]
     [Description("A trail follows each bullet, so you can see where it went.")]
-    public bool m_TrailsEnabled = true;
+    public bool m_TrailsEnabled = false;
 
     /// <summary>The longest a bullet's trail gets, in metres.</summary>
     [Name("Trail length")]
@@ -108,6 +108,31 @@ internal sealed class Settings : JsonModSettings
     [Description("Shows how many rounds are loaded in your rifle or revolver on the HUD, and how many more you're carrying. Off, you'll have to keep count yourself.")]
     public bool m_ShowAmmoCount = true;
 
+    /// <summary>
+    /// Whether every shot is logged, whatever levels Complex Logger has on: how it was fired, its spread, what it hit or
+    /// glanced off, and its damage. See <see cref="Utilities.ProjectileDebug"/>.
+    /// </summary>
+    [Section("Debug")]
+    [Name("Log shots")]
+    [Description("Writes each shot to the MelonLoader console and log: how it was fired, the weather, its spread, what it hit or glanced off, and its damage. For testing and bug reports.")]
+    public bool m_DebugLogShots = false;
+
+    /// <summary>Whether every bullet logs where it is and how fast it's going each physics step.</summary>
+    [Name("Log every step")]
+    [Description("Writes where each bullet is and how fast it's going, about 50 times a second, even with Log shots off. The log grows fast, so turn it on for a few shots at a time.")]
+    public bool m_DebugLogSteps = false;
+
+    /// <summary>Whether each bullet's path is drawn in the world: see <see cref="Utilities.ProjectilePath"/>.</summary>
+    [Name("Draw bullet paths")]
+    [Description("Draws each bullet's path in the world: yellow as it flies, orange then red after each ricochet. A cyan line shows the way the shot was fired before the sights raised it, a blue arrow the wind, and markers where it glanced off (magenta, with the surface's normal in green) and hit (red).")]
+    public bool m_DebugDrawPaths = false;
+
+    /// <summary>How long, in seconds, a drawn path stays after its bullet stops.</summary>
+    [Name("Path duration")]
+    [Description("How long, in seconds, a drawn path stays after its bullet stops.")]
+    [Slider(1f, 60f, 60)]
+    public float m_DebugPathDuration = 10f;
+
     /// <summary>The settings file's name, in the Mods folder, which ModSettings names after the mod's assembly.</summary>
     private const string SettingsFileName = "AdaptiveArsenal.json";
 
@@ -123,7 +148,11 @@ internal sealed class Settings : JsonModSettings
         nameof(m_StandingAccuracyMultiplier),
         nameof(m_MovingAccuracyMultiplier),
         nameof(m_MaxInaccuracyDegrees),
-        nameof(m_DamageFromSpeed)
+        nameof(m_DamageFromSpeed),
+        nameof(m_DebugLogShots),
+        nameof(m_DebugLogSteps),
+        nameof(m_DebugDrawPaths),
+        nameof(m_DebugPathDuration)
     ];
 
     /// <summary>Adds the settings to the Mod Settings menu and puts the saved values into effect.</summary>

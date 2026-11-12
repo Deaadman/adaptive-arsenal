@@ -78,6 +78,10 @@ internal readonly record struct DragModel
     /// <summary>Whether this uses the G1 curve, rather than linear drag.</summary>
     internal bool IsG1 => BallisticCoefficient > 0f;
 
+    /// <summary>The drag model for a log, like <c>G1 drag, BC 0.40</c> or <c>linear drag 0.10</c>.</summary>
+    public override string ToString() =>
+        IsG1 ? FormattableString.Invariant($"G1 drag, BC {BallisticCoefficient:F2}") : FormattableString.Invariant($"linear drag {LinearDrag:F2}");
+
     /// <summary>
     /// The acceleration G1 drag gives a projectile, in m/s², against its velocity through the air. Linear drag gives
     /// none here, since <see cref="Flight.Step"/> applies it the way a rigidbody does instead.
@@ -95,7 +99,7 @@ internal readonly record struct DragModel
 
         // Drag is ρv²·Cd·A/2m, with A = πd²/4. The bullet's Cd is i times the G1 curve's, and the coefficient is
         // m/(i·d²), so the deceleration is ρv²·Cd(G1)·π/(8·BC).
-        var deceleration = atmosphere.Density * speed * speed * G1DragCoefficient(speed / atmosphere.SpeedOfSound) * MathF.PI
+        var deceleration = atmosphere.Density * speed * speed * G1DragCoefficient(atmosphere.Mach(speed)) * MathF.PI
                            / (8f * BallisticCoefficient * KilogramsPerSquareMetrePerPoundPerSquareInch);
         return -airVelocity / speed * deceleration;
     }

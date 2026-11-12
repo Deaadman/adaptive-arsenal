@@ -6,7 +6,7 @@ Adaptive Arsenal changes the rifles and revolvers. The flare gun, bow and other 
 
 Without the mod, a shot hits the instant you fire. With it, each shot is a bullet that flies through the world. It takes time to reach a far-off target, and it stops at the first thing it hits, unless it glances off (see [Ricochets](#ricochets)).
 
-A trail follows each bullet, up to 200 metres behind it, so you can see where it went.
+With **Bullet trails** on in the settings, a trail follows each bullet, up to 200 metres behind it, so you can see where it went. It's off by default.
 
 ## Accuracy
 
@@ -107,6 +107,36 @@ Without the mod, aiming a revolver stops you moving. With it, you can walk while
 
 The HUD shows how many rounds are loaded in your rifle or revolver, and how many more you're carrying, as the game does, and each shot plays an animation of the spent round. With **Show ammo count** off, it hides them, so you have to keep count. It still shows the icon for the type of ammo the weapon takes.
 
+
+## Debugging
+
+The **Debug** section of the settings is for testing the mod and reporting bugs. Nothing in it changes how bullets fly.
+
+**Log shots** writes a line to the MelonLoader console and `MelonLoader\Latest.log` for:
+
+- the game's weather when you fire: temperature, wind direction and speed, and whether you're indoors
+- each shot's accuracy and spread, and how far this shot strayed from your aim
+- each bullet as it's fired: its speed, drag, zero distance and angle, damage and the air it flies through
+- each ricochet: what it glanced off, and the angle and speed going in and out
+- each hit: what it hit, how far, how long it flew, its speed, the angle to the surface and its damage, and for an animal, the damage done and its health after
+- each bullet that flies 10 seconds without hitting anything
+
+With it off, the same lines go to Complex Logger's Debug level. **Log every step** logs each bullet's position, speed, Mach number and climb angle every physics step, about 50 times a second, whatever Complex Logger's levels and with or without **Log shots**, so turn it on for only a few shots.
+
+**Draw bullet paths** draws, for each bullet:
+
+| Colour | What it shows |
+| --- | --- |
+| Yellow | The bullet's path as it flies |
+| Orange, then red | Its path after the first and second ricochet |
+| Cyan | The way the shot was fired, with its spread, before the sights raised it, so you can see the bullet rise to it at the zero distance and drop below it after |
+| Blue arrow | The wind, a quarter of a metre long for each m/s |
+| Magenta cross, with a green line | Where it glanced off, and the surface's normal there |
+| Red cross | Where it hit |
+| Grey cross | Where a bullet that hit nothing was removed |
+
+Lines and markers get bigger the further they are from where you fired, so a path a few hundred metres away is as easy to see as one close up. Each path stays for **Path duration** after its bullet stops.
+
 ## Settings
 
 Everything above is how the mod plays by default. To change it, open **Options**, then **Mod Settings**, then **Adaptive Arsenal**. The settings are saved in `Mods\AdaptiveArsenal.json`.
@@ -114,7 +144,7 @@ Everything above is how the mod plays by default. To change it, open **Options**
 | Setting | Default | What it does |
 | --- | --- | --- |
 | Real bullets | On | Off, rifles and revolvers fire the game's own instant shots, and the bullet settings below are hidden. |
-| Bullet trails | On | Shows the trail behind each bullet. |
+| Bullet trails | Off | Shows the trail behind each bullet. If you saved your settings in an older version, it stays as you had it. |
 | Trail length | 200 m | How far behind the bullet its trail reaches. |
 | Weather affects bullets | On | The wind pushes bullets, and cold air and powder slow them. Off, bullets fly as in still air at 15 °C. |
 | Bullet speed | × 1 | Multiplies every weapon's muzzle velocity. |
@@ -124,3 +154,7 @@ Everything above is how the mod plays by default. To change it, open **Options**
 | Damage from speed | 1 | How much a bullet's damage falls as it slows. At 1 it follows the energy left, as in the table above. 0 means no drop-off, and values between blend the two. |
 | Walk while aiming revolver | On | Lets you walk while aiming a revolver. |
 | Show ammo count | On | Shows the loaded and carried rounds on the HUD, with the spent round animation. Off, you keep count yourself. |
+| Log shots | Off | Writes each shot to the MelonLoader console and log, whatever levels Complex Logger has on. See [Debugging](#debugging). |
+| Log every step | Off | Logs each bullet's position and speed about 50 times a second, even with **Log shots** off. |
+| Draw bullet paths | Off | Draws each bullet's path in the world. See [Debugging](#debugging). |
+| Path duration | 10 s | How long a drawn path stays after its bullet stops. |

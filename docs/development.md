@@ -100,7 +100,7 @@ The test project compiles the files in `src/Core` itself rather than referencing
 
 Before a release, and after a game update, load a save with a rifle, a revolver and ammo, and check:
 
-- Rifle and revolver shots leave a trail and hit where you aim, with more spread from the hip, standing and moving.
+- With **Bullet trails** on, rifle and revolver shots leave a trail. Shots hit where you aim, with more spread from the hip, standing and moving. **Draw bullet paths** in the Debug settings shows each one's path, and where it glanced off and hit.
 - Shooting an animal hurts it, counts towards your Rifle or Revolver skill, and a close shot does more than a far one.
 - Bullets hitting the ground, rock and wood show the right impact effect, a bullet hole where they hit, and a sound that gets quieter with distance. Their trails fade out after the hit.
 - Saving with a bullet in the air, then loading, leaves no loose rounds of ammo where it was.

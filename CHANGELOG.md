@@ -25,6 +25,7 @@ See docs/development.md, "Releasing". CI checks this file's format.
 - Other mods can give their projectiles a ballistic coefficient and a zero distance through the API, and choose whether the weather affects them.
 - The wind pushes bullets sideways and cold air and cold powder slow them, which the new Weather affects bullets setting turns off.
 - Bullets that hit rock, metal or ice at a shallow angle glance off and fly on, slower, instead of stopping.
+- A new Debug section in the settings can log every shot, and draw each bullet's path, ricochets and hits in the world, for testing and bug reports.
 
 ### Changed
 
@@ -34,6 +35,7 @@ See docs/development.md, "Releasing". CI checks this file's format.
 - A bullet's damage falls with the energy it has left when it hits, so rifle shots past 200 metres hit harder than before.
 - Shots bunch towards where you aim and the least accurate shot lands at most 3° away instead of 10°, with Worst spread moving to the new default if you never changed any accuracy setting.
 - Even at full skill, rifles and revolvers have a small spread of their own, as real guns do.
+- Bullet trails are off by default for new players, and stay as they were if you saved your settings in an older version.
 
 ### Deprecated
 

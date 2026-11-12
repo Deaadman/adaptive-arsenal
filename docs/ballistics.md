@@ -270,3 +270,7 @@ To check in game:
 - `Weather.GetCurrentTemperatureWithoutHeatSources` gives the air's temperature in °C, without fires or wind chill.
 - A settings file saved by 1.1.0 is updated as described above.
 - Bullets glance off rock at a shallow angle, and the ricochet's impact sound plays where it glanced off, from an object the game's audio didn't set up.
+- With **Log shots** on, shots are logged with Complex Logger's levels all off. They're logged at its `Always` level, which is assumed to show whatever levels the player turned on.
+- **Draw bullet paths** draws in the right colours. It needs the `Sprites/Default` or `Hidden/Internal-Colored` shader in the game's build. Without either it falls back to the trail's material, and the colours may not show.
+
+The Debug settings help with these checks (see [Debugging](features.md#debugging)). **Draw bullet paths** shows the zero, the drift with the wind and each ricochet. **Log shots** logs the game's raw wind direction and temperature with every shot.

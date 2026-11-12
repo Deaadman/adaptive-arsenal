@@ -128,6 +128,15 @@ public class ProjectileItem : MonoBehaviour
     /// <summary>How long, in seconds, since the bullet hit something.</summary>
     private float m_TimeSinceHit;
 
+    /// <summary>Whether the bullet logs every physics step, from <see cref="ProjectileDebug.LogSteps"/> when it's fired.</summary>
+    private bool m_LogSteps;
+
+    /// <summary>
+    /// The bullet's drawn path, if <see cref="ProjectileDebug.DrawPaths"/> was on when it was fired, or
+    /// <see langword="null"/>.
+    /// </summary>
+    private ProjectilePath? m_Path;
+
     private LineRenderer? m_Trail;
     private List<Vector3>? m_TrailPoints;
     private float m_LastTrailUpdateTime;
@@ -208,7 +217,14 @@ public class ProjectileItem : MonoBehaviour
         }
         else if (Time.time - m_FireTime > MaxFlightTime)
         {
-            Mod.Logger.Log($"{name} flew for {MaxFlightTime} s without hitting anything, so it's removed at {transform.position}.", FlaggedLoggingLevel.Debug);
+            if (ProjectileDebug.Enabled)
+            {
+                ProjectileDebug.Log(
+                    $"{name} flew for {MaxFlightTime} s without hitting anything, so it's removed at {transform.position}, " +
+                    $"{Vector3.Distance(m_FirePosition, transform.position):F1} m from where it was fired, at {m_Velocity.magnitude:F0} m/s.");
+            }
+
+            m_Path?.End(transform.position, hit: false);
             Miss();
             Destroy(gameObject);
         }
@@ -290,6 +306,22 @@ public class ProjectileItem : MonoBehaviour
         var airVelocity = m_Velocity - m_Atmosphere.Wind.ToUnity();
         var rotation = airVelocity.sqrMagnitude > 0f ? Quaternion.LookRotation(airVelocity) : transform.rotation;
         transform.SetPositionAndRotation(destination, rotation);
+
+        m_Path?.Add(destination);
+        if (m_LogSteps)
+            LogStep(airVelocity);
+    }
+
+    /// <summary>Logs where the bullet is after a physics step and how fast it's going, for <see cref="m_LogSteps"/>.</summary>
+    /// <param name="airVelocity">Its velocity through the air, which sets its Mach number.</param>
+    private void LogStep(Vector3 airVelocity)
+    {
+        var position = transform.position;
+        var speed = m_Velocity.magnitude;
+        ProjectileDebug.LogStep(
+            $"{name} at {position}, {Vector3.Distance(m_FirePosition, position):F1} m out after {Time.time - m_FireTime:F2} s: " +
+            $"{speed:F0} m/s ({speed / Mathf.Max(1f, m_MuzzleSpeed):P0} of the muzzle's), Mach {m_Atmosphere.Mach(airVelocity.magnitude):F2}, " +
+            $"climbing at {Flight.ClimbAngle(m_Velocity.ToNumerics()):F2}°.");
     }
 
     /// <summary>
@@ -308,11 +340,17 @@ public class ProjectileItem : MonoBehaviour
         m_HasHit = true;
 
         var hitObject = surface.gameObject;
-        Mod.Logger.Log(
-            $"{name} hit {hitObject.name} (collider {surface.name}, layer {hitObject.layer}) at {point}, " +
-            $"{Vector3.Distance(m_FirePosition, point):F1} m from where it was fired.",
-            FlaggedLoggingLevel.Debug);
+        if (ProjectileDebug.Enabled)
+        {
+            ProjectileDebug.Log(
+                $"{name} hit {hitObject.name} (collider {surface.name}, layer {hitObject.layer}) at {point}, " +
+                $"{Vector3.Distance(m_FirePosition, point):F1} m from where it was fired, after {Time.time - m_FireTime:F2} s, ricochets {m_Ricochets}: " +
+                $"{m_Velocity.magnitude:F0} m/s (slowest {m_LowestSpeed:F0}) of {m_MuzzleSpeed:F0} at the muzzle, " +
+                $"{Ricochet.AngleToSurface(m_Velocity.ToNumerics(), normal.ToNumerics()):F1}° to the surface, " +
+                $"damage {DamageOnHit(point):F1} of {m_MuzzleDamage:F1} before any body part scales it.");
+        }
 
+        m_Path?.End(point, hit: true);
         StopAt(point);
 
         if (m_Group is null)
@@ -327,7 +365,11 @@ public class ProjectileItem : MonoBehaviour
     }
 
     // A bullet still in the air when its scene unloads is destroyed without hitting anything.
-    private void OnDestroy() => Miss();
+    private void OnDestroy()
+    {
+        m_Path?.Abandon();
+        Miss();
+    }
 
     /// <summary>
     /// If <see cref="Settings.m_TrailsEnabled"/> is on, creates the trail using the arrow's trail material.
@@ -437,6 +479,7 @@ public class ProjectileItem : MonoBehaviour
         enabled = true;
         transform.parent = null;
         m_Drag = drag;
+        var aimDirection = transform.forward;
 
         var zeroAngle = Flight.ZeroAngle(muzzleVelocity, drag, Physics.gravity.magnitude, zeroDistance, Time.fixedDeltaTime);
         if (zeroAngle > 0f)
@@ -451,6 +494,18 @@ public class ProjectileItem : MonoBehaviour
         m_LowestSpeed = launchSpeed;
 
         m_FirePosition = transform.position;
+
+        if (ProjectileDebug.Enabled)
+        {
+            ProjectileDebug.Log(
+                $"{name} fired by {(m_GunType is { } gunType ? gunType.ToString() : "another mod")} from {m_FirePosition} towards {aimDirection}: " +
+                $"{launchSpeed:F0} m/s ({muzzleVelocity:F0} at 15 °C), {drag}, zeroed at {zeroDistance:F0} m ({zeroAngle:F3}° up), " +
+                $"damage {m_MuzzleDamage:F1}, in {weather}.");
+        }
+
+        m_LogSteps = ProjectileDebug.LogSteps;
+        if (ProjectileDebug.DrawPaths)
+            m_Path = new ProjectilePath(m_FirePosition, aimDirection, m_Atmosphere.Wind.ToUnity());
 
         // Lets a cougar react to a shot that only just misses it, as it does to the game's own shots.
         GameManager.GetCougarManager().MaybeAimNearMiss(velocity.normalized);
@@ -548,13 +603,17 @@ public class ProjectileItem : MonoBehaviour
     /// <param name="colliderName">The name of the collider that was hit.</param>
     /// <param name="damage">The damage passed to the game.</param>
     /// <param name="healthBefore">The animal's health before the hit.</param>
-    private void LogDamage(BaseAi baseAi, string colliderName, float damage, float healthBefore) =>
-        Mod.Logger.Log(
+    private void LogDamage(BaseAi baseAi, string colliderName, float damage, float healthBefore)
+    {
+        if (!ProjectileDebug.Enabled)
+            return;
+
+        ProjectileDebug.Log(
             $"{name} did {damage:F1} damage to {baseAi.gameObject.name} at {colliderName} " +
             $"({Vector3.Distance(m_FirePosition, transform.position):F1} m, {m_Velocity.magnitude:F0} of {m_MuzzleSpeed:F0} m/s, " +
             $"{m_MuzzleDamage:F1} at the muzzle): " +
-            $"health {healthBefore:F1} -> {baseAi.m_CurrentHP:F1} of {baseAi.m_MaxHP:F1}, now {baseAi.GetAiMode()}.",
-            FlaggedLoggingLevel.Debug);
+            $"health {healthBefore:F1} -> {baseAi.m_CurrentHP:F1} of {baseAi.m_MaxHP:F1}, now {baseAi.GetAiMode()}.");
+    }
 
     /// <summary>
     /// Pushes the loose gear the bullet hit, if it hit some, as hard as the game's own bullet for the gun would: along
@@ -690,10 +749,6 @@ public class ProjectileItem : MonoBehaviour
             return false;
 
         m_Ricochets++;
-        Mod.Logger.Log(
-            $"{name} glanced off {surface.gameObject.name} ({impactEffectType}) at {Ricochet.AngleToSurface(incoming, normal):F1}° " +
-            $"and {velocity.magnitude:F0} m/s, ricochet {m_Ricochets}.",
-            FlaggedLoggingLevel.Debug);
 
         // The effects and the push face the way the bullet came in, so they come before it turns.
         transform.position = hit.point;
@@ -703,6 +758,17 @@ public class ProjectileItem : MonoBehaviour
 
         m_Velocity = Ricochet.Deflect(incoming, normal, UnityEngine.Random.value, UnityEngine.Random.value).ToUnity();
         m_LowestSpeed = Mathf.Min(m_LowestSpeed, m_Velocity.magnitude);
+
+        if (ProjectileDebug.Enabled)
+        {
+            ProjectileDebug.Log(
+                $"{name} glanced off {surface.gameObject.name} ({impactEffectType}, tag {materialTag}) at {hit.point}, " +
+                $"{Vector3.Distance(m_FirePosition, hit.point):F1} m from where it was fired, ricochet {m_Ricochets} of {Ricochet.MaxRicochets}: " +
+                $"in at {Ricochet.AngleToSurface(incoming, normal):F1}° and {velocity.magnitude:F0} m/s, " +
+                $"out at {Ricochet.AngleToSurface(m_Velocity.ToNumerics(), normal):F1}° and {m_Velocity.magnitude:F0} m/s.");
+        }
+
+        m_Path?.Ricochet(hit.point, hit.normal);
 
         // Just off the surface, so the next step's raycast doesn't start inside it, and facing into the air as every
         // step does.

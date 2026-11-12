@@ -42,11 +42,11 @@ Every change is built straight away and published as the [nightly release](https
 | Accuracy | Your skill, crouching or standing, moving, and firing from the hip all change how close a shot lands to where you aimed |
 | Muzzle velocity | Each rifle and revolver fires its bullets at its own speed |
 | Damage drop-off | The more a bullet has slowed when it hits, the less damage it does |
-| Bullet trails | A trail follows each bullet, so you can see where it landed |
+| Bullet trails | Turn on a trail behind each bullet, so you can see where it landed |
 | HUD animation | Firing plays an animation of the spent round on the ammo display |
 | Hidden ammo count | You can hide how many rounds are loaded or carried on the HUD, so you keep count yourself |
 | Revolver movement | You can walk while aiming a revolver |
-| Settings | Turn real bullets, trails, revolver movement and the ammo count on or off, and tune accuracy, speed and damage, in the game's Mod Settings menu |
+| Settings | Turn real bullets, trails, weather, revolver movement and the ammo count on or off, tune accuracy, speed and damage, and log shots or draw their paths for testing, in the game's Mod Settings menu |
 
 [How it all works](docs/features.md) has the numbers for each weapon.
 

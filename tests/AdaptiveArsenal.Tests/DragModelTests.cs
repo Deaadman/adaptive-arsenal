@@ -109,4 +109,11 @@ public class DragModelTests
         Assert.Equal(0f, DragModel.G1(0.40f).LinearDrag);
         Assert.Equal(0f, DragModel.Linear(0.1f).BallisticCoefficient);
     }
+
+    [Fact]
+    public void A_drag_model_describes_itself_for_the_log()
+    {
+        Assert.Equal("G1 drag, BC 0.40", DragModel.G1(0.40f).ToString());
+        Assert.Equal("linear drag 0.10", DragModel.Linear(0.1f).ToString());
+    }
 }

@@ -51,6 +51,10 @@ internal readonly record struct Atmosphere(float Density, float SpeedOfSound, Ve
 
     /// <summary>How dense the air is compared with <see cref="Standard"/>, which scales drag.</summary>
     internal float DensityRatio => Density / Standard.Density;
+
+    /// <summary>A speed through this air as a Mach number: a multiple of the speed of sound.</summary>
+    /// <param name="airSpeed">The speed through the air, in m/s.</param>
+    internal float Mach(float airSpeed) => airSpeed / SpeedOfSound;
 }
 
 /// <summary>
@@ -96,4 +100,18 @@ internal readonly record struct ShotWeather(Atmosphere Atmosphere, float? AirTem
     /// <param name="muzzleVelocity">The muzzle velocity at 15 °C, in m/s.</param>
     internal float MuzzleVelocity(float muzzleVelocity) =>
         AirTemperature is { } celsius ? Ballistics.MuzzleVelocityAtTemperature(muzzleVelocity, celsius) : muzzleVelocity;
+
+    /// <summary>
+    /// The weather for a log, like <c>air at -10.0 °C (density × 1.096, sound at 325 m/s), wind &lt;2, 0, -1&gt; m/s</c>,
+    /// or <c>still air at 15 °C</c> for <see cref="None"/>.
+    /// </summary>
+    public override string ToString()
+    {
+        if (AirTemperature is not { } celsius)
+            return "still air at 15 °C";
+
+        var wind = Atmosphere.Wind;
+        return FormattableString.Invariant(
+            $"air at {celsius:F1} °C (density × {Atmosphere.DensityRatio:F3}, sound at {Atmosphere.SpeedOfSound:F0} m/s), wind <{wind.X:F1}, {wind.Y:F1}, {wind.Z:F1}> m/s");
+    }
 }

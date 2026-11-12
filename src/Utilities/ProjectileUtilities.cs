@@ -27,14 +27,24 @@ internal static class ProjectileUtilities
         if (weather == null)
             return ShotWeather.None;
 
+        var temperature = weather.GetCurrentTemperatureWithoutHeatSources();
         var wind = GameManager.GetWindComponent();
-        var shotWeather = wind == null
-            ? ShotWeather.FromGame(weather.GetCurrentTemperatureWithoutHeatSources(), System.Numerics.Vector3.Zero, 0f, indoors: true)
-            : ShotWeather.FromGame(weather.GetCurrentTemperatureWithoutHeatSources(), wind.GetWindDirection().ToNumerics(), wind.GetSpeedMPH(),
-                weather.IsIndoorEnvironment());
+        if (wind == null)
+        {
+            if (ProjectileDebug.Enabled)
+                ProjectileDebug.Log($"The game has no wind, so the shot is fired in still air at {temperature:F1} °C.");
 
-        Mod.Logger.Log($"Shot fired in air at {shotWeather.AirTemperature:F1} °C with wind {shotWeather.Atmosphere.Wind} m/s.", FlaggedLoggingLevel.Debug);
-        return shotWeather;
+            return ShotWeather.FromGame(temperature, System.Numerics.Vector3.Zero, 0f, indoors: true);
+        }
+
+        // The game's own readings, to check which way ShotWeather.WindVelocity takes the wind to blow.
+        var windDirection = wind.GetWindDirection();
+        var windSpeed = wind.GetSpeedMPH();
+        var indoors = weather.IsIndoorEnvironment();
+        if (ProjectileDebug.Enabled)
+            ProjectileDebug.Log($"The game's weather: {temperature:F1} °C, wind direction {windDirection} at {windSpeed:F1} mph, {(indoors ? "indoors" : "outdoors")}.");
+
+        return ShotWeather.FromGame(temperature, windDirection.ToNumerics(), windSpeed, indoors);
     }
 
     /// <summary>

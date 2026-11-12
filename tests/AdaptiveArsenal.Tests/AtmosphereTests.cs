@@ -125,6 +125,25 @@ public class AtmosphereTests
         Assert.Equal(716.69f, weather.MuzzleVelocity(740f), 0.01f);
     }
 
+    [Fact]
+    public void A_speed_through_the_air_is_a_multiple_of_the_speed_of_sound()
+    {
+        var air = Atmosphere.Standard;
+        Assert.Equal(2f, air.Mach(air.SpeedOfSound * 2f), 3);
+        Assert.Equal(0f, air.Mach(0f));
+    }
+
+    [Fact]
+    public void The_weather_describes_itself_for_the_log_without_braces()
+    {
+        Assert.Equal("still air at 15 °C", ShotWeather.None.ToString());
+
+        var described = ShotWeather.FromGame(-10f, new Vector3(1f, 0f, 0f), 10f, indoors: false).ToString();
+        Assert.StartsWith("air at -10.0 °C (density × 1.0", described);
+        Assert.EndsWith("wind <4.5, 0.0, 0.0> m/s", described);
+        Assert.DoesNotContain("{", described);
+    }
+
     /// <summary>Flies a level shot until it has travelled <paramref name="distance"/> along X.</summary>
     private static FlightState FlyTo(float distance, float muzzleVelocity, DragModel drag, Atmosphere air)
     {

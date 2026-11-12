@@ -116,6 +116,13 @@ internal static class vp_FPSShooterPatches
             var maxSpread = Ballistics.MaxSpreadDegrees(accuracy, spreadFloor);
             var (pitch, yaw) = Ballistics.SpreadOffset(maxSpread, Random.value, Random.value);
             var spread = Quaternion.Euler(pitch, yaw, 0f);
+            if (ProjectileDebug.Enabled)
+            {
+                ProjectileDebug.Log(
+                    $"{weapon.m_GunItem.name} fired {(isHipFire ? "from the hip" : "aimed")}: accuracy {accuracy:F1}, spread up to {maxSpread:F3}°, " +
+                    $"this shot {pitch:F3}° up and {yaw:F3}° right of the aim.");
+            }
+
 
             // The spread turns the shot around its own axes, so it's the same whichever way the player faces.
             var direction = isHipFire ? Quaternion.LookRotation(GameManager.GetVpFPSCamera().transform.forward) : aimRotation;
